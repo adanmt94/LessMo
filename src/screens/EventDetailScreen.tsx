@@ -138,15 +138,18 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
                         style: 'cancel'
                       },
                       {
+                        text: 'Editar',
+                        onPress: () => navigation.navigate('AddExpense', { 
+                          eventId, 
+                          expenseId: expense.id, 
+                          mode: 'edit' 
+                        })
+                      },
+                      {
                         text: 'Eliminar',
                         style: 'destructive',
                         onPress: () => handleDeleteExpense(expense.id)
-                      },
-                      // TODO: Implementar edición completa
-                      // {
-                      //   text: 'Editar',
-                      //   onPress: () => navigation.navigate('EditExpense', { expenseId: expense.id, eventId })
-                      // }
+                      }
                     ]
                   );
                 }}

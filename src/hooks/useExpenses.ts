@@ -98,6 +98,45 @@ export const useExpenses = (eventId: string) => {
   };
 
   /**
+   * Actualizar gasto existente
+   */
+  const editExpense = async (
+    expenseId: string,
+    paidBy: string,
+    amount: number,
+    description: string,
+    category: ExpenseCategory,
+    beneficiaries: string[],
+    splitType: 'equal' | 'custom' = 'equal',
+    customSplits?: { [participantId: string]: number }
+  ): Promise<boolean> => {
+    try {
+      console.log('🚀 useExpenses.editExpense - Llamando a updateExpense...');
+      setError(null);
+      await updateExpense(
+        expenseId,
+        eventId,
+        paidBy,
+        amount,
+        description,
+        category,
+        beneficiaries,
+        splitType,
+        customSplits
+      );
+      console.log('✅ useExpenses.editExpense - Gasto actualizado');
+      console.log('🔄 useExpenses.editExpense - Recargando datos...');
+      await loadData(); // Recargar datos
+      console.log('✅ useExpenses.editExpense - Datos recargados correctamente');
+      return true;
+    } catch (err: any) {
+      console.error('❌ useExpenses.editExpense - Error capturado:', err);
+      setError(err.message || 'Error al actualizar gasto');
+      return false;
+    }
+  };
+
+  /**
    * Eliminar gasto
    */
   const deleteExpense = async (expenseId: string): Promise<boolean> => {
@@ -235,6 +274,7 @@ export const useExpenses = (eventId: string) => {
     loading,
     error,
     addExpense,
+    editExpense,
     deleteExpense,
     loadData,
     getTotalExpenses,

@@ -522,6 +522,120 @@ const updateBalancesAfterExpense = async (
 };
 
 /**
+ * Actualizar gasto existente con recálculo de balances
+ */
+export const updateExpense = async (
+  expenseId: string,
+  eventId: string,
+  paidBy: string,
+  amount: number,
+  description: string,
+  category: string,
+  beneficiaries: string[],
+  splitType: 'equal' | 'custom' = 'equal',
+  customSplits?: { [participantId: string]: number }
+): Promise<void> => {
+  try {
+    console.log('📝 updateExpense - Iniciando actualización de gasto:', expenseId);
+    
+    // 1. Obtener el gasto original
+    const expenseDoc = await getDoc(doc(db, 'expenses', expenseId));
+    if (!expenseDoc.exists()) {
+      throw new Error('Gasto no encontrado');
+    }
+    const originalExpense = expenseDoc.data() as Expense;
+    console.log('📋 Gasto original:', originalExpense);
+
+    // 2. Revertir los cambios de balance del gasto original
+    console.log('🔄 Revirtiendo balances del gasto original...');
+    await revertBalanceChanges(
+      originalExpense.paidBy,
+      originalExpense.amount,
+      originalExpense.beneficiaries,
+      originalExpense.splitType,
+      originalExpense.customSplits
+    );
+
+    // 3. Actualizar el gasto en Firestore
+    const cleanExpenseData: any = {
+      eventId,
+      paidBy,
+      amount,
+      description,
+      category,
+      beneficiaries,
+      splitType,
+    };
+    
+    if (customSplits && splitType === 'custom') {
+      cleanExpenseData.customSplits = customSplits;
+    }
+    
+    console.log('💾 Actualizando gasto en Firestore:', cleanExpenseData);
+    await updateDoc(doc(db, 'expenses', expenseId), cleanExpenseData);
+
+    // 4. Aplicar los nuevos cambios de balance
+    console.log('💰 Aplicando nuevos balances...');
+    await updateBalancesAfterExpense(paidBy, amount, beneficiaries, splitType, customSplits);
+    
+    console.log('✅ updateExpense - Gasto actualizado exitosamente');
+  } catch (error: any) {
+    console.error('❌ updateExpense - Error:', error);
+    throw new Error(error.message);
+  }
+};
+
+/**
+ * Revertir cambios de balance (para edición/eliminación de gastos)
+ */
+const revertBalanceChanges = async (
+  paidBy: string,
+  amount: number,
+  beneficiaries: string[],
+  splitType: 'equal' | 'custom',
+  customSplits?: { [participantId: string]: number }
+): Promise<void> => {
+  try {
+    console.log('🔙 revertBalanceChanges - Revirtiendo balances');
+    const batch = writeBatch(db);
+    
+    if (splitType === 'equal') {
+      const splitAmount = amount / beneficiaries.length;
+      
+      for (const beneficiaryId of beneficiaries) {
+        const participantDoc = await getDoc(doc(db, 'participants', beneficiaryId));
+        if (participantDoc.exists()) {
+          const participant = participantDoc.data() as Participant;
+          const newBalance = participant.currentBalance + splitAmount; // SUMAR para revertir
+          console.log(`💰 Revirtiendo ${beneficiaryId}: ${participant.currentBalance} + ${splitAmount} = ${newBalance}`);
+          batch.update(doc(db, 'participants', beneficiaryId), {
+            currentBalance: newBalance
+          });
+        }
+      }
+    } else if (splitType === 'custom' && customSplits) {
+      for (const [beneficiaryId, splitAmount] of Object.entries(customSplits)) {
+        const participantDoc = await getDoc(doc(db, 'participants', beneficiaryId));
+        if (participantDoc.exists()) {
+          const participant = participantDoc.data() as Participant;
+          const newBalance = participant.currentBalance + splitAmount; // SUMAR para revertir
+          console.log(`💰 Revirtiendo ${beneficiaryId}: ${participant.currentBalance} + ${splitAmount} = ${newBalance}`);
+          batch.update(doc(db, 'participants', beneficiaryId), {
+            currentBalance: newBalance
+          });
+        }
+      }
+    }
+    
+    await batch.commit();
+    console.log('✅ revertBalanceChanges - Completado');
+  } catch (error: any) {
+    console.error('❌ revertBalanceChanges - Error:', error);
+    throw new Error(error.message);
+  }
+};
+
+/**
  * Obtener gastos de un evento
  */
 export const getEventExpenses = async (eventId: string): Promise<Expense[]> => {
@@ -554,9 +668,10 @@ export const getEventExpenses = async (eventId: string): Promise<Expense[]> => {
 };
 
 /**
- * Actualizar gasto
+ * Actualizar gasto (versión simple - sin revertir balances)
+ * DEPRECATED: Usar updateExpenseWithBalances para ediciones completas
  */
-export const updateExpense = async (expenseId: string, updates: Partial<Expense>): Promise<void> => {
+export const updateExpenseSimple = async (expenseId: string, updates: Partial<Expense>): Promise<void> => {
   try {
     await updateDoc(doc(db, 'expenses', expenseId), {
       ...updates,

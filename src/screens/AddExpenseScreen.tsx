@@ -39,8 +39,9 @@ const CATEGORIES: ExpenseCategory[] = [
 ];
 
 export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
-  const { eventId } = route.params;
-  const { participants, addExpense } = useExpenses(eventId);
+  const { eventId, expenseId, mode } = route.params;
+  const isEditMode = mode === 'edit' && expenseId;
+  const { participants, addExpense, editExpense, expenses } = useExpenses(eventId);
 
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
@@ -51,9 +52,33 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
   const [customSplits, setCustomSplits] = useState<{ [participantId: string]: string }>({});
   const [loading, setLoading] = useState(false);
 
+  // Cargar datos del gasto en modo edición
+  useEffect(() => {
+    if (isEditMode && expenses.length > 0) {
+      const expense = expenses.find(e => e.id === expenseId);
+      if (expense) {
+        console.log('📝 Cargando datos del gasto para editar:', expense);
+        setDescription(expense.description);
+        setAmount(expense.amount.toString());
+        setPaidBy(expense.paidBy);
+        setCategory(expense.category);
+        setSelectedBeneficiaries(expense.beneficiaries);
+        setSplitType(expense.splitType || 'equal');
+        
+        if (expense.splitType === 'custom' && expense.customSplits) {
+          const splitsString: { [key: string]: string } = {};
+          Object.entries(expense.customSplits).forEach(([id, amount]) => {
+            splitsString[id] = amount.toString();
+          });
+          setCustomSplits(splitsString);
+        }
+      }
+    }
+  }, [isEditMode, expenseId, expenses]);
+
   useEffect(() => {
     console.log('🔍 AddExpenseScreen - Participants:', participants.length, participants);
-    if (participants.length > 0) {
+    if (participants.length > 0 && !isEditMode) {
       setPaidBy(participants[0].id);
       setSelectedBeneficiaries(participants.map((p) => p.id));
       
@@ -64,7 +89,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
       });
       setCustomSplits(initialSplits);
     }
-  }, [participants]);
+  }, [participants, isEditMode]);
 
   const toggleBeneficiary = (participantId: string) => {
     if (selectedBeneficiaries.includes(participantId)) {
@@ -145,33 +170,54 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
     setLoading(true);
 
     try {
-      const success = await addExpense(
-        paidBy,
-        amountNum,
-        description,
-        category,
-        selectedBeneficiaries,
-        splitType,
-        customSplitsData
-      );
+      let success: boolean;
+      
+      if (isEditMode) {
+        console.log('📝 Modo edición - Actualizando gasto:', expenseId);
+        success = await editExpense(
+          expenseId!,
+          paidBy,
+          amountNum,
+          description,
+          category,
+          selectedBeneficiaries,
+          splitType,
+          customSplitsData
+        );
+      } else {
+        console.log('➕ Modo creación - Creando gasto nuevo');
+        success = await addExpense(
+          paidBy,
+          amountNum,
+          description,
+          category,
+          selectedBeneficiaries,
+          splitType,
+          customSplitsData
+        );
+      }
 
-      console.log('📊 Resultado addExpense:', success);
+      console.log(`📊 Resultado ${isEditMode ? 'editExpense' : 'addExpense'}:`, success);
 
       if (success) {
-        console.log('✅ Gasto registrado exitosamente');
-        Alert.alert('¡Gasto agregado!', 'El gasto se ha registrado correctamente', [
-          {
-            text: 'OK',
-            onPress: () => navigation.goBack(),
-          },
-        ]);
+        console.log(`✅ Gasto ${isEditMode ? 'actualizado' : 'registrado'} exitosamente`);
+        Alert.alert(
+          isEditMode ? '¡Gasto actualizado!' : '¡Gasto agregado!',
+          isEditMode ? 'Los cambios se han guardado correctamente' : 'El gasto se ha registrado correctamente',
+          [
+            {
+              text: 'OK',
+              onPress: () => navigation.goBack(),
+            },
+          ]
+        );
       } else {
-        console.log('❌ addExpense retornó false');
-        Alert.alert('Error', 'No se pudo registrar el gasto');
+        console.log(`❌ ${isEditMode ? 'editExpense' : 'addExpense'} retornó false`);
+        Alert.alert('Error', `No se pudo ${isEditMode ? 'actualizar' : 'registrar'} el gasto`);
       }
     } catch (error: any) {
-      console.error('❌ Error al agregar gasto:', error);
-      Alert.alert('Error', error.message || 'No se pudo agregar el gasto');
+      console.error(`❌ Error al ${isEditMode ? 'actualizar' : 'agregar'} gasto:`, error);
+      Alert.alert('Error', error.message || `No se pudo ${isEditMode ? 'actualizar' : 'agregar'} el gasto`);
     } finally {
       setLoading(false);
     }
@@ -183,7 +229,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.backButton}>← Atrás</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Agregar gasto</Text>
+        <Text style={styles.title}>{isEditMode ? 'Editar gasto' : 'Agregar gasto'}</Text>
         <View style={{ width: 50 }} />
       </View>
 
@@ -401,7 +447,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
           </Card>
 
           <Button
-            title="Registrar gasto"
+            title={isEditMode ? "Guardar cambios" : "Registrar gasto"}
             onPress={handleAddExpense}
             loading={loading}
             fullWidth
