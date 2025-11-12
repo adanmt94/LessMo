@@ -218,17 +218,24 @@ export const getUserEvents = async (userId: string): Promise<Event[]> => {
   try {
     const q = query(
       collection(db, 'events'),
-      where('createdBy', '==', userId),
-      orderBy('createdAt', 'desc')
+      where('createdBy', '==', userId)
     );
     
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ 
+    const events = querySnapshot.docs.map(doc => ({ 
       id: doc.id, 
       ...doc.data() 
     } as Event));
+    
+    // Ordenar en memoria en lugar de en Firestore (evita necesitar índice)
+    return events.sort((a, b) => {
+      const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+      const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+      return dateB.getTime() - dateA.getTime();
+    });
   } catch (error: any) {
-    throw new Error(error.message);
+    console.error('Error loading events:', error);
+    throw new Error(error.message || 'No se pudieron cargar los eventos');
   }
 };
 
@@ -292,6 +299,8 @@ export const addParticipant = async (
   userId?: string
 ): Promise<string> => {
   try {
+    console.log('📝 addParticipant called:', { eventId, name, individualBudget, email, userId });
+    
     const participantData: any = {
       eventId,
       name,
@@ -308,7 +317,9 @@ export const addParticipant = async (
       participantData.email = email;
     }
     
+    console.log('📤 Guardando participante en Firestore:', participantData);
     const docRef = await addDoc(collection(db, 'participants'), participantData);
+    console.log('✅ Participante guardado con ID:', docRef.id);
     
     // Actualizar el evento con el nuevo participante
     const event = await getEvent(eventId);
@@ -328,17 +339,22 @@ export const addParticipant = async (
  */
 export const getEventParticipants = async (eventId: string): Promise<Participant[]> => {
   try {
+    console.log('🔍 getEventParticipants - Buscando participantes para evento:', eventId);
     const q = query(
       collection(db, 'participants'),
       where('eventId', '==', eventId)
     );
     
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ 
+    const participants = querySnapshot.docs.map(doc => ({ 
       id: doc.id, 
       ...doc.data() 
     } as Participant));
+    
+    console.log('📊 Participantes encontrados:', participants.length, participants);
+    return participants;
   } catch (error: any) {
+    console.error('❌ Error al obtener participantes:', error);
     throw new Error(error.message);
   }
 };
@@ -451,18 +467,29 @@ const updateBalancesAfterExpense = async (
  */
 export const getEventExpenses = async (eventId: string): Promise<Expense[]> => {
   try {
+    console.log('🔍 getEventExpenses - Buscando gastos para evento:', eventId);
     const q = query(
       collection(db, 'expenses'),
-      where('eventId', '==', eventId),
-      orderBy('date', 'desc')
+      where('eventId', '==', eventId)
     );
     
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ 
+    const expenses = querySnapshot.docs.map(doc => ({ 
       id: doc.id, 
       ...doc.data() 
     } as Expense));
+    
+    // Ordenar en memoria para evitar índice compuesto
+    expenses.sort((a, b) => {
+      const dateA = a.date instanceof Date ? a.date : new Date(a.date);
+      const dateB = b.date instanceof Date ? b.date : new Date(b.date);
+      return dateB.getTime() - dateA.getTime();
+    });
+    
+    console.log('📊 Gastos encontrados:', expenses.length);
+    return expenses;
   } catch (error: any) {
+    console.error('❌ Error al obtener gastos:', error);
     throw new Error(error.message);
   }
 };

@@ -94,35 +94,47 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation }) => {
       return;
     }
 
+    // Filtrar participantes válidos (solo nombre es obligatorio)
     const validParticipants = participants.filter(
-      (p) => p.name.trim() && p.budget.trim()
+      (p) => p.name.trim()
     );
 
     if (validParticipants.length === 0) {
-      Alert.alert('Error', 'Debes agregar al menos un participante con presupuesto');
+      Alert.alert('Error', 'Debes agregar al menos un participante');
       return;
     }
 
-    // Validar presupuestos
+    // Validar presupuestos (solo si están definidos)
     for (const p of validParticipants) {
-      const budget = parseFloat(p.budget);
-      if (isNaN(budget) || budget < VALIDATION.MIN_AMOUNT || budget > VALIDATION.MAX_AMOUNT) {
-        Alert.alert(
-          'Error',
-          `El presupuesto debe estar entre ${VALIDATION.MIN_AMOUNT} y ${VALIDATION.MAX_AMOUNT}`
-        );
-        return;
+      if (p.budget.trim()) {
+        const budget = parseFloat(p.budget);
+        if (isNaN(budget) || budget < VALIDATION.MIN_AMOUNT || budget > VALIDATION.MAX_AMOUNT) {
+          Alert.alert(
+            'Error',
+            `El presupuesto debe estar entre ${VALIDATION.MIN_AMOUNT} y ${VALIDATION.MAX_AMOUNT}`
+          );
+          return;
+        }
       }
     }
 
     setLoading(true);
 
     try {
-      // Calcular presupuesto total
-      const totalBudget = validParticipants.reduce(
-        (sum, p) => sum + parseFloat(p.budget),
-        0
-      );
+      console.log('🎯 Creando evento con participantes:', validParticipants);
+      
+      // Calcular presupuesto total (usar presupuesto grupal o suma de individuales)
+      let totalBudget = 0;
+      if (groupBudget.trim()) {
+        totalBudget = parseFloat(groupBudget);
+      } else {
+        totalBudget = validParticipants.reduce(
+          (sum, p) => sum + (p.budget.trim() ? parseFloat(p.budget) : 0),
+          0
+        );
+      }
+
+      console.log('💰 Presupuesto total:', totalBudget);
 
       // Crear evento
       const eventId = await createEvent(
@@ -133,20 +145,28 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation }) => {
         description
       );
 
+      console.log('✅ Evento creado con ID:', eventId);
+
       // Agregar participantes
       for (const participant of validParticipants) {
-        await addParticipant(
+        const budget = participant.budget.trim() ? parseFloat(participant.budget) : 0;
+        console.log('👤 Agregando participante:', participant.name, 'con presupuesto:', budget);
+        const participantId = await addParticipant(
           eventId,
           participant.name,
-          parseFloat(participant.budget),
+          budget,
           participant.email
         );
+        console.log('✅ Participante agregado con ID:', participantId);
       }
 
       Alert.alert('¡Evento creado!', 'El evento se ha creado correctamente', [
         {
           text: 'OK',
-          onPress: () => navigation.navigate('EventDetail', { eventId }),
+          onPress: () => {
+            // Usar replace para evitar volver a CreateEvent
+            navigation.replace('EventDetail', { eventId });
+          },
         },
       ]);
     } catch (error: any) {
@@ -168,16 +188,15 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation }) => {
       </View>
       
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.keyboardView}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        enabled={Platform.OS === 'ios'}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
+          keyboardShouldPersistTaps="always"
           showsVerticalScrollIndicator={false}
           nestedScrollEnabled={true}
-          bounces={false}
         >
           <Text style={styles.title}>Crear nuevo evento</Text>
 
@@ -286,7 +305,7 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation }) => {
                 />
 
                 <Input
-                  label="Presupuesto individual *"
+                  label="Presupuesto individual (opcional)"
                   placeholder="0.00"
                   value={participant.budget}
                   onChangeText={(text) =>

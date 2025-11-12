@@ -30,6 +30,7 @@ export const useExpenses = (eventId: string) => {
    */
   const loadData = useCallback(async () => {
     try {
+      console.log('🔄 useExpenses - Cargando datos para evento:', eventId);
       setLoading(true);
       setError(null);
       
@@ -38,9 +39,15 @@ export const useExpenses = (eventId: string) => {
         getEventParticipants(eventId),
       ]);
       
+      console.log('📦 useExpenses - Datos cargados:', {
+        expenses: expensesData.length,
+        participants: participantsData.length
+      });
+      
       setExpenses(expensesData);
       setParticipants(participantsData);
     } catch (err: any) {
+      console.error('❌ useExpenses - Error:', err);
       setError(err.message || 'Error al cargar datos');
     } finally {
       setLoading(false);

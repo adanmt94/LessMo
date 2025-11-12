@@ -8,7 +8,7 @@ export default {
     userInterfaceStyle: "light",
     scheme: "lessmo",
     splash: {
-      image: "./assets/splash-icon.png",
+      image: "./assets/splash.png",
       resizeMode: "contain",
       backgroundColor: "#6366F1"
     },

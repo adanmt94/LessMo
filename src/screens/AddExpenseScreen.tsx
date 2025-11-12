@@ -47,9 +47,11 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
   const [category, setCategory] = useState<ExpenseCategory>('other');
   const [paidBy, setPaidBy] = useState('');
   const [selectedBeneficiaries, setSelectedBeneficiaries] = useState<string[]>([]);
+  const [splitType, setSplitType] = useState<'equal' | 'custom'>('equal');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    console.log('🔍 AddExpenseScreen - Participants:', participants.length, participants);
     if (participants.length > 0) {
       setPaidBy(participants[0].id);
       setSelectedBeneficiaries(participants.map((p) => p.id));
@@ -127,16 +129,15 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
       </View>
 
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.keyboardView}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        enabled={Platform.OS === 'ios'}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
+          keyboardShouldPersistTaps="always"
           showsVerticalScrollIndicator={false}
           nestedScrollEnabled={true}
-          bounces={false}
         >
           <Card>
             <Input
@@ -182,40 +183,83 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
             </View>
 
             <Text style={styles.label}>¿Quién pagó? *</Text>
-            <View style={styles.participantsList}>
-              {participants.map((participant) => (
-                <TouchableOpacity
-                  key={participant.id}
-                  style={[
-                    styles.participantButton,
-                    paidBy === participant.id && styles.participantButtonActive,
-                  ]}
-                  onPress={() => setPaidBy(participant.id)}
-                >
-                  <Text
+            {participants.length === 0 ? (
+              <Text style={styles.emptyText}>No hay participantes. Agrega participantes al evento primero.</Text>
+            ) : (
+              <View style={styles.participantsList}>
+                {participants.map((participant) => (
+                  <TouchableOpacity
+                    key={participant.id}
                     style={[
-                      styles.participantText,
-                      paidBy === participant.id && styles.participantTextActive,
+                      styles.participantButton,
+                      paidBy === participant.id && styles.participantButtonActive,
                     ]}
+                    onPress={() => setPaidBy(participant.id)}
                   >
-                    {participant.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                    <Text
+                      style={[
+                        styles.participantText,
+                        paidBy === participant.id && styles.participantTextActive,
+                      ]}
+                    >
+                      {participant.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            <Text style={styles.label}>Tipo de división *</Text>
+            <View style={styles.splitTypeContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.splitTypeButton,
+                  splitType === 'equal' && styles.splitTypeButtonActive,
+                ]}
+                onPress={() => setSplitType('equal')}
+              >
+                <Text
+                  style={[
+                    styles.splitTypeText,
+                    splitType === 'equal' && styles.splitTypeTextActive,
+                  ]}
+                >
+                  ⚖️ Equitativa
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.splitTypeButton,
+                  splitType === 'custom' && styles.splitTypeButtonActive,
+                ]}
+                onPress={() => setSplitType('custom')}
+              >
+                <Text
+                  style={[
+                    styles.splitTypeText,
+                    splitType === 'custom' && styles.splitTypeTextActive,
+                  ]}
+                >
+                  🎯 Personalizada
+                </Text>
+              </TouchableOpacity>
             </View>
 
-            <Text style={styles.label}>Beneficiarios * (división equitativa)</Text>
-            <View style={styles.beneficiariesList}>
-              {participants.map((participant) => (
-                <TouchableOpacity
-                  key={participant.id}
-                  style={[
-                    styles.beneficiaryButton,
-                    selectedBeneficiaries.includes(participant.id) &&
-                      styles.beneficiaryButtonActive,
-                  ]}
-                  onPress={() => toggleBeneficiary(participant.id)}
-                >
+            <Text style={styles.label}>Beneficiarios * {splitType === 'equal' ? '(división equitativa)' : '(personalizada)'}</Text>
+            {participants.length === 0 ? (
+              <Text style={styles.emptyText}>No hay participantes disponibles</Text>
+            ) : (
+              <View style={styles.beneficiariesList}>
+                {participants.map((participant) => (
+                  <TouchableOpacity
+                    key={participant.id}
+                    style={[
+                      styles.beneficiaryButton,
+                      selectedBeneficiaries.includes(participant.id) &&
+                        styles.beneficiaryButtonActive,
+                    ]}
+                    onPress={() => toggleBeneficiary(participant.id)}
+                  >
                   <View
                     style={[
                       styles.checkbox,
@@ -230,7 +274,8 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
                   <Text style={styles.beneficiaryText}>{participant.name}</Text>
                 </TouchableOpacity>
               ))}
-            </View>
+              </View>
+            )}
           </Card>
 
           <Button
@@ -369,5 +414,38 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#374151',
     fontWeight: '500',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    padding: 16,
+    fontStyle: 'italic',
+  },
+  splitTypeContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  splitTypeButton: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    alignItems: 'center',
+  },
+  splitTypeButtonActive: {
+    backgroundColor: '#EEF2FF',
+    borderColor: '#6366F1',
+  },
+  splitTypeText: {
+    fontSize: 15,
+    color: '#6B7280',
+    fontWeight: '600',
+  },
+  splitTypeTextActive: {
+    color: '#6366F1',
   },
 });
