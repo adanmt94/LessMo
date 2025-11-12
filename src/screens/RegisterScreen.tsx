@@ -72,13 +72,24 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
+      <View style={styles.headerBar}>
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+        >
+          <Text style={styles.backButtonText}>← Atrás</Text>
+        </TouchableOpacity>
+      </View>
+      
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
             <Text style={styles.logo}>💰</Text>
@@ -175,6 +186,20 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
+  },
+  headerBar: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#F9FAFB',
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButtonText: {
+    fontSize: 16,
+    color: '#6366F1',
+    fontWeight: '600',
   },
   keyboardView: {
     flex: 1,

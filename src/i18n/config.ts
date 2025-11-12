@@ -22,8 +22,15 @@ const resources = {
   pt: { translation: pt },
 };
 
-// Detectar idioma del dispositivo
-const deviceLanguage = Localization.getLocales()[0]?.languageCode || 'en';
+// Detectar idioma del dispositivo con región
+const locale = Localization.getLocales()[0];
+let deviceLanguage = locale?.languageCode || 'en';
+
+// Si es español y la región es España, asegurar que sea 'es'
+// Si detecta 'es-ES', 'es-MX', etc., todos usarán 'es'
+if (deviceLanguage.startsWith('es')) {
+  deviceLanguage = 'es';
+}
 
 i18n
   .use(initReactI18next)
@@ -31,7 +38,7 @@ i18n
     compatibilityJSON: 'v4',
     resources,
     lng: deviceLanguage, // Idioma inicial basado en el dispositivo
-    fallbackLng: 'en', // Idioma por defecto si no se encuentra el del dispositivo
+    fallbackLng: 'es', // Cambiado a español como fallback por defecto
     interpolation: {
       escapeValue: false, // React ya protege contra XSS
     },

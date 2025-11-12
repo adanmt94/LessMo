@@ -129,10 +129,13 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
+        keyboardVerticalOffset={0}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          nestedScrollEnabled={true}
         >
           <Card>
             <Input

@@ -21,6 +21,7 @@ export const useGoogleAuth = () => {
     androidClientId: Constants.expoConfig?.extra?.googleAndroidClientId,
     iosClientId: Constants.expoConfig?.extra?.googleIosClientId || Constants.expoConfig?.extra?.googleWebClientId,
     webClientId: Constants.expoConfig?.extra?.googleWebClientId,
+    language: 'es-ES', // Forzar español de España en Google Sign-In
   });
 
   useEffect(() => {

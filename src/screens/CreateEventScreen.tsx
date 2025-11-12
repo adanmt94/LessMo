@@ -160,10 +160,13 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation }) => {
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
+        keyboardVerticalOffset={0}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          nestedScrollEnabled={true}
         >
           <Text style={styles.title}>Crear nuevo evento</Text>
 
