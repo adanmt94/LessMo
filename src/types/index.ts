@@ -96,7 +96,7 @@ export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
   Home: undefined;
-  CreateEvent: undefined;
+  CreateEvent: { eventId?: string; mode?: 'create' | 'edit' } | undefined;
   EventDetail: { eventId: string };
   AddExpense: { eventId: string };
   ExpenseList: { eventId: string };

@@ -67,14 +67,26 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   const handleAddExpense = async () => {
+    console.log('💰 handleAddExpense - Iniciando registro de gasto');
+    console.log('📝 Datos del gasto:', {
+      description: description.trim(),
+      amount,
+      paidBy,
+      category,
+      selectedBeneficiaries: selectedBeneficiaries.length,
+      participantsAvailable: participants.length
+    });
+
     // Validaciones
     if (!description.trim()) {
+      console.log('❌ Error: Descripción vacía');
       Alert.alert('Error', 'La descripción es obligatoria');
       return;
     }
 
     const amountNum = parseFloat(amount);
     if (isNaN(amountNum) || amountNum < VALIDATION.MIN_AMOUNT || amountNum > VALIDATION.MAX_AMOUNT) {
+      console.log('❌ Error: Monto inválido', amountNum);
       Alert.alert(
         'Error',
         `El monto debe estar entre ${VALIDATION.MIN_AMOUNT} y ${VALIDATION.MAX_AMOUNT}`
@@ -83,15 +95,18 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
     }
 
     if (!paidBy) {
+      console.log('❌ Error: No hay pagador seleccionado');
       Alert.alert('Error', 'Selecciona quién pagó');
       return;
     }
 
     if (selectedBeneficiaries.length === 0) {
+      console.log('❌ Error: No hay beneficiarios seleccionados');
       Alert.alert('Error', 'Selecciona al menos un beneficiario');
       return;
     }
 
+    console.log('✅ Validaciones pasadas, guardando gasto...');
     setLoading(true);
 
     try {
@@ -103,15 +118,22 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
         selectedBeneficiaries
       );
 
+      console.log('📊 Resultado addExpense:', success);
+
       if (success) {
+        console.log('✅ Gasto registrado exitosamente');
         Alert.alert('¡Gasto agregado!', 'El gasto se ha registrado correctamente', [
           {
             text: 'OK',
             onPress: () => navigation.goBack(),
           },
         ]);
+      } else {
+        console.log('❌ addExpense retornó false');
+        Alert.alert('Error', 'No se pudo registrar el gasto');
       }
     } catch (error: any) {
+      console.error('❌ Error al agregar gasto:', error);
       Alert.alert('Error', error.message || 'No se pudo agregar el gasto');
     } finally {
       setLoading(false);

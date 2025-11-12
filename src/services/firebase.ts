@@ -391,6 +391,16 @@ export const createExpense = async (
   customSplits?: { [participantId: string]: number }
 ): Promise<string> => {
   try {
+    console.log('💾 createExpense - Iniciando creación de gasto:', {
+      eventId,
+      paidBy,
+      amount,
+      description,
+      category,
+      beneficiaries,
+      splitType
+    });
+
     const expenseData: Omit<Expense, 'id'> = {
       eventId,
       paidBy,
@@ -404,13 +414,38 @@ export const createExpense = async (
       createdAt: new Date(),
     };
     
-    const docRef = await addDoc(collection(db, 'expenses'), expenseData);
+    // Filtrar campos undefined antes de guardar
+    const cleanExpenseData: any = {
+      eventId: expenseData.eventId,
+      paidBy: expenseData.paidBy,
+      amount: expenseData.amount,
+      description: expenseData.description,
+      category: expenseData.category,
+      date: expenseData.date,
+      beneficiaries: expenseData.beneficiaries,
+      splitType: expenseData.splitType,
+      createdAt: expenseData.createdAt,
+    };
+    
+    // Solo agregar customSplits si existe
+    if (customSplits && splitType === 'custom') {
+      cleanExpenseData.customSplits = customSplits;
+    }
+    
+    console.log('📝 createExpense - Guardando en Firestore (limpio):', cleanExpenseData);
+    const docRef = await addDoc(collection(db, 'expenses'), cleanExpenseData);
+    console.log('✅ createExpense - Gasto guardado con ID:', docRef.id);
     
     // Actualizar balances de participantes
+    console.log('💰 createExpense - Actualizando balances de participantes...');
     await updateBalancesAfterExpense(paidBy, amount, beneficiaries, splitType, customSplits);
+    console.log('✅ createExpense - Balances actualizados correctamente');
     
     return docRef.id;
   } catch (error: any) {
+    console.error('❌ createExpense - Error:', error);
+    console.error('❌ createExpense - Error message:', error.message);
+    console.error('❌ createExpense - Error stack:', error.stack);
     throw new Error(error.message);
   }
 };
@@ -426,38 +461,59 @@ const updateBalancesAfterExpense = async (
   customSplits?: { [participantId: string]: number }
 ): Promise<void> => {
   try {
+    console.log('🔄 updateBalancesAfterExpense - Iniciando:', {
+      paidBy,
+      amount,
+      beneficiaries,
+      splitType
+    });
+
     const batch = writeBatch(db);
     
     if (splitType === 'equal') {
       const splitAmount = amount / beneficiaries.length;
+      console.log('⚖️ División equitativa - Monto por persona:', splitAmount);
       
       for (const beneficiaryId of beneficiaries) {
+        console.log('📊 Actualizando balance de participante:', beneficiaryId);
         const participantDoc = await getDoc(doc(db, 'participants', beneficiaryId));
         
         if (participantDoc.exists()) {
           const participant = participantDoc.data() as Participant;
           const newBalance = participant.currentBalance - splitAmount;
+          console.log(`💰 Balance anterior: ${participant.currentBalance}, nuevo: ${newBalance}`);
           batch.update(doc(db, 'participants', beneficiaryId), {
             currentBalance: newBalance
           });
+        } else {
+          console.warn('⚠️ Participante no encontrado:', beneficiaryId);
         }
       }
     } else if (splitType === 'custom' && customSplits) {
+      console.log('🎯 División personalizada:', customSplits);
       for (const [beneficiaryId, splitAmount] of Object.entries(customSplits)) {
+        console.log('📊 Actualizando balance de participante:', beneficiaryId, 'monto:', splitAmount);
         const participantDoc = await getDoc(doc(db, 'participants', beneficiaryId));
         
         if (participantDoc.exists()) {
           const participant = participantDoc.data() as Participant;
           const newBalance = participant.currentBalance - splitAmount;
+          console.log(`💰 Balance anterior: ${participant.currentBalance}, nuevo: ${newBalance}`);
           batch.update(doc(db, 'participants', beneficiaryId), {
             currentBalance: newBalance
           });
+        } else {
+          console.warn('⚠️ Participante no encontrado:', beneficiaryId);
         }
       }
     }
     
+    console.log('📦 Ejecutando batch commit...');
     await batch.commit();
+    console.log('✅ updateBalancesAfterExpense - Completado');
   } catch (error: any) {
+    console.error('❌ updateBalancesAfterExpense - Error:', error);
+    console.error('❌ updateBalancesAfterExpense - Stack:', error.stack);
     throw new Error(error.message);
   }
 };

@@ -18,9 +18,14 @@ export const ParticipantItem: React.FC<ParticipantItemProps> = ({
   currency,
 }) => {
   const currencySymbol = CurrencySymbols[currency];
-  const balancePercentage = (participant.currentBalance / participant.individualBudget) * 100;
+  
+  // Calcular porcentaje - manejar caso cuando individualBudget es 0
+  const balancePercentage = participant.individualBudget > 0 
+    ? (participant.currentBalance / participant.individualBudget) * 100 
+    : 0;
   
   const getBalanceColor = () => {
+    if (participant.individualBudget === 0) return '#6B7280'; // Gris si no hay presupuesto
     if (balancePercentage > 50) return '#10B981'; // Verde
     if (balancePercentage > 20) return '#F59E0B'; // Naranja
     return '#EF4444'; // Rojo
@@ -73,7 +78,9 @@ export const ParticipantItem: React.FC<ParticipantItemProps> = ({
         />
       </View>
       <Text style={styles.percentageText}>
-        {balancePercentage.toFixed(0)}% restante
+        {participant.individualBudget > 0 
+          ? `${balancePercentage.toFixed(0)}% restante`
+          : 'Sin presupuesto asignado'}
       </Text>
     </Card>
   );

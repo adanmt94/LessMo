@@ -111,8 +111,24 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
     </View>
   );
 
+  const handleEditParticipants = () => {
+    console.log('✏️ Editando participantes del evento:', eventId);
+    navigation.navigate('CreateEvent', { 
+      eventId,
+      mode: 'edit'
+    });
+  };
+
   const renderParticipants = () => (
     <View style={styles.tabContent}>
+      <View style={styles.editParticipantsContainer}>
+        <Button
+          title="✏️ Editar participantes"
+          onPress={handleEditParticipants}
+          variant="outline"
+          fullWidth
+        />
+      </View>
       <ScrollView
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
@@ -375,6 +391,12 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'right',
     marginBottom: 16,
+  },
+  editParticipantsContainer: {
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
   fabContainer: {
     position: 'absolute',

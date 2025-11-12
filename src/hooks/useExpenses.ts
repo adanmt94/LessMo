@@ -71,8 +71,9 @@ export const useExpenses = (eventId: string) => {
     customSplits?: { [participantId: string]: number }
   ): Promise<boolean> => {
     try {
+      console.log('🚀 useExpenses.addExpense - Llamando a createExpense...');
       setError(null);
-      await createExpense(
+      const expenseId = await createExpense(
         eventId,
         paidBy,
         amount,
@@ -82,9 +83,15 @@ export const useExpenses = (eventId: string) => {
         splitType,
         customSplits
       );
+      console.log('✅ useExpenses.addExpense - Gasto creado con ID:', expenseId);
+      console.log('🔄 useExpenses.addExpense - Recargando datos...');
       await loadData(); // Recargar datos
+      console.log('✅ useExpenses.addExpense - Datos recargados correctamente');
       return true;
     } catch (err: any) {
+      console.error('❌ useExpenses.addExpense - Error capturado:', err);
+      console.error('❌ useExpenses.addExpense - Error message:', err.message);
+      console.error('❌ useExpenses.addExpense - Error stack:', err.stack);
       setError(err.message || 'Error al crear gasto');
       return false;
     }
