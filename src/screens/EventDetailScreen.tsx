@@ -44,6 +44,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
     getTotalExpenses,
     getRemainingBalance,
     getParticipantById,
+    getParticipantBalances,
   } = useExpenses(eventId);
 
   useEffect(() => {
@@ -171,7 +172,6 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const renderParticipants = () => {
     // Calcular balances de participantes basado en gastos
-    const {getParticipantBalances} = useExpenses(eventId);
     const participantBalances = getParticipantBalances();
 
     return (
