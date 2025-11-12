@@ -89,7 +89,7 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
     try {
       setExporting(true);
       const totalExpenses = getTotalExpenses();
-      const remainingBalance = getRemainingBalance();
+      const remainingBalance = getRemainingBalance(event!.initialBudget);
       const settlements = calculateSettlements();
       const currencySymbol = CurrencySymbols[event!.currency];
 
@@ -137,7 +137,7 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const currencySymbol = CurrencySymbols[event.currency];
   const totalExpenses = getTotalExpenses();
-  const remainingBalance = getRemainingBalance();
+  const remainingBalance = getRemainingBalance(event.initialBudget);
   const expensesByCategory = getExpensesByCategory();
   const participantBalances = getParticipantBalances();
   const settlements = calculateSettlements();

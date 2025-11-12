@@ -102,7 +102,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const currencySymbol = CurrencySymbols[event.currency];
   const totalExpenses = getTotalExpenses();
-  const remainingBalance = getRemainingBalance();
+  const remainingBalance = getRemainingBalance(event.initialBudget);
 
   const renderExpenses = () => (
     <View style={styles.tabContent}>

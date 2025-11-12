@@ -160,10 +160,14 @@ export const useExpenses = (eventId: string) => {
 
   /**
    * Calcular saldo restante total
+   * Si se proporciona eventBudget, se usa ese; si no, suma individualBudget de participantes
    */
-  const getRemainingBalance = (): number => {
-    const totalBudget = participants.reduce((sum, p) => sum + p.individualBudget, 0);
+  const getRemainingBalance = (eventBudget?: number): number => {
+    const totalBudget = eventBudget !== undefined 
+      ? eventBudget 
+      : participants.reduce((sum, p) => sum + p.individualBudget, 0);
     const totalSpent = getTotalExpenses();
+    console.log('💰 getRemainingBalance - Budget:', totalBudget, 'Gastado:', totalSpent, 'Restante:', totalBudget - totalSpent);
     return totalBudget - totalSpent;
   };
 
