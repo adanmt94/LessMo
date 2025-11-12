@@ -11,13 +11,23 @@ import { Card } from './Card';
 interface ParticipantItemProps {
   participant: Participant;
   currency: Currency;
+  totalPaid?: number;
+  totalOwed?: number;
+  balance?: number;
 }
 
 export const ParticipantItem: React.FC<ParticipantItemProps> = ({
   participant,
   currency,
+  totalPaid,
+  totalOwed,
+  balance,
 }) => {
   const currencySymbol = CurrencySymbols[currency];
+  
+  // Si tenemos balance calculado (desde el resumen de gastos), usarlo
+  // Si no, usar el sistema de presupuesto individual
+  const showBalanceMode = balance !== undefined && totalPaid !== undefined && totalOwed !== undefined;
   
   // Calcular porcentaje - manejar caso cuando individualBudget es 0
   const balancePercentage = participant.individualBudget > 0 
@@ -25,6 +35,9 @@ export const ParticipantItem: React.FC<ParticipantItemProps> = ({
     : 0;
   
   const getBalanceColor = () => {
+    if (showBalanceMode) {
+      return balance! >= 0 ? '#10B981' : '#EF4444';
+    }
     if (participant.individualBudget === 0) return '#6B7280'; // Gris si no hay presupuesto
     if (balancePercentage > 50) return '#10B981'; // Verde
     if (balancePercentage > 20) return '#F59E0B'; // Naranja
@@ -50,38 +63,76 @@ export const ParticipantItem: React.FC<ParticipantItemProps> = ({
       </View>
 
       <View style={styles.budgetContainer}>
-        <View style={styles.budgetRow}>
-          <Text style={styles.budgetLabel}>Presupuesto inicial</Text>
-          <Text style={styles.budgetValue}>
-            {currencySymbol}{participant.individualBudget.toFixed(2)}
-          </Text>
-        </View>
+        {showBalanceMode ? (
+          <>
+            <View style={styles.budgetRow}>
+              <Text style={styles.budgetLabel}>Pagó</Text>
+              <Text style={styles.budgetValue}>
+                {currencySymbol}{totalPaid!.toFixed(2)}
+              </Text>
+            </View>
 
-        <View style={styles.budgetRow}>
-          <Text style={styles.budgetLabel}>Saldo actual</Text>
-          <Text style={[styles.budgetValue, { color: getBalanceColor() }]}>
-            {currencySymbol}{participant.currentBalance.toFixed(2)}
-          </Text>
-        </View>
-      </View>
+            <View style={styles.budgetRow}>
+              <Text style={styles.budgetLabel}>Debe</Text>
+              <Text style={styles.budgetValue}>
+                {currencySymbol}{totalOwed!.toFixed(2)}
+              </Text>
+            </View>
 
-      {/* Barra de progreso */}
-      <View style={styles.progressBarContainer}>
-        <View
-          style={[
-            styles.progressBar,
-            {
-              width: `${Math.max(0, Math.min(100, balancePercentage))}%`,
-              backgroundColor: getBalanceColor(),
-            },
-          ]}
-        />
+            <View style={styles.divider} />
+
+            <View style={styles.budgetRow}>
+              <Text style={styles.budgetLabelBold}>Balance</Text>
+              <Text style={[styles.budgetValueBold, { color: getBalanceColor() }]}>
+                {balance! >= 0 ? '+' : ''}
+                {currencySymbol}{balance!.toFixed(2)}
+              </Text>
+            </View>
+
+            <Text style={styles.balanceDescription}>
+              {balance! > 0 
+                ? '💰 Le deben dinero' 
+                : balance! < 0 
+                  ? '💸 Tiene deudas pendientes'
+                  : '✅ Está a mano'}
+            </Text>
+          </>
+        ) : (
+          <>
+            <View style={styles.budgetRow}>
+              <Text style={styles.budgetLabel}>Presupuesto inicial</Text>
+              <Text style={styles.budgetValue}>
+                {currencySymbol}{participant.individualBudget.toFixed(2)}
+              </Text>
+            </View>
+
+            <View style={styles.budgetRow}>
+              <Text style={styles.budgetLabel}>Saldo actual</Text>
+              <Text style={[styles.budgetValue, { color: getBalanceColor() }]}>
+                {currencySymbol}{participant.currentBalance.toFixed(2)}
+              </Text>
+            </View>
+
+            {/* Barra de progreso */}
+            <View style={styles.progressBarContainer}>
+              <View
+                style={[
+                  styles.progressBar,
+                  {
+                    width: `${Math.max(0, Math.min(100, balancePercentage))}%`,
+                    backgroundColor: getBalanceColor(),
+                  },
+                ]}
+              />
+            </View>
+            <Text style={styles.percentageText}>
+              {participant.individualBudget > 0 
+                ? `${balancePercentage.toFixed(0)}% restante`
+                : 'Sin presupuesto asignado'}
+            </Text>
+          </>
+        )}
       </View>
-      <Text style={styles.percentageText}>
-        {participant.individualBudget > 0 
-          ? `${balancePercentage.toFixed(0)}% restante`
-          : 'Sin presupuesto asignado'}
-      </Text>
     </Card>
   );
 };
@@ -140,6 +191,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#111827',
+  },
+  budgetLabelBold: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  budgetValueBold: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#E5E7EB',
+    marginVertical: 8,
+  },
+  balanceDescription: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginTop: 8,
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
   progressBarContainer: {
     height: 8,

@@ -169,29 +169,41 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
     });
   };
 
-  const renderParticipants = () => (
-    <View style={styles.tabContent}>
-      <View style={styles.editParticipantsContainer}>
-        <Button
-          title="✏️ Editar participantes"
-          onPress={handleEditParticipants}
-          variant="outline"
-          fullWidth
-        />
-      </View>
-      <ScrollView
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      >
-        {participants.map((participant) => (
-          <ParticipantItem
-            key={participant.id}
-            participant={participant}
-            currency={event.currency}
+  const renderParticipants = () => {
+    // Calcular balances de participantes basado en gastos
+    const {getParticipantBalances} = useExpenses(eventId);
+    const participantBalances = getParticipantBalances();
+
+    return (
+      <View style={styles.tabContent}>
+        <View style={styles.editParticipantsContainer}>
+          <Button
+            title="✏️ Editar participantes"
+            onPress={handleEditParticipants}
+            variant="outline"
+            fullWidth
           />
-        ))}
-      </ScrollView>
-    </View>
-  );
+        </View>
+        <ScrollView
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        >
+          {participants.map((participant) => {
+            const balance = participantBalances.find(b => b.participantId === participant.id);
+            return (
+              <ParticipantItem
+                key={participant.id}
+                participant={participant}
+                currency={event.currency}
+                totalPaid={balance?.totalPaid}
+                totalOwed={balance?.totalOwed}
+                balance={balance?.balance}
+              />
+            );
+          })}
+        </ScrollView>
+      </View>
+    );
+  };
 
   const renderSummary = () => {
     const percentageSpent = event.initialBudget > 0 
