@@ -65,6 +65,31 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
     setRefreshing(false);
   };
 
+  const handleDeleteExpense = async (expenseId: string) => {
+    Alert.alert(
+      'Confirmar eliminación',
+      '¿Estás seguro de que quieres eliminar este gasto? Esta acción no se puede deshacer.',
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel'
+        },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // TODO: Implementar función deleteExpense que revierta los balances
+              Alert.alert('Aviso', 'La eliminación de gastos aún no está implementada completamente. Se agregará pronto.');
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'No se pudo eliminar el gasto');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   if (!event) {
     return (
       <SafeAreaView style={styles.container}>
@@ -103,6 +128,28 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
                 expense={expense}
                 participantName={participant?.name || 'Desconocido'}
                 currency={event.currency}
+                onPress={() => {
+                  Alert.alert(
+                    'Editar gasto',
+                    '¿Qué deseas hacer?',
+                    [
+                      {
+                        text: 'Cancelar',
+                        style: 'cancel'
+                      },
+                      {
+                        text: 'Eliminar',
+                        style: 'destructive',
+                        onPress: () => handleDeleteExpense(expense.id)
+                      },
+                      // TODO: Implementar edición completa
+                      // {
+                      //   text: 'Editar',
+                      //   onPress: () => navigation.navigate('EditExpense', { expenseId: expense.id, eventId })
+                      // }
+                    ]
+                  );
+                }}
               />
             );
           })}

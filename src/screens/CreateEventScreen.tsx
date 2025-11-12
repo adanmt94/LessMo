@@ -2,7 +2,7 @@
  * CreateEventScreen - Pantalla para crear nuevo evento
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,15 +15,18 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList, Currency, VALIDATION } from '../types';
 import { Button, Input, Card } from '../components/lovable';
-import { createEvent, addParticipant } from '../services/firebase';
+import { createEvent, addParticipant, getEvent, getEventParticipants } from '../services/firebase';
 import { useAuth } from '../hooks/useAuth';
 
 type CreateEventScreenNavigationProp = StackNavigationProp<RootStackParamList, 'CreateEvent'>;
+type CreateEventScreenRouteProp = RouteProp<RootStackParamList, 'CreateEvent'>;
 
 interface Props {
   navigation: CreateEventScreenNavigationProp;
+  route: CreateEventScreenRouteProp;
 }
 
 interface ParticipantInput {
@@ -44,8 +47,11 @@ const CURRENCIES: { value: Currency; label: string }[] = [
   { value: 'BRL', label: 'R$ Real' },
 ];
 
-export const CreateEventScreen: React.FC<Props> = ({ navigation }) => {
+export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
   const { user } = useAuth();
+  const { eventId, mode } = route.params || {};
+  const isEditMode = mode === 'edit' && eventId;
+  
   const [eventName, setEventName] = useState('');
   const [description, setDescription] = useState('');
   const [groupBudget, setGroupBudget] = useState('');
@@ -55,6 +61,48 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation }) => {
     { id: '1', name: '', budget: '' },
   ]);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(isEditMode);
+
+  // Cargar datos del evento si estamos en modo edición
+  useEffect(() => {
+    if (isEditMode) {
+      loadEventData();
+    }
+  }, [eventId, mode]);
+
+  const loadEventData = async () => {
+    try {
+      setInitialLoading(true);
+      const [eventData, participantsData] = await Promise.all([
+        getEvent(eventId!),
+        getEventParticipants(eventId!)
+      ]);
+
+      if (eventData) {
+        setEventName(eventData.name);
+        setDescription(eventData.description || '');
+        setGroupBudget(eventData.initialBudget.toString());
+        setCurrency(eventData.currency);
+        
+        // Cargar participantes existentes
+        if (participantsData.length > 0) {
+          setParticipants(
+            participantsData.map(p => ({
+              id: p.id,
+              name: p.name,
+              budget: p.individualBudget.toString(),
+              email: p.email
+            }))
+          );
+        }
+      }
+    } catch (error: any) {
+      Alert.alert('Error', 'No se pudieron cargar los datos del evento');
+      navigation.goBack();
+    } finally {
+      setInitialLoading(false);
+    }
+  };
 
   const addParticipantField = () => {
     if (participants.length >= VALIDATION.MAX_PARTICIPANTS) {
@@ -187,6 +235,16 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
+  if (initialLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text>Cargando datos del evento...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.headerBar}>
@@ -209,7 +267,9 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation }) => {
           showsVerticalScrollIndicator={false}
           nestedScrollEnabled={true}
         >
-          <Text style={styles.title}>Crear nuevo evento</Text>
+          <Text style={styles.title}>
+            {isEditMode ? 'Editar participantes' : 'Crear nuevo evento'}
+          </Text>
 
           <Card style={styles.section}>
             <Text style={styles.sectionTitle}>Información del evento</Text>
@@ -222,6 +282,7 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation }) => {
               maxLength={VALIDATION.MAX_EVENT_NAME_LENGTH}
               autoCapitalize="words"
               autoCorrect={true}
+              editable={!isEditMode}
             />
 
             <Input
@@ -230,6 +291,7 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation }) => {
               value={description}
               onChangeText={setDescription}
               multiline
+              editable={!isEditMode}
               numberOfLines={3}
               maxLength={VALIDATION.MAX_DESCRIPTION_LENGTH}
               autoCapitalize="sentences"
@@ -242,12 +304,14 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation }) => {
               value={groupBudget}
               onChangeText={setGroupBudget}
               keyboardType="decimal-pad"
+              editable={!isEditMode}
             />
 
             <Text style={styles.label}>Moneda *</Text>
             <TouchableOpacity
               style={styles.currencySelector}
-              onPress={() => setShowCurrencyPicker(!showCurrencyPicker)}
+              onPress={() => !isEditMode && setShowCurrencyPicker(!showCurrencyPicker)}
+              disabled={!!isEditMode}
             >
               <Text style={styles.currencyText}>
                 {CURRENCIES.find((c) => c.value === currency)?.label}
@@ -343,12 +407,18 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation }) => {
           </Card>
 
           <Button
-            title="Crear evento"
+            title={isEditMode ? "Guardar cambios" : "Crear evento"}
             onPress={handleCreateEvent}
             loading={loading}
             fullWidth
             size="large"
           />
+          
+          {isEditMode && (
+            <Text style={styles.editModeNote}>
+              💡 En modo edición solo puedes agregar/quitar participantes. Para cambiar el nombre o presupuesto del evento, ve a la pantalla principal.
+            </Text>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -359,6 +429,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerBar: {
     paddingHorizontal: 20,
@@ -477,5 +552,12 @@ const styles = StyleSheet.create({
     color: '#EF4444',
     fontSize: 20,
     fontWeight: '600',
+  },
+  editModeNote: {
+    marginTop: 16,
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });
