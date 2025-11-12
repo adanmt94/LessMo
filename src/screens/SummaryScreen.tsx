@@ -37,6 +37,7 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
   const { eventId } = route.params;
   const [event, setEvent] = useState<Event | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [expandedParticipant, setExpandedParticipant] = useState<string | null>(null);
   const viewShotRef = useRef<ViewShot>(null);
 
   const {
@@ -141,6 +142,47 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
   const expensesByCategory = getExpensesByCategory();
   const participantBalances = getParticipantBalances();
   const settlements = calculateSettlements();
+
+  // Función para obtener el desglose de gastos de un participante
+  const getParticipantExpenseBreakdown = (participantId: string) => {
+    const paid: Array<{ description: string; amount: number; category: string }> = [];
+    const owes: Array<{ description: string; amount: number; from: string; category: string }> = [];
+
+    expenses.forEach((expense) => {
+      // Gastos que pagó este participante
+      if (expense.paidBy === participantId) {
+        paid.push({
+          description: expense.description,
+          amount: expense.amount,
+          category: expense.category,
+        });
+      }
+
+      // Gastos en los que es beneficiario
+      if (expense.beneficiaries.includes(participantId)) {
+        const payer = getParticipantById(expense.paidBy);
+        let owedAmount = 0;
+
+        if (expense.splitType === 'custom' && expense.customSplits) {
+          owedAmount = expense.customSplits[participantId] || 0;
+        } else {
+          owedAmount = expense.amount / expense.beneficiaries.length;
+        }
+
+        // Solo agregar si no es el que pagó (para no mostrar que se debe a sí mismo)
+        if (expense.paidBy !== participantId) {
+          owes.push({
+            description: expense.description,
+            amount: owedAmount,
+            from: payer?.name || 'Desconocido',
+            category: expense.category,
+          });
+        }
+      }
+    });
+
+    return { paid, owes };
+  };
 
   // Datos para el gráfico de pastel
   const chartData = expensesByCategory.map((item) => ({
@@ -256,38 +298,95 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
         <Card style={styles.card}>
           <Text style={styles.cardTitle}>👥 Balance de participantes</Text>
           
-          {participantBalances.map((balance) => (
-            <View key={balance.participantId} style={styles.balanceItem}>
-              <Text style={styles.balanceName}>{balance.participantName}</Text>
-              
-              <View style={styles.balanceDetails}>
-                <View style={styles.balanceRow}>
-                  <Text style={styles.balanceLabel}>Pagó:</Text>
-                  <Text style={styles.balanceAmount}>
-                    {currencySymbol}{balance.totalPaid.toFixed(2)}
-                  </Text>
+          {participantBalances.map((balance) => {
+            const breakdown = getParticipantExpenseBreakdown(balance.participantId);
+            const isExpanded = expandedParticipant === balance.participantId;
+
+            return (
+              <View key={balance.participantId} style={styles.balanceItem}>
+                <TouchableOpacity
+                  onPress={() => setExpandedParticipant(isExpanded ? null : balance.participantId)}
+                  style={styles.balanceHeader}
+                >
+                  <View style={styles.balanceHeaderContent}>
+                    <Text style={styles.balanceName}>{balance.participantName}</Text>
+                    <Text style={styles.expandIcon}>{isExpanded ? '▼' : '▶'}</Text>
+                  </View>
+                </TouchableOpacity>
+                
+                <View style={styles.balanceDetails}>
+                  <View style={styles.balanceRow}>
+                    <Text style={styles.balanceLabel}>Pagó:</Text>
+                    <Text style={styles.balanceAmount}>
+                      {currencySymbol}{balance.totalPaid.toFixed(2)}
+                    </Text>
+                  </View>
+                  <View style={styles.balanceRow}>
+                    <Text style={styles.balanceLabel}>Debe:</Text>
+                    <Text style={styles.balanceAmount}>
+                      {currencySymbol}{balance.totalOwed.toFixed(2)}
+                    </Text>
+                  </View>
+                  <View style={styles.balanceRow}>
+                    <Text style={styles.balanceLabelBold}>Balance:</Text>
+                    <Text
+                      style={[
+                        styles.balanceAmountBold,
+                        { color: balance.balance >= 0 ? '#10B981' : '#EF4444' },
+                      ]}
+                    >
+                      {balance.balance >= 0 ? '+' : ''}
+                      {currencySymbol}{balance.balance.toFixed(2)}
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.balanceRow}>
-                  <Text style={styles.balanceLabel}>Debe:</Text>
-                  <Text style={styles.balanceAmount}>
-                    {currencySymbol}{balance.totalOwed.toFixed(2)}
-                  </Text>
-                </View>
-                <View style={styles.balanceRow}>
-                  <Text style={styles.balanceLabelBold}>Balance:</Text>
-                  <Text
-                    style={[
-                      styles.balanceAmountBold,
-                      { color: balance.balance >= 0 ? '#10B981' : '#EF4444' },
-                    ]}
-                  >
-                    {balance.balance >= 0 ? '+' : ''}
-                    {currencySymbol}{balance.balance.toFixed(2)}
-                  </Text>
-                </View>
+
+                {/* Desglose detallado */}
+                {isExpanded && (
+                  <View style={styles.breakdownContainer}>
+                    {/* Gastos pagados */}
+                    {breakdown.paid.length > 0 && (
+                      <View style={styles.breakdownSection}>
+                        <Text style={styles.breakdownTitle}>💳 Gastos pagados:</Text>
+                        {breakdown.paid.map((item, index) => (
+                          <View key={`paid-${index}`} style={styles.breakdownItem}>
+                            <Text style={styles.breakdownDescription}>
+                              {CategoryLabels[item.category as keyof typeof CategoryLabels]} {item.description}
+                            </Text>
+                            <Text style={styles.breakdownAmount}>
+                              +{currencySymbol}{item.amount.toFixed(2)}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+
+                    {/* Gastos que debe */}
+                    {breakdown.owes.length > 0 && (
+                      <View style={styles.breakdownSection}>
+                        <Text style={styles.breakdownTitle}>💸 Debe por gastos:</Text>
+                        {breakdown.owes.map((item, index) => (
+                          <View key={`owes-${index}`} style={styles.breakdownItem}>
+                            <View style={styles.breakdownTextContainer}>
+                              <Text style={styles.breakdownDescription}>
+                                {CategoryLabels[item.category as keyof typeof CategoryLabels]} {item.description}
+                              </Text>
+                              <Text style={styles.breakdownFrom}>
+                                (pagado por {item.from})
+                              </Text>
+                            </View>
+                            <Text style={[styles.breakdownAmount, styles.breakdownDebt]}>
+                              -{currencySymbol}{item.amount.toFixed(2)}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                )}
               </View>
-            </View>
-          ))}
+            );
+          })}
         </Card>
 
         {/* Liquidaciones sugeridas */}
@@ -460,11 +559,22 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
   },
+  balanceHeader: {
+    marginBottom: 8,
+  },
+  balanceHeaderContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   balanceName: {
     fontSize: 16,
     fontWeight: '600',
     color: '#111827',
-    marginBottom: 8,
+  },
+  expandIcon: {
+    fontSize: 14,
+    color: '#6B7280',
   },
   balanceDetails: {
     marginLeft: 8,
@@ -518,5 +628,50 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: 16,
     gap: 8,
+  },
+  breakdownContainer: {
+    marginTop: 12,
+    marginLeft: 8,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    padding: 12,
+  },
+  breakdownSection: {
+    marginBottom: 12,
+  },
+  breakdownTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  breakdownItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 6,
+    paddingLeft: 8,
+  },
+  breakdownTextContainer: {
+    flex: 1,
+    marginRight: 8,
+  },
+  breakdownDescription: {
+    fontSize: 13,
+    color: '#6B7280',
+  },
+  breakdownFrom: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    fontStyle: 'italic',
+    marginTop: 2,
+  },
+  breakdownAmount: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#10B981',
+  },
+  breakdownDebt: {
+    color: '#EF4444',
   },
 });
