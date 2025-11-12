@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "364537925711",
+    "project_id": "lessmo-9023f",
+    "storage_bucket": "lessmo-9023f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:364537925711:android:6e2bdb637106c835905a3a",
+        "android_client_info": {
+          "package_name": "com.lessmo.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "364537925711-f72ngqui0ncaoedmckhtd9rm5ndhcbt5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBuHRnfCWi2aDP_qFfyhomugXYqSLOTwMo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "364537925711-f72ngqui0ncaoedmckhtd9rm5ndhcbt5.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

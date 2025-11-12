@@ -20,7 +20,7 @@ export default {
       googleServicesFile: "./GoogleService-Info.plist",
       config: {
         googleSignIn: {
-          reservedClientId: "com.googleusercontent.apps.364537925711-9i60g88gd4jrnh1r24bdg80hn6ub90hb"
+          reservedClientId: "com.googleusercontent.apps.364537925711-vtgqi80bk7i7f3ioqo8gilafo7hjj0vc"
         }
       }
     },
