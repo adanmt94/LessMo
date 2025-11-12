@@ -26,7 +26,20 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({
   const currencySymbol = CurrencySymbols[currency];
 
   const formatDate = (date: Date) => {
-    const d = new Date(date);
+    // Manejar timestamps de Firestore
+    let d: Date;
+    if (date && typeof date === 'object' && 'seconds' in date) {
+      // Es un Timestamp de Firestore
+      d = new Date((date as any).seconds * 1000);
+    } else {
+      d = new Date(date);
+    }
+    
+    // Verificar si la fecha es válida
+    if (isNaN(d.getTime())) {
+      return 'Fecha inválida';
+    }
+    
     return d.toLocaleDateString('es-ES', { 
       day: 'numeric', 
       month: 'short',
