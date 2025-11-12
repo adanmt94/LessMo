@@ -48,6 +48,7 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation }) => {
   const { user } = useAuth();
   const [eventName, setEventName] = useState('');
   const [description, setDescription] = useState('');
+  const [groupBudget, setGroupBudget] = useState('');
   const [currency, setCurrency] = useState<Currency>('EUR');
   const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
   const [participants, setParticipants] = useState<ParticipantInput[]>([
@@ -157,16 +158,26 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
+      <View style={styles.headerBar}>
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+        >
+          <Text style={styles.backButtonText}>← Atrás</Text>
+        </TouchableOpacity>
+      </View>
+      
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
-        keyboardVerticalOffset={0}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           nestedScrollEnabled={true}
+          bounces={false}
         >
           <Text style={styles.title}>Crear nuevo evento</Text>
 
@@ -193,6 +204,14 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation }) => {
               maxLength={VALIDATION.MAX_DESCRIPTION_LENGTH}
               autoCapitalize="sentences"
               autoCorrect={true}
+            />
+
+            <Input
+              label="Presupuesto grupal total (opcional)"
+              placeholder="0.00"
+              value={groupBudget}
+              onChangeText={setGroupBudget}
+              keyboardType="decimal-pad"
             />
 
             <Text style={styles.label}>Moneda *</Text>
@@ -310,6 +329,22 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
+  },
+  headerBar: {
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButtonText: {
+    fontSize: 16,
+    color: '#6366F1',
+    fontWeight: '600',
   },
   keyboardView: {
     flex: 1,

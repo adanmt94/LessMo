@@ -292,15 +292,21 @@ export const addParticipant = async (
   userId?: string
 ): Promise<string> => {
   try {
-    const participantData: Omit<Participant, 'id'> = {
+    const participantData: any = {
       eventId,
-      userId,
       name,
-      email,
       individualBudget,
       currentBalance: individualBudget,
       joinedAt: new Date(),
     };
+    
+    // Solo agregar userId y email si están definidos
+    if (userId) {
+      participantData.userId = userId;
+    }
+    if (email) {
+      participantData.email = email;
+    }
     
     const docRef = await addDoc(collection(db, 'participants'), participantData);
     

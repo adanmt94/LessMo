@@ -53,10 +53,10 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
 
     const success = await register(email, password, name);
     if (success) {
+      // El usuario ya está autenticado automáticamente, no necesita navegar
       Alert.alert(
         '¡Registro exitoso!',
-        'Tu cuenta ha sido creada correctamente',
-        [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
+        'Tu cuenta ha sido creada correctamente'
       );
     } else {
       Alert.alert('Error', error || 'No se pudo crear la cuenta');
@@ -84,12 +84,13 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          bounces={false}
         >
           <View style={styles.header}>
             <Text style={styles.logo}>💰</Text>
