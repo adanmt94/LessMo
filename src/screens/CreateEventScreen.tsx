@@ -147,9 +147,20 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation }) => {
 
       console.log('✅ Evento creado con ID:', eventId);
 
+      // Calcular presupuesto individual por defecto
+      const groupBudgetNum = groupBudget.trim() ? parseFloat(groupBudget) : 0;
+      const defaultIndividualBudget = groupBudgetNum > 0 
+        ? groupBudgetNum / validParticipants.length 
+        : 0;
+      console.log('💰 Presupuesto individual por defecto:', defaultIndividualBudget);
+
       // Agregar participantes
       for (const participant of validParticipants) {
-        const budget = participant.budget.trim() ? parseFloat(participant.budget) : 0;
+        // Si el participante tiene presupuesto individual, usarlo
+        // Si no, usar el presupuesto grupal dividido equitativamente
+        const budget = participant.budget.trim() 
+          ? parseFloat(participant.budget) 
+          : defaultIndividualBudget;
         console.log('👤 Agregando participante:', participant.name, 'con presupuesto:', budget);
         const participantId = await addParticipant(
           eventId,

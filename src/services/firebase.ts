@@ -470,31 +470,21 @@ const updateBalancesAfterExpense = async (
 
     const batch = writeBatch(db);
     
-    // PASO 1: Quien pagó SUMA el monto total (adelantó el dinero)
-    console.log('💳 Actualizando balance de quien pagó:', paidBy);
-    const payerDoc = await getDoc(doc(db, 'participants', paidBy));
-    if (payerDoc.exists()) {
-      const payer = payerDoc.data() as Participant;
-      const newPayerBalance = payer.currentBalance + amount;
-      console.log(`💰 Pagador - Balance anterior: ${payer.currentBalance}, nuevo: ${newPayerBalance} (+${amount})`);
-      batch.update(doc(db, 'participants', paidBy), {
-        currentBalance: newPayerBalance
-      });
-    }
+    // Lógica: Solo RESTAR de cada beneficiario su parte del gasto
+    // El balance representa el saldo disponible de su presupuesto individual
     
-    // PASO 2: Cada beneficiario RESTA su parte (debe ese dinero)
     if (splitType === 'equal') {
       const splitAmount = amount / beneficiaries.length;
       console.log('⚖️ División equitativa - Monto por persona:', splitAmount);
       
       for (const beneficiaryId of beneficiaries) {
-        console.log('📊 Actualizando balance de beneficiario:', beneficiaryId);
+        console.log('📊 Actualizando balance de:', beneficiaryId);
         const participantDoc = await getDoc(doc(db, 'participants', beneficiaryId));
         
         if (participantDoc.exists()) {
           const participant = participantDoc.data() as Participant;
           const newBalance = participant.currentBalance - splitAmount;
-          console.log(`💰 Beneficiario - Balance anterior: ${participant.currentBalance}, nuevo: ${newBalance} (-${splitAmount})`);
+          console.log(`💰 Balance anterior: ${participant.currentBalance}, nuevo: ${newBalance} (-${splitAmount})`);
           batch.update(doc(db, 'participants', beneficiaryId), {
             currentBalance: newBalance
           });
@@ -505,13 +495,13 @@ const updateBalancesAfterExpense = async (
     } else if (splitType === 'custom' && customSplits) {
       console.log('🎯 División personalizada:', customSplits);
       for (const [beneficiaryId, splitAmount] of Object.entries(customSplits)) {
-        console.log('📊 Actualizando balance de beneficiario:', beneficiaryId, 'monto:', splitAmount);
+        console.log('📊 Actualizando balance de:', beneficiaryId, 'monto:', splitAmount);
         const participantDoc = await getDoc(doc(db, 'participants', beneficiaryId));
         
         if (participantDoc.exists()) {
           const participant = participantDoc.data() as Participant;
           const newBalance = participant.currentBalance - splitAmount;
-          console.log(`💰 Beneficiario - Balance anterior: ${participant.currentBalance}, nuevo: ${newBalance} (-${splitAmount})`);
+          console.log(`💰 Balance anterior: ${participant.currentBalance}, nuevo: ${newBalance} (-${splitAmount})`);
           batch.update(doc(db, 'participants', beneficiaryId), {
             currentBalance: newBalance
           });
