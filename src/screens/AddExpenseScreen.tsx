@@ -44,10 +44,11 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
-  const [category, setCategory] = useState<ExpenseCategory>('other');
   const [paidBy, setPaidBy] = useState('');
+  const [category, setCategory] = useState<ExpenseCategory>('other');
   const [selectedBeneficiaries, setSelectedBeneficiaries] = useState<string[]>([]);
   const [splitType, setSplitType] = useState<'equal' | 'custom'>('equal');
+  const [customSplits, setCustomSplits] = useState<{ [participantId: string]: string }>({});
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -55,6 +56,13 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
     if (participants.length > 0) {
       setPaidBy(participants[0].id);
       setSelectedBeneficiaries(participants.map((p) => p.id));
+      
+      // Inicializar custom splits con división equitativa
+      const initialSplits: { [key: string]: string } = {};
+      participants.forEach(p => {
+        initialSplits[p.id] = '';
+      });
+      setCustomSplits(initialSplits);
     }
   }, [participants]);
 
@@ -106,7 +114,34 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
       return;
     }
 
+    // Validaciones adicionales para división personalizada
+    let customSplitsData: { [key: string]: number } | undefined;
+    if (splitType === 'custom') {
+      customSplitsData = {};
+      let totalCustom = 0;
+
+      for (const beneficiaryId of selectedBeneficiaries) {
+        const splitAmount = parseFloat(customSplits[beneficiaryId] || '0');
+        if (isNaN(splitAmount) || splitAmount <= 0) {
+          Alert.alert('Error', 'Todos los beneficiarios deben tener un monto válido en división personalizada');
+          return;
+        }
+        customSplitsData[beneficiaryId] = splitAmount;
+        totalCustom += splitAmount;
+      }
+
+      // Verificar que la suma sea igual al total (con margen de error de 0.01 por decimales)
+      if (Math.abs(totalCustom - amountNum) > 0.01) {
+        Alert.alert(
+          'Error de división',
+          `La suma de los montos personalizados (€${totalCustom.toFixed(2)}) debe ser igual al monto total (€${amountNum.toFixed(2)})`
+        );
+        return;
+      }
+    }
+
     console.log('✅ Validaciones pasadas, guardando gasto...');
+    console.log('📊 Tipo de división:', splitType, customSplitsData);
     setLoading(true);
 
     try {
@@ -115,7 +150,9 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
         amountNum,
         description,
         category,
-        selectedBeneficiaries
+        selectedBeneficiaries,
+        splitType,
+        customSplitsData
       );
 
       console.log('📊 Resultado addExpense:', success);
@@ -267,35 +304,98 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.label}>Beneficiarios * {splitType === 'equal' ? '(división equitativa)' : '(personalizada)'}</Text>
+            <Text style={styles.label}>
+              Beneficiarios * {splitType === 'equal' ? '(división equitativa)' : '(especifica el monto para cada uno)'}
+            </Text>
+            
+            {splitType === 'custom' && amount && (
+              <View style={styles.customSummary}>
+                <Text style={styles.customSummaryText}>
+                  Total a dividir: €{parseFloat(amount || '0').toFixed(2)}
+                </Text>
+                <Text style={styles.customSummaryText}>
+                  Suma actual: €{
+                    selectedBeneficiaries.reduce((sum, id) => {
+                      return sum + parseFloat(customSplits[id] || '0');
+                    }, 0).toFixed(2)
+                  }
+                </Text>
+              </View>
+            )}
+            
             {participants.length === 0 ? (
               <Text style={styles.emptyText}>No hay participantes disponibles</Text>
             ) : (
               <View style={styles.beneficiariesList}>
-                {participants.map((participant) => (
-                  <TouchableOpacity
-                    key={participant.id}
-                    style={[
-                      styles.beneficiaryButton,
-                      selectedBeneficiaries.includes(participant.id) &&
-                        styles.beneficiaryButtonActive,
-                    ]}
-                    onPress={() => toggleBeneficiary(participant.id)}
-                  >
-                  <View
-                    style={[
-                      styles.checkbox,
-                      selectedBeneficiaries.includes(participant.id) &&
-                        styles.checkboxActive,
-                    ]}
-                  >
-                    {selectedBeneficiaries.includes(participant.id) && (
-                      <Text style={styles.checkmark}>✓</Text>
-                    )}
-                  </View>
-                  <Text style={styles.beneficiaryText}>{participant.name}</Text>
-                </TouchableOpacity>
-              ))}
+                {splitType === 'equal' ? (
+                  // Modo equitativo: checkboxes simples
+                  participants.map((participant) => (
+                    <TouchableOpacity
+                      key={participant.id}
+                      style={[
+                        styles.beneficiaryButton,
+                        selectedBeneficiaries.includes(participant.id) &&
+                          styles.beneficiaryButtonActive,
+                      ]}
+                      onPress={() => toggleBeneficiary(participant.id)}
+                    >
+                      <View
+                        style={[
+                          styles.checkbox,
+                          selectedBeneficiaries.includes(participant.id) &&
+                            styles.checkboxActive,
+                        ]}
+                      >
+                        {selectedBeneficiaries.includes(participant.id) && (
+                          <Text style={styles.checkmark}>✓</Text>
+                        )}
+                      </View>
+                      <Text style={styles.beneficiaryText}>{participant.name}</Text>
+                    </TouchableOpacity>
+                  ))
+                ) : (
+                  // Modo personalizado: inputs de monto
+                  participants.map((participant) => (
+                    <View key={participant.id} style={styles.customBeneficiaryRow}>
+                      <TouchableOpacity
+                        style={[
+                          styles.customBeneficiaryButton,
+                          selectedBeneficiaries.includes(participant.id) &&
+                            styles.customBeneficiaryButtonActive,
+                        ]}
+                        onPress={() => toggleBeneficiary(participant.id)}
+                      >
+                        <View
+                          style={[
+                            styles.checkbox,
+                            selectedBeneficiaries.includes(participant.id) &&
+                              styles.checkboxActive,
+                          ]}
+                        >
+                          {selectedBeneficiaries.includes(participant.id) && (
+                            <Text style={styles.checkmark}>✓</Text>
+                          )}
+                        </View>
+                        <Text style={styles.customBeneficiaryName}>{participant.name}</Text>
+                      </TouchableOpacity>
+                      
+                      {selectedBeneficiaries.includes(participant.id) && (
+                        <Input
+                          placeholder="0.00"
+                          value={customSplits[participant.id] || ''}
+                          onChangeText={(text) => {
+                            setCustomSplits({
+                              ...customSplits,
+                              [participant.id]: text
+                            });
+                          }}
+                          keyboardType="decimal-pad"
+                          style={styles.customAmountInput}
+                        />
+                      )}
+                    </View>
+                  ))
+                )}
               </View>
             )}
           </Card>
@@ -469,5 +569,42 @@ const styles = StyleSheet.create({
   },
   splitTypeTextActive: {
     color: '#6366F1',
+  },
+  customBeneficiaryRow: {
+    marginBottom: 12,
+  },
+  customBeneficiaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    marginBottom: 8,
+  },
+  customBeneficiaryButtonActive: {
+    backgroundColor: '#EEF2FF',
+    borderColor: '#6366F1',
+  },
+  customBeneficiaryName: {
+    fontSize: 16,
+    color: '#111827',
+    fontWeight: '500',
+  },
+  customAmountInput: {
+    marginTop: 0,
+  },
+  customSummary: {
+    backgroundColor: '#FEF3C7',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  customSummaryText: {
+    fontSize: 14,
+    color: '#92400E',
+    fontWeight: '600',
+    marginBottom: 4,
   },
 });
