@@ -251,15 +251,6 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.surface }]}>
-      <View style={[styles.headerBar, { backgroundColor: theme.colors.background, borderBottomColor: theme.colors.border }]}>
-        <TouchableOpacity 
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-        >
-          <Text style={[styles.backButtonText, { color: theme.colors.primary }]}>← Atrás</Text>
-        </TouchableOpacity>
-      </View>
-      
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.keyboardView}

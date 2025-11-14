@@ -92,19 +92,6 @@ export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={styles.backButtonText}>‹</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>
-            {isEditMode ? 'Editar Grupo' : 'Nuevo Grupo'}
-          </Text>
-          <View style={styles.backButton} />
-        </View>
-
         <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
           {/* Información básica */}
           <Card style={styles.section}>

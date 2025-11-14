@@ -198,14 +198,6 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>← Atrás</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Resumen completo</Text>
-        <View style={{ width: 50 }} />
-      </View>
-
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <ViewShot ref={viewShotRef} options={{ format: 'png', quality: 0.9 }}>
           {/* Resumen general */}

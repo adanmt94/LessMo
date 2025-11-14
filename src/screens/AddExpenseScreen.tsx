@@ -289,14 +289,6 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.surface }]}>
-      <View style={[styles.header, { backgroundColor: theme.colors.background, borderBottomColor: theme.colors.border }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={[styles.backButton, { color: theme.colors.primary }]}>← Atrás</Text>
-        </TouchableOpacity>
-        <Text style={[styles.title, { color: theme.colors.text }]}>{isEditMode ? 'Editar gasto' : 'Agregar gasto'}</Text>
-        <View style={{ width: 50 }} />
-      </View>
-
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.keyboardView}

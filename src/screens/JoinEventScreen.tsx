@@ -120,17 +120,6 @@ export const JoinEventScreen: React.FC<Props> = ({ navigation, route }) => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={styles.backButtonText}>‹</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>Unirse a Evento</Text>
-          <View style={styles.backButton} />
-        </View>
-
         <View style={styles.content}>
           <View style={styles.iconContainer}>
             <Text style={styles.icon}>🎟️</Text>

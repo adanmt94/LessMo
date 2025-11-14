@@ -311,18 +311,6 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={styles.backButtonText}>‹</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>Editar Perfil</Text>
-          <View style={styles.backButton} />
-        </View>
-
         <ScrollView 
           style={styles.content}
           contentContainerStyle={styles.scrollContent}
