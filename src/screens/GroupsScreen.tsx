@@ -7,7 +7,7 @@ import {
   View,
   Text,
   StyleSheet,
-  
+  TextInput,
   ScrollView,
   TouchableOpacity,
   RefreshControl,
@@ -34,6 +34,7 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
   const [groups, setGroups] = useState<Group[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Reload groups when screen gains focus
   useFocusEffect(
@@ -108,6 +109,14 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
 
   const getGroupColor = (color?: string) => color || '#6366F1';
 
+  // Filtro de búsqueda
+  const filteredGroups = searchQuery.trim()
+    ? groups.filter(g => 
+        g.name.toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
+        g.description?.toLowerCase().includes(searchQuery.toLowerCase().trim())
+      )
+    : groups;
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.surface }]}>
       <View style={[styles.header, { backgroundColor: theme.colors.background, borderBottomColor: theme.colors.border }]}>
@@ -117,6 +126,25 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
           onPress={() => navigation.navigate('CreateGroup', { mode: 'create' })}
           size="small"
         />
+      </View>
+
+      {/* Search Bar */}
+      <View style={[styles.searchContainer, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.border }]}>
+        <TextInput
+          style={[styles.searchInput, { backgroundColor: theme.colors.background, color: theme.colors.text, borderColor: theme.colors.border }]}
+          placeholder="Buscar grupos..."
+          placeholderTextColor={theme.colors.textSecondary}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity
+            style={[styles.clearButton, { backgroundColor: theme.colors.surface }]}
+            onPress={() => setSearchQuery('')}
+          >
+            <Text style={[styles.clearButtonText, { color: theme.colors.textSecondary }]}>✕</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <ScrollView
@@ -129,11 +157,11 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={styles.emptyIcon}>⏳</Text>
             <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>Cargando grupos...</Text>
           </View>
-        ) : groups.length === 0 ? (
+        ) : filteredGroups.length === 0 && !searchQuery.trim() ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>👥</Text>
-            <Text style={styles.emptyText}>No tienes grupos creados</Text>
-            <Text style={styles.emptySubtext}>
+            <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>No tienes grupos creados</Text>
+            <Text style={[styles.emptySubtext, { color: theme.colors.textSecondary }]}>
               Los grupos te permiten organizar múltiples eventos relacionados
             </Text>
             <Button
@@ -142,8 +170,16 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
               style={styles.emptyButton}
             />
           </View>
+        ) : filteredGroups.length === 0 && searchQuery.trim() ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyIcon}>🔍</Text>
+            <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>No se encontraron grupos</Text>
+            <Text style={[styles.emptySubtext, { color: theme.colors.textSecondary }]}>
+              Intenta con otro término de búsqueda
+            </Text>
+          </View>
         ) : (
-          groups.map((group) => (
+          filteredGroups.map((group) => (
             <Card key={group.id} style={styles.groupCard}>
               <TouchableOpacity 
                 onPress={() => handleViewGroupEvents(group.id)}
@@ -333,5 +369,31 @@ const styles = StyleSheet.create({
   statDivider: {
     width: 1,
     backgroundColor: '#E5E7EB',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  searchInput: {
+    flex: 1,
+    height: 40,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    fontSize: 15,
+    borderWidth: 1,
+  },
+  clearButton: {
+    marginLeft: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  clearButtonText: {
+    fontSize: 18,
   },
 });

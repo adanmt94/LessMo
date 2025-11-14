@@ -7,7 +7,7 @@ import {
   View,
   Text,
   StyleSheet,
-  
+  TextInput,
   ScrollView,
   TouchableOpacity,
   RefreshControl,
@@ -28,6 +28,7 @@ type EventsScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 interface Props {
   navigation: EventsScreenNavigationProp;
+  route?: any;
 }
 
 type EventTab = 'active' | 'past';
@@ -35,12 +36,14 @@ type EventTab = 'active' | 'past';
 export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
   const { user } = useAuth();
   const { theme } = useTheme();
+  const styles = getStyles(theme);
   const [events, setEvents] = useState<Event[]>([]);
   const [activeTab, setActiveTab] = useState<EventTab>('active');
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [filterGroupId, setFilterGroupId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Check if first time and show onboarding
   useEffect(() => {
@@ -51,18 +54,17 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
   useEffect(() => {
     if (route?.params?.filterGroupId) {
       setFilterGroupId(route.params.filterGroupId);
+    } else {
+      // Si no hay params, limpiar el filtro
+      setFilterGroupId(null);
     }
-  }, [route?.params]);
+  }, [route?.params?.filterGroupId]);
 
-  // Reload events when screen gains focus AND clean filter if no route params
+  // Reload events when screen gains focus
   useFocusEffect(
     useCallback(() => {
-      // Si no hay filterGroupId en route params, limpiar el filtro
-      if (!route?.params?.filterGroupId) {
-        setFilterGroupId(null);
-      }
       loadEvents();
-    }, [user, route?.params])
+    }, [user])
   );
 
   const checkFirstTime = async () => {
@@ -118,6 +120,15 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
   } else {
     // Mostrar solo eventos SIN grupo (individuales)
     filteredEvents = events.filter(e => !e.groupId);
+  }
+
+  // Aplicar filtro de búsqueda
+  if (searchQuery.trim()) {
+    const query = searchQuery.toLowerCase().trim();
+    filteredEvents = filteredEvents.filter(e => 
+      e.name.toLowerCase().includes(query) ||
+      e.description?.toLowerCase().includes(query)
+    );
   }
 
   const activeEvents = filteredEvents.filter(e => e.status === 'active');
@@ -183,6 +194,25 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
             Pasados ({pastEvents.length})
           </Text>
         </TouchableOpacity>
+      </View>
+
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Buscar eventos..."
+          placeholderTextColor={theme.colors.textSecondary}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity
+            style={styles.clearButton}
+            onPress={() => setSearchQuery('')}
+          >
+            <Text style={styles.clearButtonText}>✕</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <ScrollView
@@ -253,10 +283,19 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
                   <View style={styles.eventDetail}>
                     <Text style={styles.detailLabel}>Creado</Text>
                     <Text style={styles.detailValue}>
-                      {new Date(event.createdAt).toLocaleDateString('es-ES', { 
-                        day: 'numeric',
-                        month: 'short' 
-                      })}
+                      {(() => {
+                        try {
+                          const date = (event.createdAt as any)?.toDate 
+                            ? (event.createdAt as any).toDate() 
+                            : new Date(event.createdAt);
+                          return date.toLocaleDateString('es-ES', { 
+                            day: 'numeric',
+                            month: 'short' 
+                          });
+                        } catch {
+                          return 'N/A';
+                        }
+                      })()}
                     </Text>
                   </View>
                 </View>
@@ -276,24 +315,24 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.colors.background,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: theme.colors.border,
   },
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.colors.text,
   },
   headerButtons: {
     flexDirection: 'row',
@@ -301,31 +340,33 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   backButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: 8,
     marginRight: 8,
+    backgroundColor: theme.colors.surface,
   },
   backButtonText: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
+    color: theme.colors.primary,
   },
   iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F3F4F6',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
   iconButtonText: {
-    fontSize: 20,
+    fontSize: 24,
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: theme.colors.border,
   },
   tab: {
     flex: 1,
@@ -335,15 +376,15 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   tabActive: {
-    borderBottomColor: '#6366F1',
+    borderBottomColor: theme.colors.primary,
   },
   tabText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
   },
   tabTextActive: {
-    color: '#6366F1',
+    color: theme.colors.primary,
   },
   content: {
     flex: 1,
@@ -364,7 +405,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
     marginBottom: 24,
   },
   emptyButton: {
@@ -382,7 +423,7 @@ const styles = StyleSheet.create({
   eventName: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#111827',
+    color: theme.colors.text,
     flex: 1,
     marginRight: 12,
   },
@@ -392,18 +433,19 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   statusActive: {
-    backgroundColor: '#DCFCE7',
+    backgroundColor: theme.dark ? '#064E3B' : '#DCFCE7',
   },
   statusPast: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.dark ? '#374151' : '#F3F4F6',
   },
   statusText: {
     fontSize: 12,
     fontWeight: '600',
+    color: theme.colors.text,
   },
   eventDescription: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
     marginBottom: 12,
   },
   eventDetails: {
@@ -411,7 +453,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: theme.colors.border,
   },
   eventDetail: {
     flex: 1,
@@ -419,13 +461,13 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: theme.colors.textSecondary,
     marginBottom: 4,
   },
   detailValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#111827',
+    color: theme.colors.text,
   },
   inviteCodeContainer: {
     flexDirection: 'row',
@@ -434,17 +476,50 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: theme.colors.border,
   },
   inviteCodeLabel: {
     fontSize: 12,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
     marginRight: 8,
   },
   inviteCode: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6366F1',
+    color: theme.colors.primary,
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: theme.colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  searchInput: {
+    flex: 1,
+    height: 40,
+    backgroundColor: theme.colors.background,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    fontSize: 15,
+    color: theme.colors.text,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  clearButton: {
+    marginLeft: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: theme.colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  clearButtonText: {
+    fontSize: 18,
+    color: theme.colors.textSecondary,
   },
 });

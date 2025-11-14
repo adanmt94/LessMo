@@ -338,7 +338,7 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
                                 // Import delete functions
                                 const { deleteUser } = await import('firebase/auth');
                                 const { deleteDoc, doc } = await import('firebase/firestore');
-                                const { auth } = await import('../services/firebase');
+                                const { auth, db } = await import('../services/firebase');
                                 
                                 try {
                                   // Delete user document
