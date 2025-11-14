@@ -11,6 +11,7 @@ export { AddExpenseScreen } from './AddExpenseScreen';
 export { SummaryScreen } from './SummaryScreen';
 export { EventsScreen } from './EventsScreen';
 export { GroupsScreen } from './GroupsScreen';
+export { GroupEventsScreen } from './GroupEventsScreen';
 export { SettingsScreen } from './SettingsScreen';
 export { CreateGroupScreen } from './CreateGroupScreen';
 export { JoinEventScreen } from './JoinEventScreen';

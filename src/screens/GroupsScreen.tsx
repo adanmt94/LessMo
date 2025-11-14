@@ -68,12 +68,9 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
     setRefreshing(false);
   };
 
-  const handleViewGroupEvents = (groupId: string) => {
-    // Navegar a EventsScreen filtrando por groupId
-    navigation.navigate('MainTabs', { 
-      screen: 'Events',
-      params: { filterGroupId: groupId }
-    } as any);
+  const handleViewGroupEvents = (groupId: string, groupName: string) => {
+    // Navegar a pantalla dedicada de eventos del grupo
+    navigation.navigate('GroupEvents', { groupId, groupName });
   };
 
   const handleEditGroup = (groupId: string) => {
@@ -182,7 +179,7 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
           filteredGroups.map((group) => (
             <Card key={group.id} style={styles.groupCard}>
               <TouchableOpacity 
-                onPress={() => handleViewGroupEvents(group.id)}
+                onPress={() => handleViewGroupEvents(group.id, group.name)}
                 activeOpacity={0.7}
               >
                 <View style={styles.groupHeader}>
@@ -220,7 +217,7 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
                     variant="outline"
                     size="small"
                     style={{ flex: 1 }}
-                    onPress={() => handleViewGroupEvents(group.id)}
+                    onPress={() => handleViewGroupEvents(group.id, group.name)}
                   />
                   <Button
                     title="+ Evento"

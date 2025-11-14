@@ -116,6 +116,7 @@ export type RootStackParamList = {
   CreateEvent: { eventId?: string; mode?: 'create' | 'edit'; groupId?: string } | undefined;
   CreateGroup: { groupId?: string; mode?: 'create' | 'edit' } | undefined;
   EventDetail: { eventId: string };
+  GroupEvents: { groupId: string; groupName: string };
   AddExpense: { eventId: string; expenseId?: string; mode?: 'create' | 'edit' };
   ExpenseList: { eventId: string };
   Summary: { eventId: string };

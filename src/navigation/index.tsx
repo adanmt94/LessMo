@@ -16,6 +16,7 @@ import {
   AddExpenseScreen,
   SummaryScreen,
   CreateGroupScreen,
+  GroupEventsScreen,
   JoinEventScreen,
   EditProfileScreen,
 } from '../screens';
@@ -101,6 +102,13 @@ export const Navigation: React.FC = () => {
                 headerShown: true,
                 title: 'Crear Grupo',
                 headerBackTitle: 'Atrás'
+              }}
+            />
+            <Stack.Screen 
+              name="GroupEvents" 
+              component={GroupEventsScreen}
+              options={{ 
+                headerShown: false
               }}
             />
             <Stack.Screen 
