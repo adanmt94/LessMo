@@ -7,13 +7,14 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
+  
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   TouchableOpacity,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../hooks/useAuth';
 import { useGoogleAuth } from '../hooks/useGoogleAuth';
 import { Button, Input } from '../components/lovable';

@@ -7,3 +7,4 @@ export { Input } from './Input';
 export { Card } from './Card';
 export { ExpenseItem } from './ExpenseItem';
 export { ParticipantItem } from './ParticipantItem';
+export { OnboardingModal } from './OnboardingModal';

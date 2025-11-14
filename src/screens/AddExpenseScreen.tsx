@@ -7,18 +7,20 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
+  
   ScrollView,
   KeyboardAvoidingView,
   Platform,
   Alert,
   TouchableOpacity,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList, ExpenseCategory, CategoryLabels, VALIDATION } from '../types';
 import { Button, Input, Card } from '../components/lovable';
 import { useExpenses } from '../hooks/useExpenses';
+import { useNotifications } from '../hooks/useNotifications';
 
 type AddExpenseScreenNavigationProp = StackNavigationProp<RootStackParamList, 'AddExpense'>;
 type AddExpenseScreenRouteProp = RouteProp<RootStackParamList, 'AddExpense'>;
@@ -42,6 +44,8 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
   const { eventId, expenseId, mode } = route.params;
   const isEditMode = mode === 'edit' && expenseId;
   const { participants, addExpense, editExpense, expenses } = useExpenses(eventId);
+  const { notifyNewExpense } = useNotifications();
+  const [eventData, setEventData] = useState<any>(null);
 
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
@@ -51,6 +55,20 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
   const [splitType, setSplitType] = useState<'equal' | 'custom'>('equal');
   const [customSplits, setCustomSplits] = useState<{ [participantId: string]: string }>({});
   const [loading, setLoading] = useState(false);
+
+  // Cargar datos del evento
+  useEffect(() => {
+    const loadEventData = async () => {
+      try {
+        const { getEvent } = await import('../services/firebase');
+        const event = await getEvent(eventId);
+        setEventData(event);
+      } catch (error) {
+        console.error('Error cargando datos del evento:', error);
+      }
+    };
+    loadEventData();
+  }, [eventId]);
 
   // Cargar datos del gasto en modo edición
   useEffect(() => {
@@ -97,6 +115,44 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
     } else {
       setSelectedBeneficiaries([...selectedBeneficiaries, participantId]);
     }
+  };
+
+  const handleDeleteExpense = async () => {
+    if (!expenseId) return;
+
+    Alert.alert(
+      'Eliminar gasto',
+      '¿Estás seguro de que deseas eliminar este gasto?',
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              const { deleteExpense } = await import('../services/firebase');
+              await deleteExpense(expenseId);
+              
+              Alert.alert('Éxito', 'Gasto eliminado correctamente', [
+                {
+                  text: 'Aceptar',
+                  onPress: () => navigation.goBack(),
+                },
+              ]);
+            } catch (error: any) {
+              console.error('❌ Error eliminando gasto:', error);
+              Alert.alert('Error', error.message || 'No se pudo eliminar el gasto');
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleAddExpense = async () => {
@@ -201,6 +257,12 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
 
       if (success) {
         console.log(`✅ Gasto ${isEditMode ? 'actualizado' : 'registrado'} exitosamente`);
+        
+        // Enviar notificación solo para gastos nuevos
+        if (!isEditMode && eventData) {
+          await notifyNewExpense(eventData.name, amountNum, eventData.currency);
+        }
+        
         Alert.alert(
           isEditMode ? '¡Gasto actualizado!' : '¡Gasto agregado!',
           isEditMode ? 'Los cambios se han guardado correctamente' : 'El gasto se ha registrado correctamente',
@@ -453,6 +515,17 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
             fullWidth
             size="large"
           />
+
+          {isEditMode && expenseId && (
+            <Button
+              title="Eliminar gasto"
+              onPress={handleDeleteExpense}
+              variant="danger"
+              fullWidth
+              size="large"
+              style={{ marginTop: 12 }}
+            />
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

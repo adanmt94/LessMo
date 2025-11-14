@@ -7,13 +7,14 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
+  
   ScrollView,
   KeyboardAvoidingView,
   Platform,
   Alert,
   TouchableOpacity,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList, Currency, VALIDATION } from '../types';
@@ -49,7 +50,7 @@ const CURRENCIES: { value: Currency; label: string }[] = [
 
 export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
   const { user } = useAuth();
-  const { eventId, mode } = route.params || {};
+  const { eventId, mode, groupId } = route.params || {};
   const isEditMode = mode === 'edit' && eventId;
   
   const [eventName, setEventName] = useState('');
@@ -61,7 +62,7 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
     { id: '1', name: '', budget: '' },
   ]);
   const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(isEditMode);
+  const [initialLoading, setInitialLoading] = useState(!!isEditMode);
 
   // Cargar datos del evento si estamos en modo edición
   useEffect(() => {
@@ -190,7 +191,8 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
         totalBudget,
         currency,
         user!.uid,
-        description
+        description,
+        groupId // Asociar con grupo si viene desde un grupo
       );
 
       console.log('✅ Evento creado con ID:', eventId);

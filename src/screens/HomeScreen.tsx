@@ -7,19 +7,21 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
+  
   FlatList,
   TouchableOpacity,
   RefreshControl,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList, Event, CurrencySymbols } from '../types';
 import { Button, Card } from '../components/lovable';
 import { getUserEvents } from '../services/firebase';
 import { useAuth } from '../hooks/useAuth';
 
-type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Home'>;
+// DEPRECATED: Esta pantalla ha sido reemplazada por MainTabs (EventsScreen, GroupsScreen, SettingsScreen)
+type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'MainTabs'>;
 
 interface Props {
   navigation: HomeScreenNavigationProp;

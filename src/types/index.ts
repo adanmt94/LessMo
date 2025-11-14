@@ -35,6 +35,9 @@ export interface Event {
   currency: Currency;
   participantIds: string[];   // Array de IDs de participantes
   isActive: boolean;          // Si el evento está activo
+  status: 'active' | 'completed' | 'archived'; // Estado del evento
+  groupId?: string;           // ID del grupo al que pertenece (opcional)
+  inviteCode?: string;        // Código único para compartir el evento
 }
 
 // Interface para participante
@@ -47,6 +50,20 @@ export interface Participant {
   individualBudget: number;   // Saldo inicial asignado a este participante
   currentBalance: number;     // Saldo actual después de gastos
   joinedAt: Date;
+  isAnonymous?: boolean;      // Si se unió sin registrarse
+}
+
+// Interface para grupo de eventos
+export interface Group {
+  id: string;
+  name: string;
+  description?: string;
+  createdBy: string;
+  createdAt: Date;
+  memberIds: string[];        // IDs de usuarios miembros
+  eventIds: string[];         // IDs de eventos del grupo
+  color?: string;             // Color para identificar el grupo
+  icon?: string;              // Emoji o icono del grupo
 }
 
 // Interface para gasto
@@ -95,12 +112,21 @@ export interface Settlement {
 export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
-  Home: undefined;
-  CreateEvent: { eventId?: string; mode?: 'create' | 'edit' } | undefined;
+  MainTabs: undefined;
+  CreateEvent: { eventId?: string; mode?: 'create' | 'edit'; groupId?: string } | undefined;
+  CreateGroup: { groupId?: string; mode?: 'create' | 'edit' } | undefined;
   EventDetail: { eventId: string };
   AddExpense: { eventId: string; expenseId?: string; mode?: 'create' | 'edit' };
   ExpenseList: { eventId: string };
   Summary: { eventId: string };
+  JoinEvent: { inviteCode: string };
+  EditProfile: undefined;
+};
+
+export type TabParamList = {
+  Events: undefined;
+  Groups: undefined;
+  Settings: undefined;
 };
 
 // Símbolos de monedas

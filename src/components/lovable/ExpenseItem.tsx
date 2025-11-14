@@ -4,7 +4,8 @@
  */
 
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { Swipeable } from 'react-native-gesture-handler';
 import { Expense, CategoryLabels, CategoryColors, CurrencySymbols, Currency } from '../../types';
 import { Card } from './Card';
 
@@ -13,6 +14,7 @@ interface ExpenseItemProps {
   participantName: string;
   currency: Currency;
   onPress?: () => void;
+  onDelete?: () => void;
 }
 
 export const ExpenseItem: React.FC<ExpenseItemProps> = ({
@@ -20,6 +22,7 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({
   participantName,
   currency,
   onPress,
+  onDelete,
 }) => {
   const categoryColor = CategoryColors[expense.category];
   const categoryLabel = CategoryLabels[expense.category];
@@ -47,7 +50,39 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({
     });
   };
 
-  return (
+  const renderRightActions = (
+    progress: Animated.AnimatedInterpolation<number>,
+    dragX: Animated.AnimatedInterpolation<number>
+  ) => {
+    const trans = dragX.interpolate({
+      inputRange: [-100, 0],
+      outputRange: [0, 100],
+      extrapolate: 'clamp',
+    });
+
+    if (!onDelete) return null;
+
+    return (
+      <TouchableOpacity
+        style={styles.deleteButton}
+        onPress={onDelete}
+      >
+        <Animated.View
+          style={[
+            styles.deleteButtonInner,
+            {
+              transform: [{ translateX: trans }],
+            },
+          ]}
+        >
+          <Text style={styles.deleteButtonText}>🗑️</Text>
+          <Text style={styles.deleteButtonLabel}>Eliminar</Text>
+        </Animated.View>
+      </TouchableOpacity>
+    );
+  };
+
+  const content = (
     <TouchableOpacity onPress={onPress} activeOpacity={0.7} disabled={!onPress}>
       <Card style={styles.card}>
         <View style={styles.header}>
@@ -69,6 +104,20 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({
       </Card>
     </TouchableOpacity>
   );
+
+  if (onDelete) {
+    return (
+      <Swipeable
+        renderRightActions={renderRightActions}
+        overshootRight={false}
+        friction={2}
+      >
+        {content}
+      </Swipeable>
+    );
+  }
+
+  return content;
 };
 
 const styles = StyleSheet.create({
@@ -119,5 +168,27 @@ const styles = StyleSheet.create({
   date: {
     fontSize: 12,
     color: '#9CA3AF',
+  },
+  deleteButton: {
+    backgroundColor: '#EF4444',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 100,
+    marginBottom: 12,
+    borderRadius: 12,
+  },
+  deleteButtonInner: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  deleteButtonText: {
+    fontSize: 24,
+    marginBottom: 4,
+  },
+  deleteButtonLabel: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });

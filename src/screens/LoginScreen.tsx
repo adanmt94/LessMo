@@ -7,13 +7,13 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   TouchableOpacity,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../hooks/useAuth';
 import { useGoogleAuth } from '../hooks/useGoogleAuth';
 import { Button, Input } from '../components/lovable';
@@ -66,10 +66,12 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
-            <Text style={styles.logo}>💰</Text>
+            <View style={styles.logoContainer}>
+              <Text style={styles.logo}>💰</Text>
+            </View>
             <Text style={styles.title}>LessMo</Text>
             <Text style={styles.subtitle}>
-              Gestiona tus gastos compartidos de forma fácil
+              Gestiona tus finanzas de forma fácil
             </Text>
           </View>
 
@@ -109,19 +111,37 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
 
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>o</Text>
+              <Text style={styles.dividerText}>o continúa con</Text>
               <View style={styles.dividerLine} />
             </View>
 
-            <Button
-              testID="google-signin-button"
-              title="🔍 Continuar con Google"
-              onPress={handleGoogleSignIn}
-              loading={googleLoading}
-              fullWidth
-              size="large"
-              variant="outline"
-            />
+            <View style={styles.socialButtons}>
+              <TouchableOpacity
+                testID="google-signin-button"
+                style={styles.socialButton}
+                onPress={handleGoogleSignIn}
+                disabled={googleLoading}
+              >
+                <Text style={styles.googleIcon}>G</Text>
+                <Text style={styles.socialButtonText}>Google</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                testID="anonymous-signin-button"
+                style={styles.socialButton}
+                onPress={async () => {
+                  try {
+                    const { signInAnonymously } = await import('../services/firebase');
+                    await signInAnonymously();
+                  } catch (error: any) {
+                    Alert.alert('Error', error.message || 'No se pudo continuar sin registro');
+                  }
+                }}
+              >
+                <Text style={styles.anonymousIcon}>👤</Text>
+                <Text style={styles.socialButtonText}>Anónimo</Text>
+              </TouchableOpacity>
+            </View>
 
             <TouchableOpacity
               testID="register-link"
@@ -157,21 +177,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 48,
   },
+  logoContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#EEF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 8,
+  },
   logo: {
-    fontSize: 64,
-    marginBottom: 16,
+    fontSize: 52,
   },
   title: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#111827',
+    fontSize: 40,
+    fontWeight: '800',
+    color: '#6366F1',
     marginBottom: 8,
+    letterSpacing: -1,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#6B7280',
     textAlign: 'center',
     paddingHorizontal: 32,
+    fontWeight: '500',
   },
   form: {
     width: '100%',
@@ -179,7 +214,7 @@ const styles = StyleSheet.create({
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 24,
+    marginVertical: 28,
   },
   dividerLine: {
     flex: 1,
@@ -187,9 +222,40 @@ const styles = StyleSheet.create({
     backgroundColor: '#E5E7EB',
   },
   dividerText: {
-    marginHorizontal: 16,
+    marginHorizontal: 12,
     color: '#9CA3AF',
+    fontSize: 12,
+  },
+  socialButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
+  socialButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    gap: 8,
+  },
+  googleIcon: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#4285F4',
+  },
+  anonymousIcon: {
+    fontSize: 18,
+  },
+  socialButtonText: {
     fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
   },
   registerLink: {
     alignItems: 'center',

@@ -2,19 +2,21 @@
  * EventDetailScreen - Pantalla de detalle del evento con tabs
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
+  
   TouchableOpacity,
   ScrollView,
   RefreshControl,
   Alert,
+  Share,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RouteProp } from '@react-navigation/native';
+import { RouteProp, useFocusEffect } from '@react-navigation/native';
 import { RootStackParamList, Event, CurrencySymbols } from '../types';
 import { Button, Card, ExpenseItem, ParticipantItem } from '../components/lovable';
 import { getEvent } from '../services/firebase';
@@ -47,9 +49,13 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
     getParticipantBalances,
   } = useExpenses(eventId);
 
-  useEffect(() => {
-    loadEvent();
-  }, [eventId]);
+  // Reload event data when screen gains focus
+  useFocusEffect(
+    useCallback(() => {
+      loadEvent();
+      loadData();
+    }, [eventId])
+  );
 
   const loadEvent = async () => {
     try {
@@ -129,31 +135,12 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
                 expense={expense}
                 participantName={participant?.name || 'Desconocido'}
                 currency={event.currency}
-                onPress={() => {
-                  Alert.alert(
-                    'Editar gasto',
-                    '¿Qué deseas hacer?',
-                    [
-                      {
-                        text: 'Cancelar',
-                        style: 'cancel'
-                      },
-                      {
-                        text: 'Editar',
-                        onPress: () => navigation.navigate('AddExpense', { 
-                          eventId, 
-                          expenseId: expense.id, 
-                          mode: 'edit' 
-                        })
-                      },
-                      {
-                        text: 'Eliminar',
-                        style: 'destructive',
-                        onPress: () => handleDeleteExpense(expense.id)
-                      }
-                    ]
-                  );
-                }}
+                onPress={() => navigation.navigate('AddExpense', { 
+                  eventId, 
+                  expenseId: expense.id, 
+                  mode: 'edit' 
+                })}
+                onDelete={() => handleDeleteExpense(expense.id)}
               />
             );
           })}
@@ -267,6 +254,36 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
     );
   };
 
+  const handleExportToExcel = async () => {
+    try {
+      const { exportExpensesToExcel } = await import('../utils/exportUtils');
+      await exportExpensesToExcel(event, expenses, participants);
+      Alert.alert('Éxito', 'Los datos han sido exportados correctamente');
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'No se pudo exportar el archivo');
+    }
+  };
+
+  const handleShareEvent = async () => {
+    if (!event) return;
+
+    try {
+      const inviteCode = event.inviteCode || event.id;
+      const shareUrl = `lessmo://join/${inviteCode}`;
+      const message = `¡Únete a "${event.name}" en LessMo!\n\n` +
+        `Usa este código: ${inviteCode}\n` +
+        `O abre este enlace: ${shareUrl}\n\n` +
+        `Gestiona gastos compartidos de forma fácil con LessMo.`;
+
+      await Share.share({
+        message,
+        title: `Únete a ${event.name}`,
+      });
+    } catch (error) {
+      console.error('Error sharing event:', error);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -274,7 +291,12 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
           <Text style={styles.backButton}>← Atrás</Text>
         </TouchableOpacity>
         <Text style={styles.eventName} numberOfLines={1}>{event.name}</Text>
-        <View style={{ width: 50 }} />
+        <TouchableOpacity onPress={handleShareEvent} style={styles.exportButton}>
+          <Text style={styles.exportIcon}>🔗</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={handleExportToExcel} style={styles.exportButton}>
+          <Text style={styles.exportIcon}>📊</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.tabs}>
@@ -346,6 +368,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6366F1',
     fontWeight: '600',
+  },
+  exportButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  exportIcon: {
+    fontSize: 20,
   },
   eventName: {
     fontSize: 18,

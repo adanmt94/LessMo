@@ -167,6 +167,18 @@ export const signInWithGoogleToken = async (idToken: string): Promise<User> => {
 // ==================== EVENTOS ====================
 
 /**
+ * Generar código de invitación único
+ */
+export const generateInviteCode = (): string => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+};
+
+/**
  * Crear nuevo evento
  */
 export const createEvent = async (
@@ -174,23 +186,38 @@ export const createEvent = async (
   initialBudget: number,
   currency: Currency,
   userId: string,
-  description?: string
+  description?: string,
+  groupId?: string
 ): Promise<string> => {
   try {
-    const eventData: Omit<Event, 'id'> = {
+    // Generar código de invitación único
+    const inviteCode = generateInviteCode();
+    
+    // Construir el objeto del evento sin campos undefined
+    const eventData: any = {
       name,
-      description,
       createdBy: userId,
       createdAt: new Date(),
       initialBudget,
       currency,
       participantIds: [],
       isActive: true,
+      status: 'active',
+      inviteCode,
     };
+    
+    // Solo agregar campos opcionales si tienen valor
+    if (description) {
+      eventData.description = description;
+    }
+    if (groupId) {
+      eventData.groupId = groupId;
+    }
     
     const docRef = await addDoc(collection(db, 'events'), eventData);
     return docRef.id;
   } catch (error: any) {
+    console.error('❌ Error creating event:', error);
     throw new Error(error.message);
   }
 };
@@ -694,6 +721,168 @@ export const deleteExpense = async (expenseId: string): Promise<void> => {
   }
 };
 
+// ==================== GRUPOS ====================
+
+/**
+ * Crear nuevo grupo
+ */
+export const createGroup = async (
+  name: string,
+  createdBy: string,
+  description?: string,
+  color?: string,
+  icon?: string
+): Promise<string> => {
+  try {
+    const groupData: any = {
+      name,
+      createdBy,
+      createdAt: new Date(),
+      memberIds: [createdBy],
+      eventIds: [],
+    };
+    
+    // Solo agregar campos opcionales si tienen valor
+    if (description) {
+      groupData.description = description;
+    }
+    if (color) {
+      groupData.color = color;
+    }
+    if (icon) {
+      groupData.icon = icon;
+    }
+    
+    const docRef = await addDoc(collection(db, 'groups'), groupData);
+    console.log('✅ Grupo creado:', docRef.id);
+    return docRef.id;
+  } catch (error: any) {
+    console.error('❌ Error creating group:', error);
+    throw new Error(error.message);
+  }
+};
+
+/**
+ * Obtener grupos del usuario
+ */
+export const getUserGroups = async (userId: string): Promise<any[]> => {
+  try {
+    const q = query(
+      collection(db, 'groups'),
+      where('memberIds', 'array-contains', userId)
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const groups = querySnapshot.docs.map(doc => ({ 
+      id: doc.id, 
+      ...doc.data() 
+    }));
+    
+    // Ordenar por fecha de creación
+    return groups.sort((a: any, b: any) => {
+      const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+      const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+      return dateB.getTime() - dateA.getTime();
+    });
+  } catch (error: any) {
+    console.error('❌ Error loading groups:', error);
+    // Si es error de permisos, retornar array vacío en lugar de lanzar error
+    if (error.code === 'permission-denied' || error.message?.includes('permission')) {
+      console.log('⚠️ Sin permisos para leer grupos, retornando lista vacía');
+      return [];
+    }
+    throw new Error(error.message || 'No se pudieron cargar los grupos');
+  }
+};
+
+/**
+ * Obtener eventos de un usuario con filtro de estado
+ */
+export const getUserEventsByStatus = async (
+  userId: string,
+  status?: 'active' | 'completed' | 'archived'
+): Promise<Event[]> => {
+  try {
+    let q;
+    
+    if (status) {
+      q = query(
+        collection(db, 'events'),
+        where('createdBy', '==', userId),
+        where('status', '==', status)
+      );
+    } else {
+      q = query(
+        collection(db, 'events'),
+        where('createdBy', '==', userId)
+      );
+    }
+    
+    const querySnapshot = await getDocs(q);
+    const events = querySnapshot.docs.map(doc => ({ 
+      id: doc.id, 
+      ...doc.data() 
+    } as Event));
+    
+    // Ordenar por fecha de creación
+    return events.sort((a, b) => {
+      const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+      const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+      return dateB.getTime() - dateA.getTime();
+    });
+  } catch (error: any) {
+    console.error('Error loading events by status:', error);
+    throw new Error(error.message || 'No se pudieron cargar los eventos');
+  }
+};
+
+/**
+ * Obtener evento por código de invitación
+ */
+export const getEventByInviteCode = async (inviteCode: string): Promise<Event | null> => {
+  try {
+    const q = query(
+      collection(db, 'events'),
+      where('inviteCode', '==', inviteCode.toUpperCase())
+    );
+    
+    const querySnapshot = await getDocs(q);
+    
+    if (querySnapshot.empty) {
+      return null;
+    }
+    
+    const eventDoc = querySnapshot.docs[0];
+    return { id: eventDoc.id, ...eventDoc.data() } as Event;
+  } catch (error: any) {
+    console.error('Error finding event by invite code:', error);
+    throw new Error(error.message || 'No se pudo buscar el evento');
+  }
+};
+
+/**
+ * Autenticación anónima
+ */
+export const signInAnonymously = async (): Promise<User> => {
+  try {
+    const { signInAnonymously: firebaseSignInAnonymously } = await import('firebase/auth');
+    const userCredential = await firebaseSignInAnonymously(auth);
+    
+    // Crear usuario anónimo en Firestore
+    const anonymousUser: User = {
+      uid: userCredential.user.uid,
+      email: `anonymous_${userCredential.user.uid}@lessmo.app`,
+      displayName: 'Usuario anónimo',
+      createdAt: new Date(),
+    };
+    
+    await setDoc(doc(db, 'users', anonymousUser.uid), anonymousUser);
+    return anonymousUser;
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
+};
+
 export default {
   auth,
   db,
@@ -704,6 +893,7 @@ export default {
   createEvent,
   getEvent,
   getUserEvents,
+  getUserEventsByStatus,
   updateEvent,
   deleteEvent,
   addParticipant,
@@ -713,4 +903,9 @@ export default {
   getEventExpenses,
   updateExpense,
   deleteExpense,
+  createGroup,
+  getUserGroups,
+  generateInviteCode,
+  getEventByInviteCode,
+  signInAnonymously,
 };
