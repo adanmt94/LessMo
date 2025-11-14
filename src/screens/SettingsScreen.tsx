@@ -54,7 +54,10 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
       'Elige el idioma de la aplicación',
       availableLanguages.map(lang => ({
         text: `${lang.nativeName} (${lang.name})`,
-        onPress: () => changeLanguage(lang.code),
+        onPress: async () => {
+          await changeLanguage(lang.code);
+          Alert.alert('Idioma cambiado', `El idioma se ha cambiado a ${lang.nativeName}`);
+        },
       })),
       { cancelable: true }
     );
@@ -66,7 +69,10 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
       'Elige la moneda predeterminada para nuevos eventos',
       availableCurrencies.map(curr => ({
         text: `${curr.name} (${curr.symbol})`,
-        onPress: () => changeCurrency(curr.code),
+        onPress: async () => {
+          await changeCurrency(curr.code);
+          Alert.alert('Moneda cambiada', `La moneda predeterminada ahora es ${curr.name}`);
+        },
       })),
       { cancelable: true }
     );
