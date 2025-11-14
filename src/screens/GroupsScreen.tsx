@@ -20,6 +20,7 @@ import { RootStackParamList, Group } from '../types';
 import { Button, Card } from '../components/lovable';
 import { getUserGroups } from '../services/firebase';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../context/ThemeContext';
 
 type GroupsScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -29,6 +30,7 @@ interface Props {
 
 export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
   const { user } = useAuth();
+  const { theme } = useTheme();
   const [groups, setGroups] = useState<Group[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -107,9 +109,9 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
   const getGroupColor = (color?: string) => color || '#6366F1';
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Mis Grupos</Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.surface }]}>
+      <View style={[styles.header, { backgroundColor: theme.colors.background, borderBottomColor: theme.colors.border }]}>
+        <Text style={[styles.title, { color: theme.colors.text }]}>Mis Grupos</Text>
         <Button
           title="+ Crear Grupo"
           onPress={() => navigation.navigate('CreateGroup', { mode: 'create' })}
@@ -125,7 +127,7 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
         {loading ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>⏳</Text>
-            <Text style={styles.emptyText}>Cargando grupos...</Text>
+            <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>Cargando grupos...</Text>
           </View>
         ) : groups.length === 0 ? (
           <View style={styles.emptyState}>

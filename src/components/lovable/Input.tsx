@@ -12,6 +12,7 @@ import {
   TextInputProps,
   ViewStyle,
 } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -29,30 +30,40 @@ export const Input: React.FC<InputProps> = ({
   ...props
 }) => {
   const [isFocused, setIsFocused] = useState(false);
+  const { theme } = useTheme();
 
   return (
     <View style={[styles.container, containerStyle]}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label && <Text style={[styles.label, { color: theme.colors.text }]}>{label}</Text>}
       
       <View
         style={[
           styles.inputContainer,
-          isFocused && styles.inputContainerFocused,
-          error && styles.inputContainerError,
+          { 
+            backgroundColor: theme.colors.card, 
+            borderColor: error ? theme.colors.error : (isFocused ? theme.colors.primary : theme.colors.border)
+          },
+          isFocused && {
+            shadowColor: theme.colors.primary,
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 4,
+            elevation: 2,
+          },
         ]}
       >
         {icon && <View style={styles.iconContainer}>{icon}</View>}
         
         <TextInput
-          style={[styles.input, icon ? styles.inputWithIcon : undefined, style]}
-          placeholderTextColor="#9CA3AF"
+          style={[styles.input, { color: theme.colors.text }, icon ? styles.inputWithIcon : undefined, style]}
+          placeholderTextColor={theme.colors.placeholder}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           {...props}
         />
       </View>
       
-      {error && <Text style={styles.error}>{error}</Text>}
+      {error && <Text style={[styles.error, { color: theme.colors.error }]}>{error}</Text>}
     </View>
   );
 };
@@ -64,28 +75,14 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#374151',
     marginBottom: 8,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
     paddingHorizontal: 16,
-  },
-  inputContainerFocused: {
-    borderColor: '#6366F1',
-    shadowColor: '#6366F1',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  inputContainerError: {
-    borderColor: '#EF4444',
   },
   iconContainer: {
     marginRight: 8,
@@ -93,7 +90,6 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    color: '#111827',
     paddingVertical: 12,
   },
   inputWithIcon: {
@@ -101,7 +97,6 @@ const styles = StyleSheet.create({
   },
   error: {
     fontSize: 12,
-    color: '#EF4444',
     marginTop: 4,
     marginLeft: 4,
   },

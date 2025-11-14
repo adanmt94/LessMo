@@ -21,6 +21,7 @@ import { RootStackParamList, Event, CurrencySymbols } from '../types';
 import { Button, Card, ExpenseItem, ParticipantItem } from '../components/lovable';
 import { getEvent } from '../services/firebase';
 import { useExpenses } from '../hooks/useExpenses';
+import { useTheme } from '../context/ThemeContext';
 
 type EventDetailScreenNavigationProp = StackNavigationProp<RootStackParamList, 'EventDetail'>;
 type EventDetailScreenRouteProp = RouteProp<RootStackParamList, 'EventDetail'>;
@@ -34,6 +35,7 @@ type TabType = 'expenses' | 'participants' | 'summary';
 
 export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   const { eventId } = route.params;
+  const { theme } = useTheme();
   const [event, setEvent] = useState<Event | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('expenses');
   const [refreshing, setRefreshing] = useState(false);
@@ -323,29 +325,29 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.tabs}>
+    <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
+      <View style={[styles.tabs, { backgroundColor: theme.colors.background, borderBottomColor: theme.colors.border }]}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'expenses' && styles.tabActive]}
+          style={[styles.tab, activeTab === 'expenses' && { borderBottomColor: theme.colors.primary, borderBottomWidth: 2 }]}
           onPress={() => setActiveTab('expenses')}
         >
-          <Text style={[styles.tabText, activeTab === 'expenses' && styles.tabTextActive]}>
+          <Text style={[styles.tabText, { color: activeTab === 'expenses' ? theme.colors.primary : theme.colors.textSecondary }]}>
             Gastos
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'participants' && styles.tabActive]}
+          style={[styles.tab, activeTab === 'participants' && { borderBottomColor: theme.colors.primary, borderBottomWidth: 2 }]}
           onPress={() => setActiveTab('participants')}
         >
-          <Text style={[styles.tabText, activeTab === 'participants' && styles.tabTextActive]}>
+          <Text style={[styles.tabText, { color: activeTab === 'participants' ? theme.colors.primary : theme.colors.textSecondary }]}>
             Participantes
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'summary' && styles.tabActive]}
+          style={[styles.tab, activeTab === 'summary' && { borderBottomColor: theme.colors.primary, borderBottomWidth: 2 }]}
           onPress={() => setActiveTab('summary')}
         >
-          <Text style={[styles.tabText, activeTab === 'summary' && styles.tabTextActive]}>
+          <Text style={[styles.tabText, { color: activeTab === 'summary' ? theme.colors.primary : theme.colors.textSecondary }]}>
             Resumen
           </Text>
         </TouchableOpacity>
