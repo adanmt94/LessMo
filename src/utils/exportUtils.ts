@@ -99,7 +99,7 @@ export const exportExpensesToExcel = async (
 
     // Escribir contenido en base64
     await FileSystem.writeAsStringAsync(fileUri, wbout, {
-      encoding: FileSystem.EncodingType.Base64,
+      encoding: 'base64',
     });
 
     // Compartir archivo
@@ -197,7 +197,7 @@ export const exportAllEventsToExcel = async (
 
     // Escribir contenido en base64
     await FileSystem.writeAsStringAsync(fileUri, wbout, {
-      encoding: FileSystem.EncodingType.Base64,
+      encoding: 'base64',
     });
 
     // Compartir archivo
