@@ -1,18 +1,31 @@
 rules_version = '2';
 
 // Firebase Storage Security Rules for LessMo
+// LÍMITES ESTRICTOS PARA NO EXCEDER CUOTA GRATUITA
 service firebase.storage {
   match /b/{bucket}/o {
     
-    // Profile images - usuarios autenticados pueden subir su propia foto
+    // Profile images - usuarios autenticados pueden subir UNA SOLA foto de perfil
+    // Formato: profiles/userId_cualquiernombre.jpg
     match /profiles/{fileName} {
       // Permitir lectura a todos
       allow read;
       
-      // Permitir escritura solo si está autenticado
+      // Permitir escritura solo si:
+      // 1. Está autenticado
+      // 2. Imagen menor a 500KB (NO 5MB - para ahorrar cuota)
+      // 3. Solo imágenes JPG/PNG
       allow write: if request.auth != null 
-                   && request.resource.size < 5 * 1024 * 1024 // Máximo 5MB
+                   && request.resource.size < 500 * 1024 // Máximo 500KB
                    && request.resource.contentType.matches('image/.*');
+      
+      // Permitir eliminar solo si está autenticado
+      allow delete: if request.auth != null;
+    }
+    
+    // Denegar todo lo demás
+    match /{allPaths=**} {
+      allow read, write: if false;
     }
   }
 }

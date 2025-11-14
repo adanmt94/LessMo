@@ -95,7 +95,7 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
         mediaTypes: 'images' as any, // Workaround for expo-image-picker v15+
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.5, // Comprimir para ahorrar espacio
+        quality: 0.3, // Comprimir más para ahorrar espacio (reducido de 0.5 a 0.3)
       });
 
       console.log('📋 Resultado del picker:', result);
@@ -129,7 +129,7 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.5,
+        quality: 0.3, // Comprimir más para ahorrar espacio (reducido de 0.5 a 0.3)
       });
 
       if (!result.canceled && result.assets[0]) {
@@ -154,6 +154,22 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
       // Validar URI
       if (!uri || uri.trim() === '') {
         throw new Error('URI de imagen inválida');
+      }
+
+      // LÍMITE ESTRICTO: Verificar tamaño del archivo
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      const fileSizeInKB = blob.size / 1024;
+      const MAX_SIZE_KB = 500; // Máximo 500KB para no exceder cuota gratuita
+      
+      console.log(`📊 Tamaño de archivo: ${fileSizeInKB.toFixed(2)} KB`);
+      
+      if (fileSizeInKB > MAX_SIZE_KB) {
+        throw new Error(
+          `La imagen es muy grande (${fileSizeInKB.toFixed(0)}KB). ` +
+          `Máximo permitido: ${MAX_SIZE_KB}KB. ` +
+          `Por favor selecciona una imagen más pequeña o tómala con menos calidad.`
+        );
       }
 
       // Verificar que storage esté inicializado
