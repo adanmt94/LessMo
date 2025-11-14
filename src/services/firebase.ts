@@ -894,7 +894,7 @@ export const signInAnonymously = async (): Promise<User> => {
   } catch (error: any) {
     console.error('❌ Error signing in anonymously:', error);
     if (error.code === 'auth/admin-restricted-operation') {
-      throw new Error('El acceso anónimo no está habilitado. Por favor, crea una cuenta o usa Google Sign-In.');
+      throw new Error('El acceso anónimo no está habilitado en Firebase.\n\nPara habilitarlo:\n1. Ve a Firebase Console\n2. Authentication > Sign-in method\n3. Habilita "Anonymous"\n\nPor ahora, usa Google Sign-In o crea una cuenta.');
     }
     throw new Error(error.message || 'No se pudo iniciar sesión anónimamente');
   }

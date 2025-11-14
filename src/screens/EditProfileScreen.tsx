@@ -73,8 +73,11 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
 
   const pickImage = async () => {
     try {
+      console.log('📸 Iniciando selección de imagen...');
+      
       // Pedir permisos
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      console.log('🔑 Permisos de galería:', status);
       
       if (status !== 'granted') {
         Alert.alert(
@@ -85,19 +88,25 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
       }
 
       // Abrir selector de imágenes
+      console.log('🖼️ Abriendo selector de imágenes...');
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaType.Images,
+        mediaTypes: 'images' as any, // Workaround for expo-image-picker v15+
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.5, // Comprimir para ahorrar espacio
       });
 
+      console.log('📋 Resultado del picker:', result);
+
       if (!result.canceled && result.assets[0]) {
+        console.log('✅ Imagen seleccionada:', result.assets[0].uri);
         await uploadImage(result.assets[0].uri);
+      } else {
+        console.log('❌ Selección cancelada');
       }
-    } catch (error) {
-      console.error('Error picking image:', error);
-      Alert.alert('Error', 'No se pudo seleccionar la imagen');
+    } catch (error: any) {
+      console.error('❌ Error picking image:', error);
+      Alert.alert('Error', error.message || 'No se pudo seleccionar la imagen');
     }
   };
 

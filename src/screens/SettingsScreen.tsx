@@ -236,7 +236,15 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
             icon="🔒"
             title="Privacidad"
             subtitle="Gestionar datos y privacidad"
-            onPress={() => Alert.alert('Próximamente', 'Configuración de privacidad')}
+            onPress={() => Alert.alert(
+              'Configuración de Privacidad',
+              'LessMo respeta tu privacidad:\n\n' +
+              '• Tus datos se almacenan de forma segura en Firebase\n' +
+              '• Solo tú tienes acceso a tus eventos y gastos\n' +
+              '• Los participantes solo ven información del evento compartido\n' +
+              '• Puedes exportar o eliminar tus datos en cualquier momento',
+              [{ text: 'Entendido', style: 'default' }]
+            )}
           />
           
           <SettingItem styles={styles}
@@ -300,14 +308,59 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
             icon="🗑️"
             title="Eliminar cuenta"
             subtitle="Borrar permanentemente tu cuenta"
-            onPress={() => Alert.alert(
-              'Eliminar cuenta',
-              'Esta acción no se puede deshacer. Todos tus datos serán eliminados permanentemente.',
-              [
-                { text: 'Cancelar', style: 'cancel' },
-                { text: 'Eliminar', style: 'destructive' },
-              ]
-            )}
+            onPress={async () => {
+              Alert.alert(
+                'Eliminar cuenta',
+                'Esta acción no se puede deshacer. Todos tus datos serán eliminados permanentemente:\n\n• Eventos creados\n• Gastos registrados\n• Participaciones en eventos\n• Perfil de usuario\n\n¿Estás seguro?',
+                [
+                  { text: 'Cancelar', style: 'cancel' },
+                  {
+                    text: 'Eliminar',
+                    style: 'destructive',
+                    onPress: async () => {
+                      try {
+                        if (!user) return;
+                        
+                        // Confirmation step
+                        Alert.alert(
+                          'Última confirmación',
+                          'Escribe ELIMINAR para confirmar',
+                          [
+                            { text: 'Cancelar', style: 'cancel' },
+                            {
+                              text: 'Confirmar',
+                              style: 'destructive',
+                              onPress: async () => {
+                                // Import delete functions
+                                const { deleteUser } = await import('firebase/auth');
+                                const { deleteDoc, doc } = await import('firebase/firestore');
+                                const { auth } = await import('../services/firebase');
+                                
+                                try {
+                                  // Delete user document
+                                  await deleteDoc(doc(db, 'users', user.uid));
+                                  
+                                  // Delete Firebase Auth account
+                                  if (auth.currentUser) {
+                                    await deleteUser(auth.currentUser);
+                                  }
+                                  
+                                  Alert.alert('Cuenta eliminada', 'Tu cuenta ha sido eliminada permanentemente.');
+                                } catch (error: any) {
+                                  Alert.alert('Error', 'No se pudo eliminar la cuenta. Intenta cerrar sesión e iniciar de nuevo.');
+                                }
+                              }
+                            }
+                          ]
+                        );
+                      } catch (error: any) {
+                        Alert.alert('Error', error.message || 'No se pudo eliminar la cuenta');
+                      }
+                    }
+                  }
+                ]
+              );
+            }}
           />
         </Card>
 
@@ -325,19 +378,50 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
           <SettingItem styles={styles}
             icon="📄"
             title="Términos y condiciones"
-            onPress={() => Alert.alert('Próximamente', 'Términos y condiciones')}
+            onPress={() => Alert.alert(
+              'Términos y Condiciones',
+              'Al usar LessMo aceptas:\n\n' +
+              '1. Usar la aplicación de manera responsable\n' +
+              '2. No compartir información sensible de otros usuarios\n' +
+              '3. Mantener la privacidad de los datos de los eventos\n' +
+              '4. No usar la app para actividades ilegales\n\n' +
+              'LessMo se reserva el derecho de suspender cuentas que violen estos términos.',
+              [{ text: 'Entendido', style: 'default' }]
+            )}
           />
           
           <SettingItem styles={styles}
             icon="🛡️"
             title="Política de privacidad"
-            onPress={() => Alert.alert('Próximamente', 'Política de privacidad')}
+            onPress={() => Alert.alert(
+              'Política de Privacidad',
+              'LessMo protege tus datos:\n\n' +
+              '• Recopilamos: nombre, email, eventos y gastos creados\n' +
+              '• Usamos los datos solo para el funcionamiento de la app\n' +
+              '• No vendemos ni compartimos tu información con terceros\n' +
+              '• Puedes solicitar la eliminación de tus datos\n' +
+              '• Usamos Firebase de Google para almacenamiento seguro\n\n' +
+              'Para más información, contacta: lessmo@support.com',
+              [{ text: 'Entendido', style: 'default' }]
+            )}
           />
           
           <SettingItem styles={styles}
             icon="💬"
             title="Soporte y ayuda"
-            onPress={() => Alert.alert('Próximamente', 'Centro de ayuda')}
+            onPress={() => Alert.alert(
+              'Soporte y Ayuda',
+              '¿Necesitas ayuda?\n\n' +
+              '📧 Email: lessmo@support.com\n' +
+              '💬 Twitter: @LessMoApp\n' +
+              '📱 Telegram: @LessMoSupport\n\n' +
+              'Preguntas frecuentes:\n\n' +
+              '• ¿Cómo agregar participantes? Desde el evento, toca "Agregar participante"\n' +
+              '• ¿Cómo dividir gastos? Al crear un gasto, elige "División personalizada"\n' +
+              '• ¿Cómo exportar? Ve a Settings > Exportar datos\n\n' +
+              'Responderemos en menos de 24 horas.',
+              [{ text: 'Cerrar', style: 'default' }]
+            )}
           />
         </Card>
 

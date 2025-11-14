@@ -3,7 +3,7 @@
  */
 
 import * as XLSX from 'xlsx';
-import * as FileSystem from 'expo-file-system';
+import { writeAsStringAsync, cacheDirectory } from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Event, Expense, Participant } from '../types';
 
@@ -95,10 +95,10 @@ export const exportExpensesToExcel = async (
 
     // Guardar archivo
     const fileName = `${event.name.replace(/[^a-z0-9]/gi, '_')}_${Date.now()}.xlsx`;
-    const fileUri = FileSystem.cacheDirectory + fileName;
+    const fileUri = cacheDirectory + fileName;
 
     // Escribir contenido en base64
-    await FileSystem.writeAsStringAsync(fileUri, wbout, {
+    await writeAsStringAsync(fileUri, wbout, {
       encoding: 'base64',
     });
 
@@ -193,10 +193,10 @@ export const exportAllEventsToExcel = async (
 
     // Guardar archivo
     const fileName = `LessMo_Todos_los_eventos_${Date.now()}.xlsx`;
-    const fileUri = FileSystem.cacheDirectory + fileName;
+    const fileUri = cacheDirectory + fileName;
 
     // Escribir contenido en base64
-    await FileSystem.writeAsStringAsync(fileUri, wbout, {
+    await writeAsStringAsync(fileUri, wbout, {
       encoding: 'base64',
     });
 
