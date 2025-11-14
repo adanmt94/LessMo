@@ -22,6 +22,7 @@ import { RootStackParamList, Event, CurrencySymbols } from '../types';
 import { Button, Card, OnboardingModal } from '../components/lovable';
 import { getUserEventsByStatus } from '../services/firebase';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../context/ThemeContext';
 
 type EventsScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -33,6 +34,7 @@ type EventTab = 'active' | 'past';
 
 export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
   const { user } = useAuth();
+  const { theme } = useTheme();
   const [events, setEvents] = useState<Event[]>([]);
   const [activeTab, setActiveTab] = useState<EventTab>('active');
   const [refreshing, setRefreshing] = useState(false);
@@ -119,14 +121,14 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
   const displayEvents = activeTab === 'active' ? activeEvents : pastEvents;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.surface }]}>
       <OnboardingModal
         visible={showOnboarding}
         onClose={handleCloseOnboarding}
       />
       
-      <View style={styles.header}>
-        <Text style={styles.title}>
+      <View style={[styles.header, { backgroundColor: theme.colors.background, borderBottomColor: theme.colors.border }]}>
+        <Text style={[styles.title, { color: theme.colors.text }]}>
           {filterGroupId ? 'Eventos del Grupo' : 'Mis Eventos'}
         </Text>
         <View style={styles.headerButtons}>
@@ -159,21 +161,21 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
       </View>
 
       {/* Tabs */}
-      <View style={styles.tabContainer}>
+      <View style={[styles.tabContainer, { backgroundColor: theme.colors.background, borderBottomColor: theme.colors.border }]}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'active' && styles.tabActive]}
+          style={[styles.tab, activeTab === 'active' && { borderBottomColor: theme.colors.primary, borderBottomWidth: 2 }]}
           onPress={() => setActiveTab('active')}
         >
-          <Text style={[styles.tabText, activeTab === 'active' && styles.tabTextActive]}>
+          <Text style={[styles.tabText, { color: activeTab === 'active' ? theme.colors.primary : theme.colors.textSecondary }]}>
             Activos ({activeEvents.length})
           </Text>
         </TouchableOpacity>
         
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'past' && styles.tabActive]}
+          style={[styles.tab, activeTab === 'past' && { borderBottomColor: theme.colors.primary, borderBottomWidth: 2 }]}
           onPress={() => setActiveTab('past')}
         >
-          <Text style={[styles.tabText, activeTab === 'past' && styles.tabTextActive]}>
+          <Text style={[styles.tabText, { color: activeTab === 'past' ? theme.colors.primary : theme.colors.textSecondary }]}>
             Pasados ({pastEvents.length})
           </Text>
         </TouchableOpacity>

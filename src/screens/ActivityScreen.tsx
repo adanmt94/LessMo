@@ -16,6 +16,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types';
 import { Card } from '../components/lovable';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../context/ThemeContext';
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../services/firebase';
 
@@ -38,6 +39,7 @@ interface ActivityItem {
 
 export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
   const { user } = useAuth();
+  const { theme } = useTheme();
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -167,26 +169,26 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
     >
       <Card style={styles.activityCard}>
         <View style={styles.activityHeader}>
-          <View style={styles.iconContainer}>
+          <View style={[styles.iconContainer, { backgroundColor: theme.colors.primaryLight + '20' }]}>
             <Text style={styles.activityIcon}>{activity.icon}</Text>
           </View>
           <View style={styles.activityContent}>
-            <Text style={styles.activityTitle}>{activity.title}</Text>
-            <Text style={styles.activityDescription} numberOfLines={2}>
+            <Text style={[styles.activityTitle, { color: theme.colors.text }]}>{activity.title}</Text>
+            <Text style={[styles.activityDescription, { color: theme.colors.textSecondary }]} numberOfLines={2}>
               {activity.description}
             </Text>
           </View>
-          <Text style={styles.activityTime}>{getTimeAgo(activity.date)}</Text>
+          <Text style={[styles.activityTime, { color: theme.colors.textTertiary }]}>{getTimeAgo(activity.date)}</Text>
         </View>
       </Card>
     </TouchableOpacity>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Actividad Reciente</Text>
-        <Text style={styles.headerSubtitle}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.surface }]}>
+      <View style={[styles.header, { backgroundColor: theme.colors.background, borderBottomColor: theme.colors.border }]}>
+        <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Actividad Reciente</Text>
+        <Text style={[styles.headerSubtitle, { color: theme.colors.textSecondary }]}>
           Historial de eventos, gastos y cambios
         </Text>
       </View>
@@ -199,13 +201,13 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
       >
         {loading ? (
           <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Cargando actividad...</Text>
+            <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Cargando actividad...</Text>
           </View>
         ) : activities.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>📊</Text>
-            <Text style={styles.emptyTitle}>Sin actividad reciente</Text>
-            <Text style={styles.emptyText}>
+            <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>Sin actividad reciente</Text>
+            <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
               Tus eventos y gastos aparecerán aquí
             </Text>
           </View>

@@ -19,6 +19,7 @@ import { RootStackParamList, Event, CurrencySymbols } from '../types';
 import { Button, Card } from '../components/lovable';
 import { getUserEvents } from '../services/firebase';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../context/ThemeContext';
 
 // DEPRECATED: Esta pantalla ha sido reemplazada por MainTabs (EventsScreen, GroupsScreen, SettingsScreen)
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'MainTabs'>;
@@ -32,6 +33,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { user, signOut } = useAuth();
+  const { theme } = useTheme();
 
   const loadEvents = useCallback(async () => {
     if (!user) return;
@@ -83,7 +85,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
       >
         <Card style={styles.eventCard}>
           <View style={styles.eventHeader}>
-            <Text style={styles.eventName}>{item.name}</Text>
+            <Text style={[styles.eventName, { color: theme.colors.text }]}>{item.name}</Text>
             <View style={[styles.statusBadge, item.isActive && styles.statusActive]}>
               <Text style={styles.statusText}>
                 {item.isActive ? 'Activo' : 'Finalizado'}
@@ -92,19 +94,19 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
           </View>
 
           {item.description && (
-            <Text style={styles.eventDescription} numberOfLines={2}>
+            <Text style={[styles.eventDescription, { color: theme.colors.textSecondary }]} numberOfLines={2}>
               {item.description}
             </Text>
           )}
 
           <View style={styles.eventFooter}>
             <View style={styles.budgetContainer}>
-              <Text style={styles.budgetLabel}>Presupuesto</Text>
-              <Text style={styles.budgetValue}>
+              <Text style={[styles.budgetLabel, { color: theme.colors.textSecondary }]}>Presupuesto</Text>
+              <Text style={[styles.budgetValue, { color: theme.colors.primary }]}>
                 {currencySymbol}{item.initialBudget.toFixed(2)}
               </Text>
             </View>
-            <Text style={styles.participantsCount}>
+            <Text style={[styles.participantsCount, { color: theme.colors.textSecondary }]}>
               👥 {item.participantIds.length} participantes
             </Text>
           </View>
@@ -116,8 +118,8 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
       <Text style={styles.emptyIcon}>📝</Text>
-      <Text style={styles.emptyTitle}>No hay eventos</Text>
-      <Text style={styles.emptyDescription}>
+      <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No hay eventos</Text>
+      <Text style={[styles.emptyDescription, { color: theme.colors.textSecondary }]}>
         Crea tu primer evento para comenzar a gestionar gastos compartidos
       </Text>
       <Button
@@ -129,13 +131,13 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.surface }]}>
+      <View style={[styles.header, { backgroundColor: theme.colors.background, borderBottomColor: theme.colors.border }]}>
         <View>
-          <Text style={styles.greeting}>Hola 👋</Text>
-          <Text style={styles.userName}>{user?.email}</Text>
+          <Text style={[styles.greeting, { color: theme.colors.textSecondary }]}>Hola 👋</Text>
+          <Text style={[styles.userName, { color: theme.colors.text }]}>{user?.email}</Text>
         </View>
-        <TouchableOpacity onPress={handleSignOut} style={styles.logoutButton}>
+        <TouchableOpacity onPress={handleSignOut} style={[styles.logoutButton, { backgroundColor: theme.colors.error }]}>
           <Text style={styles.logoutText}>Salir</Text>
         </TouchableOpacity>
       </View>
