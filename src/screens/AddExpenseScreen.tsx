@@ -44,6 +44,7 @@ const CATEGORIES: ExpenseCategory[] = [
 export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
   const { eventId, expenseId, mode } = route.params;
   const { theme } = useTheme();
+  const styles = getStyles(theme);
   const isEditMode = mode === 'edit' && expenseId;
   const { participants, addExpense, editExpense, expenses } = useExpenses(eventId);
   const { notifyNewExpense } = useNotifications();
@@ -526,29 +527,29 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.colors.background,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: theme.colors.border,
   },
   backButton: {
     fontSize: 16,
-    color: '#6366F1',
+    color: theme.colors.primary,
     fontWeight: '600',
   },
   title: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.colors.text,
   },
   keyboardView: {
     flex: 1,
@@ -559,9 +560,9 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#374151',
+    color: theme.colors.text,
     marginBottom: 12,
-    marginTop: 8,
+    marginTop: 0,
   },
   categoriesGrid: {
     flexDirection: 'row',
@@ -573,21 +574,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.colors.inputBackground,
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
+    borderColor: theme.colors.border,
   },
   categoryButtonActive: {
-    backgroundColor: '#EEF2FF',
-    borderColor: '#6366F1',
+    backgroundColor: theme.colors.primaryLight,
+    borderColor: theme.colors.primary,
   },
   categoryText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
     fontWeight: '500',
   },
   categoryTextActive: {
-    color: '#6366F1',
+    color: theme.colors.primary,
     fontWeight: '600',
   },
   participantsList: {
@@ -597,22 +598,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 12,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.colors.inputBackground,
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
+    borderColor: theme.colors.border,
     marginBottom: 8,
   },
   participantButtonActive: {
-    backgroundColor: '#EEF2FF',
-    borderColor: '#6366F1',
+    backgroundColor: theme.colors.primaryLight,
+    borderColor: theme.colors.primary,
   },
   participantText: {
     fontSize: 16,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
     fontWeight: '500',
   },
   participantTextActive: {
-    color: '#6366F1',
+    color: theme.colors.primary,
     fontWeight: '600',
   },
   beneficiariesList: {
@@ -623,7 +624,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: theme.colors.inputBackground,
   },
   beneficiaryButtonActive: {},
   checkbox: {
@@ -631,14 +632,14 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: '#D1D5DB',
+    borderColor: theme.colors.border,
     marginRight: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkboxActive: {
-    backgroundColor: '#6366F1',
-    borderColor: '#6366F1',
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
   },
   checkmark: {
     color: '#FFFFFF',
@@ -647,12 +648,12 @@ const styles = StyleSheet.create({
   },
   beneficiaryText: {
     fontSize: 16,
-    color: '#374151',
+    color: theme.colors.text,
     fontWeight: '500',
   },
   emptyText: {
     fontSize: 14,
-    color: '#9CA3AF',
+    color: theme.colors.textSecondary,
     textAlign: 'center',
     padding: 16,
     fontStyle: 'italic',
@@ -666,22 +667,22 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
     borderRadius: 12,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.colors.inputBackground,
     borderWidth: 2,
-    borderColor: '#E5E7EB',
+    borderColor: theme.colors.border,
     alignItems: 'center',
   },
   splitTypeButtonActive: {
-    backgroundColor: '#EEF2FF',
-    borderColor: '#6366F1',
+    backgroundColor: theme.colors.primaryLight,
+    borderColor: theme.colors.primary,
   },
   splitTypeText: {
     fontSize: 15,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
     fontWeight: '600',
   },
   splitTypeTextActive: {
-    color: '#6366F1',
+    color: theme.colors.primary,
   },
   customBeneficiaryRow: {
     marginBottom: 12,
@@ -690,33 +691,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
+    borderColor: theme.colors.border,
     marginBottom: 8,
   },
   customBeneficiaryButtonActive: {
-    backgroundColor: '#EEF2FF',
-    borderColor: '#6366F1',
+    backgroundColor: theme.colors.primaryLight,
+    borderColor: theme.colors.primary,
   },
   customBeneficiaryName: {
     fontSize: 16,
-    color: '#111827',
+    color: theme.colors.text,
     fontWeight: '500',
   },
   customAmountInput: {
     marginTop: 0,
   },
   customSummary: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: theme.colors.warning || '#FEF3C7',
     padding: 12,
     borderRadius: 8,
     marginBottom: 12,
   },
   customSummaryText: {
     fontSize: 14,
-    color: '#92400E',
+    color: theme.colors.warningText || '#92400E',
     fontWeight: '600',
     marginBottom: 4,
   },

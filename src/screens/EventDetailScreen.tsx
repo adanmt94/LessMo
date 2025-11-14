@@ -36,6 +36,7 @@ type TabType = 'expenses' | 'participants' | 'summary';
 export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   const { eventId } = route.params;
   const { theme } = useTheme();
+  const styles = getStyles(theme);
   const [event, setEvent] = useState<Event | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('expenses');
   const [refreshing, setRefreshing] = useState(false);
@@ -408,10 +409,10 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.colors.background,
   },
   loadingContainer: {
     flex: 1,
@@ -423,38 +424,39 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: theme.colors.border,
   },
   backButton: {
     fontSize: 16,
-    color: '#6366F1',
+    color: theme.colors.primary,
     fontWeight: '600',
   },
   exportButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.colors.inputBackground,
     alignItems: 'center',
     justifyContent: 'center',
   },
   exportIcon: {
     fontSize: 20,
+    color: theme.colors.text,
   },
   eventName: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.colors.text,
     flex: 1,
     textAlign: 'center',
   },
   tabs: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: theme.colors.border,
   },
   tab: {
     flex: 1,
@@ -464,15 +466,15 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   tabActive: {
-    borderBottomColor: '#6366F1',
+    borderBottomColor: theme.colors.primary,
   },
   tabText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
   },
   tabTextActive: {
-    color: '#6366F1',
+    color: theme.colors.primary,
   },
   tabContent: {
     flex: 1,
@@ -489,12 +491,12 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
     marginBottom: 24,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#9CA3AF',
+    color: theme.colors.textSecondary,
     textAlign: 'center',
     marginTop: 8,
   },
@@ -507,7 +509,7 @@ const styles = StyleSheet.create({
   summaryTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.colors.text,
     marginBottom: 16,
   },
   summaryRow: {
@@ -517,17 +519,17 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
   },
   summaryValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#111827',
+    color: theme.colors.text,
   },
   summaryLabelBold: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.colors.text,
   },
   summaryValueBold: {
     fontSize: 18,
@@ -535,12 +537,12 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: theme.colors.border,
     marginVertical: 16,
   },
   progressBarContainer: {
     height: 8,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: theme.colors.border,
     borderRadius: 4,
     overflow: 'hidden',
     marginTop: 16,
@@ -552,15 +554,15 @@ const styles = StyleSheet.create({
   },
   percentageText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
     textAlign: 'right',
     marginBottom: 16,
   },
   editParticipantsContainer: {
     padding: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: theme.colors.border,
   },
   fabContainer: {
     position: 'absolute',
@@ -571,10 +573,10 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#6366F1',
+    backgroundColor: theme.colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#6366F1',
+    shadowColor: theme.colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 12,
@@ -591,6 +593,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
   },
   searchInput: {
     flex: 1,
@@ -599,6 +603,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontSize: 15,
     borderWidth: 1,
+    backgroundColor: theme.colors.inputBackground,
+    color: theme.colors.text,
+    borderColor: theme.colors.border,
   },
   clearButton: {
     marginLeft: 8,
@@ -607,8 +614,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: theme.colors.inputBackground,
   },
   clearButtonText: {
     fontSize: 18,
+    color: theme.colors.textSecondary,
   },
 });
