@@ -22,6 +22,7 @@ export const useGoogleAuth = () => {
     iosClientId: Constants.expoConfig?.extra?.googleIosClientId || Constants.expoConfig?.extra?.googleWebClientId,
     webClientId: Constants.expoConfig?.extra?.googleWebClientId,
     language: 'es-ES', // Forzar español de España en Google Sign-In
+    redirectUri: `${Constants.expoConfig?.scheme || 'lessmo'}:/`, // Fix para redirect URI
   });
 
   useEffect(() => {

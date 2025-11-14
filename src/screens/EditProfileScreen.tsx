@@ -156,22 +156,6 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
         throw new Error('URI de imagen inválida');
       }
 
-      // LÍMITE ESTRICTO: Verificar tamaño del archivo
-      const response = await fetch(uri);
-      const blob = await response.blob();
-      const fileSizeInKB = blob.size / 1024;
-      const MAX_SIZE_KB = 500; // Máximo 500KB para no exceder cuota gratuita
-      
-      console.log(`📊 Tamaño de archivo: ${fileSizeInKB.toFixed(2)} KB`);
-      
-      if (fileSizeInKB > MAX_SIZE_KB) {
-        throw new Error(
-          `La imagen es muy grande (${fileSizeInKB.toFixed(0)}KB). ` +
-          `Máximo permitido: ${MAX_SIZE_KB}KB. ` +
-          `Por favor selecciona una imagen más pequeña o tómala con menos calidad.`
-        );
-      }
-
       // Verificar que storage esté inicializado
       if (!storage) {
         console.error('❌ Firebase Storage no está inicializado');
@@ -188,6 +172,20 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
       
       const blob = await response.blob();
       console.log('✅ Blob creado, tamaño:', blob.size, 'tipo:', blob.type);
+      
+      // LÍMITE ESTRICTO: Verificar tamaño del archivo
+      const fileSizeInKB = blob.size / 1024;
+      const MAX_SIZE_KB = 500; // Máximo 500KB para no exceder cuota gratuita
+      
+      console.log(`📊 Tamaño de archivo: ${fileSizeInKB.toFixed(2)} KB`);
+      
+      if (fileSizeInKB > MAX_SIZE_KB) {
+        throw new Error(
+          `La imagen es muy grande (${fileSizeInKB.toFixed(0)}KB). ` +
+          `Máximo permitido: ${MAX_SIZE_KB}KB. ` +
+          `Por favor selecciona una imagen más pequeña o tómala con menos calidad.`
+        );
+      }
 
       if (blob.size === 0) {
         throw new Error('La imagen está vacía');

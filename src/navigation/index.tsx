@@ -2,7 +2,7 @@
  * Navigation - Configuración de navegación de la app
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { NavigationContainer, LinkingOptions } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -19,6 +19,8 @@ import {
   GroupEventsScreen,
   JoinEventScreen,
   EditProfileScreen,
+  OnboardingScreen,
+  shouldShowOnboarding,
 } from '../screens';
 import { MainTabNavigator } from './MainTabNavigator';
 
@@ -51,9 +53,32 @@ const linking: LinkingOptions<RootStackParamList> = {
 
 export const Navigation: React.FC = () => {
   const { isAuthenticated, loading } = useAuthContext();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [checkingOnboarding, setCheckingOnboarding] = useState(true);
 
-  if (loading) {
+  useEffect(() => {
+    checkOnboarding();
+  }, [isAuthenticated]);
+
+  const checkOnboarding = async () => {
+    if (isAuthenticated) {
+      const should Show = await shouldShowOnboarding();
+      setShowOnboarding(shouldShow);
+    }
+    setCheckingOnboarding(false);
+  };
+
+  const handleOnboardingComplete = () => {
+    setShowOnboarding(false);
+  };
+
+  if (loading || checkingOnboarding) {
     return null; // Puedes mostrar un splash screen aquí
+  }
+
+  // Mostrar onboarding si es la primera vez y está autenticado
+  if (isAuthenticated && showOnboarding) {
+    return <OnboardingScreen onComplete={handleOnboardingComplete} />;
   }
 
   return (
