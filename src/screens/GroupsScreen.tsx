@@ -65,6 +65,45 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
     setRefreshing(false);
   };
 
+  const handleViewGroupEvents = (groupId: string) => {
+    // Navegar a EventsScreen filtrando por groupId
+    navigation.navigate('MainTabs', { 
+      screen: 'Events',
+      params: { filterGroupId: groupId }
+    } as any);
+  };
+
+  const handleEditGroup = (groupId: string) => {
+    navigation.navigate('CreateGroup', { 
+      groupId, 
+      mode: 'edit' 
+    });
+  };
+
+  const handleDeleteGroup = (groupId: string, groupName: string) => {
+    Alert.alert(
+      'Eliminar grupo',
+      `¿Estás seguro de eliminar "${groupName}"? Los eventos asociados no se eliminarán.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { deleteGroup } = await import('../services/firebase');
+              await deleteGroup(groupId);
+              Alert.alert('Éxito', 'Grupo eliminado correctamente');
+              loadGroups();
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'No se pudo eliminar el grupo');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const getGroupColor = (color?: string) => color || '#6366F1';
 
   return (
@@ -133,16 +172,13 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
                   </View>
                 </View>
 
-                <View style={{ flexDirection: 'row', gap: 8 }}>
+                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
                   <Button
                     title="Ver Eventos"
                     variant="outline"
                     size="small"
                     style={{ flex: 1 }}
-                    onPress={() => {
-                      // TODO: Navegar a vista filtrada de eventos del grupo
-                      Alert.alert('Próximamente', 'Ver eventos del grupo');
-                    }}
+                    onPress={() => handleViewGroupEvents(group.id)}
                   />
                   <Button
                     title="+ Evento"
@@ -155,6 +191,22 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
                         groupId: group.id 
                       });
                     }}
+                  />
+                </View>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Button
+                    title="✏️ Editar"
+                    variant="outline"
+                    size="small"
+                    style={{ flex: 1 }}
+                    onPress={() => handleEditGroup(group.id)}
+                  />
+                  <Button
+                    title="🗑️ Eliminar"
+                    variant="danger"
+                    size="small"
+                    style={{ flex: 1 }}
+                    onPress={() => handleDeleteGroup(group.id, group.name)}
                   />
                 </View>
               </Card>

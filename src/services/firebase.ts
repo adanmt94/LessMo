@@ -796,6 +796,19 @@ export const getUserGroups = async (userId: string): Promise<any[]> => {
 };
 
 /**
+ * Eliminar un grupo
+ */
+export const deleteGroup = async (groupId: string): Promise<void> => {
+  try {
+    await deleteDoc(doc(db, 'groups', groupId));
+    console.log('✅ Grupo eliminado:', groupId);
+  } catch (error: any) {
+    console.error('❌ Error deleting group:', error);
+    throw new Error(error.message || 'No se pudo eliminar el grupo');
+  }
+};
+
+/**
  * Obtener eventos de un usuario con filtro de estado
  */
 export const getUserEventsByStatus = async (
@@ -879,7 +892,11 @@ export const signInAnonymously = async (): Promise<User> => {
     await setDoc(doc(db, 'users', anonymousUser.uid), anonymousUser);
     return anonymousUser;
   } catch (error: any) {
-    throw new Error(error.message);
+    console.error('❌ Error signing in anonymously:', error);
+    if (error.code === 'auth/admin-restricted-operation') {
+      throw new Error('El acceso anónimo no está habilitado. Por favor, crea una cuenta o usa Google Sign-In.');
+    }
+    throw new Error(error.message || 'No se pudo iniciar sesión anónimamente');
   }
 };
 

@@ -31,18 +31,26 @@ interface Props {
 
 type EventTab = 'active' | 'past';
 
-export const EventsScreen: React.FC<Props> = ({ navigation }) => {
+export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
   const { user } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
   const [activeTab, setActiveTab] = useState<EventTab>('active');
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [filterGroupId, setFilterGroupId] = useState<string | null>(null);
 
   // Check if first time and show onboarding
   useEffect(() => {
     checkFirstTime();
   }, []);
+
+  // Check for filter from route params
+  useEffect(() => {
+    if (route?.params?.filterGroupId) {
+      setFilterGroupId(route.params.filterGroupId);
+    }
+  }, [route?.params]);
 
   // Reload events when screen gains focus
   useFocusEffect(
@@ -96,8 +104,14 @@ export const EventsScreen: React.FC<Props> = ({ navigation }) => {
     setRefreshing(false);
   };
 
-  const activeEvents = events.filter(e => e.status === 'active');
-  const pastEvents = events.filter(e => e.status === 'completed' || e.status === 'archived');
+  // Filtrar eventos
+  let filteredEvents = events;
+  if (filterGroupId) {
+    filteredEvents = events.filter(e => e.groupId === filterGroupId);
+  }
+
+  const activeEvents = filteredEvents.filter(e => e.status === 'active');
+  const pastEvents = filteredEvents.filter(e => e.status === 'completed' || e.status === 'archived');
   const displayEvents = activeTab === 'active' ? activeEvents : pastEvents;
 
   return (
@@ -108,8 +122,18 @@ export const EventsScreen: React.FC<Props> = ({ navigation }) => {
       />
       
       <View style={styles.header}>
-        <Text style={styles.title}>Mis Eventos</Text>
+        <Text style={styles.title}>
+          {filterGroupId ? 'Eventos del Grupo' : 'Mis Eventos'}
+        </Text>
         <View style={styles.headerButtons}>
+          {filterGroupId && (
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={() => setFilterGroupId(null)}
+            >
+              <Text style={styles.iconButtonText}>✕</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             style={styles.iconButton}
             onPress={() => setShowOnboarding(true)}

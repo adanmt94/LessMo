@@ -131,18 +131,37 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const uploadImage = async (uri: string) => {
-    if (!user) return;
+    if (!user) {
+      console.log('❌ No user');
+      return;
+    }
 
     try {
       setUploading(true);
+      console.log('📤 Subiendo imagen desde:', uri);
+
+      // Validar URI
+      if (!uri || uri.trim() === '') {
+        throw new Error('URI de imagen inválida');
+      }
 
       // Obtener la imagen como blob
       const response = await fetch(uri);
+      if (!response.ok) {
+        throw new Error(`Error al obtener imagen: ${response.status}`);
+      }
+      
       const blob = await response.blob();
+      console.log('✅ Blob creado, tamaño:', blob.size);
+
+      if (blob.size === 0) {
+        throw new Error('La imagen está vacía');
+      }
 
       // Crear referencia en Storage
       const filename = `profile_${user.uid}_${Date.now()}.jpg`;
       const storageRef = ref(storage, `profiles/${filename}`);
+      console.log('📁 Referencia creada:', filename);
 
       // Subir imagen
       const uploadResult = await uploadBytes(storageRef, blob);
@@ -156,6 +175,11 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
       Alert.alert('¡Éxito!', 'Foto actualizada correctamente');
     } catch (error: any) {
       console.error('❌ Error uploading image:', error);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        stack: error.stack
+      });
       Alert.alert('Error', error.message || 'No se pudo subir la imagen');
     } finally {
       setUploading(false);

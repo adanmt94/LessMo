@@ -283,8 +283,8 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
         </Card>
 
         <Button
-          title="Ver resumen completo"
-          onPress={() => navigation.navigate('Summary', { eventId })}
+          title="Ver gráficos y liquidaciones"
+          onPress={() => setActiveTab('summary')}
           variant="outline"
           fullWidth
         />
