@@ -134,6 +134,8 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   const handleCreateEvent = async () => {
+    console.log('🎯 CreateEvent - groupId recibido:', groupId);
+    
     // Validaciones
     if (!eventName.trim()) {
       Alert.alert('Error', 'El nombre del evento es obligatorio');
@@ -188,6 +190,7 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
       console.log('💰 Presupuesto total:', totalBudget);
 
       // Crear evento
+      console.log('📤 Enviando a createEvent - groupId:', groupId);
       const eventId = await createEvent(
         eventName,
         totalBudget,
@@ -197,7 +200,7 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
         groupId // Asociar con grupo si viene desde un grupo
       );
 
-      console.log('✅ Evento creado con ID:', eventId);
+      console.log('✅ Evento creado con ID:', eventId, '- groupId:', groupId);
 
       // Calcular presupuesto individual por defecto
       const groupBudgetNum = groupBudget.trim() ? parseFloat(groupBudget) : 0;

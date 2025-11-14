@@ -194,6 +194,8 @@ export const createEvent = async (
   groupId?: string
 ): Promise<string> => {
   try {
+    console.log('📥 firebase.createEvent - Recibido groupId:', groupId);
+    
     // Generar código de invitación único
     const inviteCode = generateInviteCode();
     
@@ -216,9 +218,14 @@ export const createEvent = async (
     }
     if (groupId) {
       eventData.groupId = groupId;
+      console.log('✅ GroupId agregado al eventData:', groupId);
+    } else {
+      console.log('⚠️ No se recibió groupId');
     }
     
+    console.log('💾 Guardando evento con data:', eventData);
     const docRef = await addDoc(collection(db, 'events'), eventData);
+    console.log('✅ Evento guardado en Firestore con ID:', docRef.id);
     return docRef.id;
   } catch (error: any) {
     console.error('❌ Error creating event:', error);
