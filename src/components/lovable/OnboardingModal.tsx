@@ -47,7 +47,8 @@ const STEPS: StepData[] = [
     description: 'Organiza viajes, cenas, fiestas o cualquier actividad con gastos compartidos.',
     features: [
       'Añade participantes',
-      'Define presupuestos',
+      '🌟 EXCLUSIVO: Define presupuesto máximo individual',
+      '🔔 Notificaciones al acercarse al límite',
       'Soporte multi-moneda',
       'Agrupa eventos relacionados',
     ],

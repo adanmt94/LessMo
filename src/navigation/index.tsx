@@ -3,6 +3,7 @@
  */
 
 import React from 'react';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { NavigationContainer, LinkingOptions } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { RootStackParamList } from '../types';
@@ -114,11 +115,26 @@ export const Navigation: React.FC = () => {
             <Stack.Screen 
               name="EventDetail" 
               component={EventDetailScreen}
-              options={{ 
+              options={({ navigation, route }) => ({ 
                 headerShown: true,
                 title: 'Detalles del Evento',
-                headerBackTitle: 'Atrás'
-              }}
+                headerBackTitle: 'Atrás',
+                headerRight: () => (
+                  <View style={{ flexDirection: 'row', marginRight: 8 }}>
+                    <TouchableOpacity 
+                      onPress={() => {
+                        navigation.navigate('CreateEvent', { 
+                          eventId: route.params?.eventId, 
+                          mode: 'edit' 
+                        });
+                      }}
+                      style={{ padding: 8 }}
+                    >
+                      <Text style={{ fontSize: 20 }}>✏️</Text>
+                    </TouchableOpacity>
+                  </View>
+                )
+              })}
             />
             <Stack.Screen 
               name="AddExpense" 

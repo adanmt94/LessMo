@@ -137,11 +137,11 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
 
   if (!event) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
         <View style={styles.loadingContainer}>
           <Text>Cargando...</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -323,26 +323,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>← Atrás</Text>
-        </TouchableOpacity>
-        <Text style={styles.eventName} numberOfLines={1}>{event.name}</Text>
-        <TouchableOpacity onPress={handleEditEvent} style={styles.exportButton}>
-          <Text style={styles.exportIcon}>✏️</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={handleShareEvent} style={styles.exportButton}>
-          <Text style={styles.exportIcon}>🔗</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={handleExportToExcel} style={styles.exportButton}>
-          <Text style={styles.exportIcon}>📊</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={handleDeleteEvent} style={styles.exportButton}>
-          <Text style={styles.exportIcon}>🗑️</Text>
-        </TouchableOpacity>
-      </View>
-
+    <View style={styles.container}>
       <View style={styles.tabs}>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'expenses' && styles.tabActive]}
@@ -385,7 +366,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
           </TouchableOpacity>
         </View>
       )}
-    </SafeAreaView>
+    </View>
   );
 };
 

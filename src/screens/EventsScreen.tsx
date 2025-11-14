@@ -52,11 +52,15 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
     }
   }, [route?.params]);
 
-  // Reload events when screen gains focus
+  // Reload events when screen gains focus AND clean filter if no route params
   useFocusEffect(
     useCallback(() => {
+      // Si no hay filterGroupId en route params, limpiar el filtro
+      if (!route?.params?.filterGroupId) {
+        setFilterGroupId(null);
+      }
       loadEvents();
-    }, [user])
+    }, [user, route?.params])
   );
 
   const checkFirstTime = async () => {

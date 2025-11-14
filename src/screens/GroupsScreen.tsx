@@ -142,8 +142,11 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
           </View>
         ) : (
           groups.map((group) => (
-            <TouchableOpacity key={group.id}>
-              <Card style={styles.groupCard}>
+            <Card key={group.id} style={styles.groupCard}>
+              <TouchableOpacity 
+                onPress={() => handleViewGroupEvents(group.id)}
+                activeOpacity={0.7}
+              >
                 <View style={styles.groupHeader}>
                   <View style={[styles.groupIcon, { backgroundColor: getGroupColor(group.color) }]}>
                     <Text style={styles.groupEmoji}>{group.icon || '📁'}</Text>
@@ -171,6 +174,7 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
                     <Text style={styles.statLabel}>Miembros</Text>
                   </View>
                 </View>
+              </TouchableOpacity>
 
                 <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
                   <Button
@@ -193,24 +197,23 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
                     }}
                   />
                 </View>
-                <View style={{ flexDirection: 'row', gap: 8 }}>
-                  <Button
-                    title="✏️ Editar"
-                    variant="outline"
-                    size="small"
-                    style={{ flex: 1 }}
-                    onPress={() => handleEditGroup(group.id)}
-                  />
-                  <Button
-                    title="🗑️ Eliminar"
-                    variant="danger"
-                    size="small"
-                    style={{ flex: 1 }}
-                    onPress={() => handleDeleteGroup(group.id, group.name)}
-                  />
-                </View>
-              </Card>
-            </TouchableOpacity>
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+                <Button
+                  title="✏️ Editar"
+                  variant="outline"
+                  size="small"
+                  style={{ flex: 1 }}
+                  onPress={() => handleEditGroup(group.id)}
+                />
+                <Button
+                  title="🗑️ Eliminar"
+                  variant="danger"
+                  size="small"
+                  style={{ flex: 1 }}
+                  onPress={() => handleDeleteGroup(group.id, group.name)}
+                />
+              </View>
+            </Card>
           ))
         )}
       </ScrollView>
