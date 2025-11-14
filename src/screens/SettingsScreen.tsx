@@ -60,16 +60,11 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
             console.log('🌍 Cambiando idioma a:', lang.code);
             await changeLanguage(lang.code);
             console.log('✅ Idioma cambiado correctamente a:', lang.code);
-            // Forzar re-render para que los hooks se actualicen
-            setTimeout(() => forceUpdate(), 100);
+            // Forzar re-render con más tiempo para AsyncStorage + i18n
+            setTimeout(() => forceUpdate(), 1000);
           },
         })),
         { text: 'Cancelar', style: 'cancel' }
-      ],
-      { cancelable: true }
-    );
-  };
-
   const handleCurrencyChange = () => {
     Alert.alert(
       'Seleccionar moneda',
@@ -81,10 +76,15 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
             console.log('💰 Cambiando moneda a:', curr.code);
             await changeCurrency(curr.code);
             console.log('✅ Moneda cambiada correctamente a:', curr.code);
-            // Forzar re-render para que los hooks se actualicen
-            setTimeout(() => forceUpdate(), 100);
+            // Forzar re-render con más tiempo para AsyncStorage
+            setTimeout(() => forceUpdate(), 1000);
           },
         })),
+        { text: 'Cancelar', style: 'cancel' }
+      ],
+      { cancelable: true }
+    );
+  };    })),
         { text: 'Cancelar', style: 'cancel' }
       ],
       { cancelable: true }

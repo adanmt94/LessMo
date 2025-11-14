@@ -52,6 +52,7 @@ const CURRENCIES: { value: Currency; label: string }[] = [
 export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
   const { user } = useAuth();
   const { theme } = useTheme();
+  const styles = getStyles(theme);
   const { eventId, mode, groupId } = route.params || {};
   const isEditMode = mode === 'edit' && eventId;
   
@@ -423,10 +424,10 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.colors.background,
   },
   loadingContainer: {
     flex: 1,
@@ -436,9 +437,9 @@ const styles = StyleSheet.create({
   headerBar: {
     paddingHorizontal: 20,
     paddingVertical: 15,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: theme.colors.border,
   },
   backButton: {
     flexDirection: 'row',
@@ -446,7 +447,7 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 16,
-    color: '#6366F1',
+    color: theme.colors.primary,
     fontWeight: '600',
   },
   keyboardView: {
@@ -458,7 +459,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.colors.text,
     marginBottom: 24,
   },
   section: {
@@ -473,40 +474,40 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#111827',
+    color: theme.colors.text,
     marginBottom: 16,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#374151',
+    color: theme.colors.text,
     marginBottom: 8,
   },
   currencySelector: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
+    borderColor: theme.colors.border,
     paddingHorizontal: 16,
     paddingVertical: 12,
     marginBottom: 8,
   },
   currencyText: {
     fontSize: 16,
-    color: '#111827',
+    color: theme.colors.text,
   },
   currencyArrow: {
     fontSize: 12,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
   },
   currencyPicker: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.colors.border,
     marginBottom: 16,
     overflow: 'hidden',
   },
@@ -514,18 +515,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: theme.colors.inputBackground,
   },
   currencyOptionText: {
     fontSize: 16,
-    color: '#374151',
+    color: theme.colors.text,
   },
   currencyOptionSelected: {
-    color: '#6366F1',
+    color: theme.colors.primary,
     fontWeight: '600',
   },
   addButton: {
-    color: '#6366F1',
+    color: theme.colors.primary,
     fontWeight: '600',
     fontSize: 16,
   },
@@ -533,7 +534,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     paddingBottom: 24,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: theme.colors.border,
   },
   participantHeader: {
     flexDirection: 'row',
@@ -544,17 +545,17 @@ const styles = StyleSheet.create({
   participantNumber: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
   },
   removeButton: {
-    color: '#EF4444',
+    color: theme.colors.error,
     fontSize: 20,
     fontWeight: '600',
   },
   editModeNote: {
     marginTop: 16,
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
   },

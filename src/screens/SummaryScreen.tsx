@@ -38,6 +38,7 @@ const screenWidth = Dimensions.get('window').width;
 export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
   const { eventId } = route.params;
   const { theme } = useTheme();
+  const styles = getStyles(theme);
   const [event, setEvent] = useState<Event | null>(null);
   const [exporting, setExporting] = useState(false);
   const [expandedParticipant, setExpandedParticipant] = useState<string | null>(null);
@@ -435,10 +436,10 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.colors.background,
   },
   loadingContainer: {
     flex: 1,
@@ -450,19 +451,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: theme.colors.border,
   },
   backButton: {
     fontSize: 16,
-    color: '#6366F1',
+    color: theme.colors.primary,
     fontWeight: '600',
   },
   title: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.colors.text,
   },
   scrollContent: {
     padding: 24,
@@ -473,12 +474,12 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.colors.text,
     marginBottom: 16,
   },
   cardSubtitle: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
     marginBottom: 16,
   },
   summaryRow: {
@@ -488,17 +489,17 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
   },
   summaryValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#111827',
+    color: theme.colors.text,
   },
   summaryLabelBold: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.colors.text,
   },
   summaryValueBold: {
     fontSize: 18,
@@ -506,7 +507,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: theme.colors.border,
     marginVertical: 16,
   },
   categoryList: {
@@ -531,7 +532,7 @@ const styles = StyleSheet.create({
   },
   categoryName: {
     fontSize: 14,
-    color: '#374151',
+    color: theme.colors.text,
     fontWeight: '500',
   },
   categoryStats: {
@@ -541,18 +542,18 @@ const styles = StyleSheet.create({
   categoryAmount: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#111827',
+    color: theme.colors.text,
     marginRight: 8,
   },
   categoryPercentage: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: theme.colors.textSecondary,
   },
   balanceItem: {
     marginBottom: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: theme.colors.borderLight,
   },
   balanceHeader: {
     marginBottom: 8,
@@ -565,11 +566,11 @@ const styles = StyleSheet.create({
   balanceName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
+    color: theme.colors.text,
   },
   expandIcon: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
   },
   balanceDetails: {
     marginLeft: 8,
@@ -581,16 +582,16 @@ const styles = StyleSheet.create({
   },
   balanceLabel: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
   },
   balanceAmount: {
     fontSize: 14,
-    color: '#374151',
+    color: theme.colors.text,
   },
   balanceLabelBold: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.colors.text,
   },
   balanceAmountBold: {
     fontSize: 16,
@@ -601,23 +602,23 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 12,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.colors.inputBackground,
     borderRadius: 8,
     marginBottom: 8,
   },
   settlementText: {
     fontSize: 14,
-    color: '#374151',
+    color: theme.colors.text,
     flex: 1,
   },
   settlementName: {
     fontWeight: '600',
-    color: '#111827',
+    color: theme.colors.text,
   },
   settlementAmount: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#6366F1',
+    color: theme.colors.primary,
   },
   exportButtons: {
     flexDirection: 'row',
@@ -627,7 +628,7 @@ const styles = StyleSheet.create({
   breakdownContainer: {
     marginTop: 12,
     marginLeft: 8,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.colors.inputBackground,
     borderRadius: 8,
     padding: 12,
   },
@@ -637,7 +638,7 @@ const styles = StyleSheet.create({
   breakdownTitle: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#374151',
+    color: theme.colors.text,
     marginBottom: 8,
   },
   breakdownItem: {
@@ -653,20 +654,20 @@ const styles = StyleSheet.create({
   },
   breakdownDescription: {
     fontSize: 13,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
   },
   breakdownFrom: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: theme.colors.textSecondary,
     fontStyle: 'italic',
     marginTop: 2,
   },
   breakdownAmount: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#10B981',
+    color: theme.colors.success,
   },
   breakdownDebt: {
-    color: '#EF4444',
+    color: theme.colors.error,
   },
 });

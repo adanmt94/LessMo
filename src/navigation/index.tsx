@@ -62,7 +62,7 @@ export const Navigation: React.FC = () => {
 
   const checkOnboarding = async () => {
     if (isAuthenticated) {
-      const should Show = await shouldShowOnboarding();
+      const shouldShow = await shouldShowOnboarding();
       setShowOnboarding(shouldShow);
     }
     setCheckingOnboarding(false);

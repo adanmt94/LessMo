@@ -162,6 +162,8 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
         throw new Error('Firebase Storage no disponible. Por favor reinicia la app.');
       }
       console.log('✅ Firebase Storage OK');
+      console.log('📦 Storage bucket:', storage.app.options.storageBucket);
+      console.log('🔐 Auth state:', user.email, 'UID:', user.uid);
 
       // Obtener la imagen como blob
       console.log('📥 Fetching image...');
@@ -198,8 +200,10 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
       console.log('✅ Referencia creada correctamente');
 
       // Subir imagen
+      console.log('🚀 Iniciando uploadBytes...');
       const uploadResult = await uploadBytes(storageRef, blob);
       console.log('✅ Imagen subida:', uploadResult.metadata.fullPath);
+      console.log('📊 Metadata completo:', JSON.stringify(uploadResult.metadata, null, 2));
 
       // Obtener URL de descarga
       const downloadURL = await getDownloadURL(storageRef);

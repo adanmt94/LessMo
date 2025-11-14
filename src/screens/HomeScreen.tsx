@@ -34,6 +34,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const { user, signOut } = useAuth();
   const { theme } = useTheme();
+  const styles = getStyles(theme);
 
   const loadEvents = useCallback(async () => {
     if (!user) return;
@@ -168,10 +169,10 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -182,22 +183,22 @@ const styles = StyleSheet.create({
   },
   greeting: {
     fontSize: 16,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
   },
   userName: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.colors.text,
     marginTop: 4,
   },
   logoutButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: '#FEE2E2',
+    backgroundColor: theme.colors.error + '20',
   },
   logoutText: {
-    color: '#EF4444',
+    color: theme.colors.error,
     fontWeight: '600',
     fontSize: 14,
   },
@@ -217,27 +218,27 @@ const styles = StyleSheet.create({
   eventName: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.colors.text,
     flex: 1,
   },
   statusBadge: {
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: theme.colors.border,
     marginLeft: 8,
   },
   statusActive: {
-    backgroundColor: '#D1FAE5',
+    backgroundColor: theme.colors.success + '30',
   },
   statusText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#059669',
+    color: theme.colors.success,
   },
   eventDescription: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
     marginBottom: 12,
   },
   eventFooter: {
@@ -250,17 +251,17 @@ const styles = StyleSheet.create({
   },
   budgetLabel: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: theme.colors.textSecondary,
     marginBottom: 2,
   },
   budgetValue: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#6366F1',
+    color: theme.colors.primary,
   },
   participantsCount: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
   },
   emptyState: {
     alignItems: 'center',
@@ -274,12 +275,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.colors.text,
     marginBottom: 8,
   },
   emptyDescription: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
     textAlign: 'center',
     paddingHorizontal: 32,
     marginBottom: 24,
@@ -296,10 +297,10 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#6366F1',
+    backgroundColor: theme.colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#6366F1',
+    shadowColor: theme.colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 12,

@@ -184,7 +184,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: theme.isDark ? theme.colors.surface : '#EEF2FF',
+    backgroundColor: theme.isDark ? theme.colors.surface : theme.colors.primary + '15',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
@@ -250,7 +250,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   googleIcon: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#4285F4',
+    color: theme.colors.primary,
   },
   anonymousIcon: {
     fontSize: 18,
