@@ -21,6 +21,7 @@ import { RootStackParamList, Currency, VALIDATION } from '../types';
 import { Button, Input, Card } from '../components/lovable';
 import { createEvent, addParticipant, getEvent, getEventParticipants } from '../services/firebase';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../context/ThemeContext';
 
 type CreateEventScreenNavigationProp = StackNavigationProp<RootStackParamList, 'CreateEvent'>;
 type CreateEventScreenRouteProp = RouteProp<RootStackParamList, 'CreateEvent'>;
@@ -50,6 +51,7 @@ const CURRENCIES: { value: Currency; label: string }[] = [
 
 export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
   const { user } = useAuth();
+  const { theme } = useTheme();
   const { eventId, mode, groupId } = route.params || {};
   const isEditMode = mode === 'edit' && eventId;
   
@@ -239,22 +241,22 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
 
   if (initialLoading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.surface }]}>
         <View style={styles.loadingContainer}>
-          <Text>Cargando datos del evento...</Text>
+          <Text style={{ color: theme.colors.text }}>Cargando datos del evento...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.headerBar}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.surface }]}>
+      <View style={[styles.headerBar, { backgroundColor: theme.colors.background, borderBottomColor: theme.colors.border }]}>
         <TouchableOpacity 
           onPress={() => navigation.goBack()}
           style={styles.backButton}
         >
-          <Text style={styles.backButtonText}>← Atrás</Text>
+          <Text style={[styles.backButtonText, { color: theme.colors.primary }]}>← Atrás</Text>
         </TouchableOpacity>
       </View>
       
@@ -269,12 +271,12 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
           showsVerticalScrollIndicator={false}
           nestedScrollEnabled={true}
         >
-          <Text style={styles.title}>
+          <Text style={[styles.title, { color: theme.colors.text }]}>
             {isEditMode ? 'Editar participantes' : 'Crear nuevo evento'}
           </Text>
 
           <Card style={styles.section}>
-            <Text style={styles.sectionTitle}>Información del evento</Text>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Información del evento</Text>
 
             <Input
               label="Nombre del evento *"

@@ -21,6 +21,7 @@ import { RootStackParamList } from '../types';
 import { Button, Input, Card } from '../components/lovable';
 import { getEventByInviteCode, addParticipant } from '../services/firebase';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../context/ThemeContext';
 
 type JoinEventScreenNavigationProp = StackNavigationProp<RootStackParamList, 'JoinEvent'>;
 type JoinEventScreenRouteProp = RouteProp<RootStackParamList, 'JoinEvent'>;
@@ -32,6 +33,7 @@ interface Props {
 
 export const JoinEventScreen: React.FC<Props> = ({ navigation, route }) => {
   const { user } = useAuth();
+  const { theme } = useTheme();
   const { inviteCode: routeInviteCode } = route.params || {};
   
   const [inviteCode, setInviteCode] = useState(routeInviteCode || '');

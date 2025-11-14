@@ -21,6 +21,7 @@ import { RootStackParamList } from '../types';
 import { Button, Input, Card } from '../components/lovable';
 import { createGroup } from '../services/firebase';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../context/ThemeContext';
 
 type CreateGroupScreenNavigationProp = StackNavigationProp<RootStackParamList, 'CreateGroup'>;
 type CreateGroupScreenRouteProp = RouteProp<RootStackParamList, 'CreateGroup'>;
@@ -35,6 +36,7 @@ const GROUP_COLORS = ['#6366F1', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#3
 
 export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
   const { user } = useAuth();
+  const { theme } = useTheme();
   const { groupId, mode } = route.params || {};
   const isEditMode = mode === 'edit' && groupId;
   

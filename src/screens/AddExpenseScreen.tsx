@@ -21,6 +21,7 @@ import { RootStackParamList, ExpenseCategory, CategoryLabels, VALIDATION } from 
 import { Button, Input, Card } from '../components/lovable';
 import { useExpenses } from '../hooks/useExpenses';
 import { useNotifications } from '../hooks/useNotifications';
+import { useTheme } from '../context/ThemeContext';
 
 type AddExpenseScreenNavigationProp = StackNavigationProp<RootStackParamList, 'AddExpense'>;
 type AddExpenseScreenRouteProp = RouteProp<RootStackParamList, 'AddExpense'>;
@@ -42,6 +43,7 @@ const CATEGORIES: ExpenseCategory[] = [
 
 export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
   const { eventId, expenseId, mode } = route.params;
+  const { theme } = useTheme();
   const isEditMode = mode === 'edit' && expenseId;
   const { participants, addExpense, editExpense, expenses } = useExpenses(eventId);
   const { notifyNewExpense } = useNotifications();
@@ -286,12 +288,12 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.surface }]}>
+      <View style={[styles.header, { backgroundColor: theme.colors.background, borderBottomColor: theme.colors.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>← Atrás</Text>
+          <Text style={[styles.backButton, { color: theme.colors.primary }]}>← Atrás</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>{isEditMode ? 'Editar gasto' : 'Agregar gasto'}</Text>
+        <Text style={[styles.title, { color: theme.colors.text }]}>{isEditMode ? 'Editar gasto' : 'Agregar gasto'}</Text>
         <View style={{ width: 50 }} />
       </View>
 

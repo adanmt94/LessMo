@@ -24,6 +24,7 @@ import { db, storage } from '../services/firebase';
 import { RootStackParamList } from '../types';
 import { Button, Input, Card } from '../components/lovable';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../context/ThemeContext';
 
 type EditProfileScreenNavigationProp = StackNavigationProp<RootStackParamList, 'EditProfile'>;
 
@@ -33,6 +34,7 @@ interface Props {
 
 export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
   const { user } = useAuth();
+  const { theme } = useTheme();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [photoURL, setPhotoURL] = useState<string | null>(null);

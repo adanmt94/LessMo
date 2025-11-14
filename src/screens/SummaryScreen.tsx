@@ -21,6 +21,7 @@ import { RootStackParamList, Event, CategoryColors, CategoryLabels, CurrencySymb
 import { Card, Button } from '../components/lovable';
 import { getEvent } from '../services/firebase';
 import { useExpenses } from '../hooks/useExpenses';
+import { useTheme } from '../context/ThemeContext';
 import * as Sharing from 'expo-sharing';
 import ViewShot from 'react-native-view-shot';
 
@@ -36,6 +37,7 @@ const screenWidth = Dimensions.get('window').width;
 
 export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
   const { eventId } = route.params;
+  const { theme } = useTheme();
   const [event, setEvent] = useState<Event | null>(null);
   const [exporting, setExporting] = useState(false);
   const [expandedParticipant, setExpandedParticipant] = useState<string | null>(null);
