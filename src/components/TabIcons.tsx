@@ -41,6 +41,28 @@ export const GroupsIcon: React.FC<TabIconProps> = ({ focused, color }) => (
   </View>
 );
 
+export const ActivityIcon: React.FC<TabIconProps> = ({ focused, color }) => (
+  <View style={styles.iconContainer}>
+    <View style={styles.activityContainer}>
+      <View style={[styles.activityBar, styles.activityBar1, { 
+        backgroundColor: color,
+        opacity: focused ? 1 : 0.6,
+        height: focused ? 18 : 14
+      }]} />
+      <View style={[styles.activityBar, styles.activityBar2, { 
+        backgroundColor: color,
+        opacity: focused ? 0.8 : 0.5,
+        height: focused ? 14 : 10
+      }]} />
+      <View style={[styles.activityBar, styles.activityBar3, { 
+        backgroundColor: color,
+        opacity: focused ? 0.6 : 0.4,
+        height: focused ? 10 : 6
+      }]} />
+    </View>
+  </View>
+);
+
 export const SettingsIcon: React.FC<TabIconProps> = ({ focused, color }) => (
   <View style={styles.iconContainer}>
     <View style={[styles.settingsCircle, { 
@@ -103,6 +125,26 @@ const styles = StyleSheet.create({
   personRight: {
     right: 0,
     top: 5,
+  },
+  // Activity Icon
+  activityContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 3,
+    height: 22,
+  },
+  activityBar: {
+    width: 4,
+    borderRadius: 2,
+  },
+  activityBar1: {
+    height: 18,
+  },
+  activityBar2: {
+    height: 14,
+  },
+  activityBar3: {
+    height: 10,
   },
   // Settings Icon
   settingsCircle: {

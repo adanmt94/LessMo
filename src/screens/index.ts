@@ -15,3 +15,4 @@ export { SettingsScreen } from './SettingsScreen';
 export { CreateGroupScreen } from './CreateGroupScreen';
 export { JoinEventScreen } from './JoinEventScreen';
 export { EditProfileScreen } from './EditProfileScreen';
+export { ActivityScreen } from './ActivityScreen';

@@ -126,6 +126,7 @@ export type RootStackParamList = {
 export type TabParamList = {
   Events: undefined;
   Groups: undefined;
+  Activity: undefined;
   Settings: undefined;
 };
 
