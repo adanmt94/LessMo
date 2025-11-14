@@ -90,15 +90,29 @@ export const GroupEventsScreen: React.FC<Props> = ({ navigation, route }) => {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={styles.backIcon}>←</Text>
+        </TouchableOpacity>
+        
         <View style={styles.headerContent}>
-          <Text style={styles.groupName}>{groupName}</Text>
-          <Text style={styles.subtitle}>Eventos del grupo</Text>
+          <View style={styles.groupIconContainer}>
+            <Text style={styles.groupIcon}>👥</Text>
+          </View>
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.groupName}>{groupName}</Text>
+            <Text style={styles.subtitle}>{activeEvents.length} evento(s) activo(s)</Text>
+          </View>
         </View>
-        <Button
-          title="+ Crear Evento"
+        
+        <TouchableOpacity
+          style={styles.createButton}
           onPress={() => navigation.navigate('CreateEvent', { mode: 'create', groupId })}
-          size="small"
-        />
+        >
+          <Text style={styles.createButtonIcon}>+</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Tabs */}
@@ -250,25 +264,81 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
+    paddingTop: 8,
     backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  backIcon: {
+    fontSize: 24,
+    color: theme.colors.text,
+    fontWeight: '600',
   },
   headerContent: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  groupIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: theme.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  groupIcon: {
+    fontSize: 24,
+  },
+  headerTextContainer: {
+    flex: 1,
   },
   groupName: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: '700',
     color: theme.colors.text,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: theme.colors.textSecondary,
+    fontWeight: '500',
+  },
+  createButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: theme.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  createButtonIcon: {
+    fontSize: 28,
+    color: '#FFFFFF',
+    fontWeight: '300',
   },
   tabContainer: {
     flexDirection: 'row',
