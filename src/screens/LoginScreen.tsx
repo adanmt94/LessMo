@@ -19,6 +19,7 @@ import { useGoogleAuth } from '../hooks/useGoogleAuth';
 import { Button, Input } from '../components/lovable';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types';
+import { useTheme } from '../context/ThemeContext';
 
 type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -31,6 +32,8 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const { signIn, loading, error } = useAuth();
   const { signInWithGoogle, loading: googleLoading, error: googleError } = useGoogleAuth();
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -160,10 +163,10 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.colors.background,
   },
   keyboardView: {
     flex: 1,
@@ -181,11 +184,11 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#EEF2FF',
+    backgroundColor: theme.isDark ? theme.colors.surface : '#EEF2FF',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
-    shadowColor: '#6366F1',
+    shadowColor: theme.colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 12,
@@ -197,13 +200,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 40,
     fontWeight: '800',
-    color: '#6366F1',
+    color: theme.colors.primary,
     marginBottom: 8,
     letterSpacing: -1,
   },
   subtitle: {
     fontSize: 15,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
     textAlign: 'center',
     paddingHorizontal: 32,
     fontWeight: '500',
@@ -219,11 +222,11 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: theme.colors.border,
   },
   dividerText: {
     marginHorizontal: 12,
-    color: '#9CA3AF',
+    color: theme.colors.textTertiary,
     fontSize: 12,
   },
   socialButtons: {
@@ -239,9 +242,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.card,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.colors.border,
     gap: 8,
   },
   googleIcon: {
@@ -255,7 +258,7 @@ const styles = StyleSheet.create({
   socialButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#374151',
+    color: theme.colors.text,
   },
   registerLink: {
     alignItems: 'center',
@@ -263,10 +266,10 @@ const styles = StyleSheet.create({
   },
   registerText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
   },
   registerTextBold: {
-    color: '#6366F1',
+    color: theme.colors.primary,
     fontWeight: '600',
   },
 });

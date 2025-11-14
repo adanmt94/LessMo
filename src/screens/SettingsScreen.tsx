@@ -78,6 +78,27 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
     );
   };
 
+  const handleThemeChange = () => {
+    const themeOptions = [
+      { mode: 'light' as const, label: '☀️ Claro', description: 'Tema claro siempre' },
+      { mode: 'dark' as const, label: '🌙 Oscuro', description: 'Tema oscuro siempre' },
+      { mode: 'auto' as const, label: '🔄 Automático', description: 'Según el sistema' },
+    ];
+
+    Alert.alert(
+      'Seleccionar tema',
+      'Elige el modo de visualización',
+      themeOptions.map(option => ({
+        text: option.label,
+        onPress: async () => {
+          await setThemeMode(option.mode);
+          Alert.alert('Tema cambiado', option.description);
+        },
+      })),
+      { cancelable: true }
+    );
+  };
+
   const SettingItem: React.FC<SettingItemProps> = ({
     icon,
     title,
@@ -196,20 +217,14 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
           />
           
           <SettingItem styles={styles}
-            icon="🌙"
-            title="Modo oscuro"
-            subtitle="Tema oscuro de la app"
-            showArrow={false}
-            rightElement={
-              <Switch
-                value={darkModeEnabled}
-                onValueChange={async (value) => {
-                  await setThemeMode(value ? 'dark' : 'light');
-                }}
-                trackColor={{ false: '#E5E7EB', true: '#A5B4FC' }}
-                thumbColor={darkModeEnabled ? '#6366F1' : '#F3F4F6'}
-              />
+            icon="�"
+            title="Tema de la aplicación"
+            subtitle={
+              themeMode === 'light' ? '☀️ Claro' :
+              themeMode === 'dark' ? '🌙 Oscuro' :
+              '🔄 Automático'
             }
+            onPress={handleThemeChange}
           />
         </Card>
 

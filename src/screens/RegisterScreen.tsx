@@ -7,7 +7,6 @@ import {
   View,
   Text,
   StyleSheet,
-  
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -20,6 +19,7 @@ import { useGoogleAuth } from '../hooks/useGoogleAuth';
 import { Button, Input } from '../components/lovable';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types';
+import { useTheme } from '../context/ThemeContext';
 
 type RegisterScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Register'>;
 
@@ -34,6 +34,8 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const { register, loading, error } = useAuth();
   const { signInWithGoogle, loading: googleLoading, error: googleError } = useGoogleAuth();
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
 
   const handleRegister = async () => {
     // Validaciones
@@ -93,7 +95,9 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
-            <Text style={styles.logo}>💰</Text>
+            <View style={styles.logoContainer}>
+              <Text style={styles.logo}>💰</Text>
+            </View>
             <Text style={styles.title}>Crear cuenta</Text>
             <Text style={styles.subtitle}>
               Únete a LessMo y comienza a gestionar tus gastos
@@ -154,18 +158,18 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
 
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>o</Text>
+              <Text style={styles.dividerText}>o continúa con</Text>
               <View style={styles.dividerLine} />
             </View>
 
-            <Button
-              title="🔍 Registrarse con Google"
+            <TouchableOpacity
+              style={styles.socialButton}
               onPress={handleGoogleSignUp}
-              loading={googleLoading}
-              fullWidth
-              size="large"
-              variant="outline"
-            />
+              disabled={googleLoading}
+            >
+              <Text style={styles.googleIcon}>G</Text>
+              <Text style={styles.socialButtonText}>Registrarse con Google</Text>
+            </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.loginLink}
@@ -183,15 +187,15 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.colors.background,
   },
   headerBar: {
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.colors.background,
   },
   backButton: {
     flexDirection: 'row',
@@ -199,7 +203,7 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 16,
-    color: '#6366F1',
+    color: theme.colors.primary,
     fontWeight: '600',
   },
   keyboardView: {
@@ -212,23 +216,38 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 48,
+  },
+  logoContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: theme.isDark ? theme.colors.surface : '#EEF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 8,
   },
   logo: {
-    fontSize: 64,
-    marginBottom: 16,
+    fontSize: 52,
   },
   title: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#111827',
+    fontSize: 40,
+    fontWeight: '800',
+    color: theme.colors.primary,
     marginBottom: 8,
+    letterSpacing: -1,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#6B7280',
+    fontSize: 15,
+    color: theme.colors.textSecondary,
     textAlign: 'center',
     paddingHorizontal: 32,
+    fontWeight: '500',
   },
   form: {
     width: '100%',
@@ -236,28 +255,51 @@ const styles = StyleSheet.create({
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 24,
+    marginVertical: 28,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: theme.colors.border,
   },
   dividerText: {
-    marginHorizontal: 16,
-    color: '#9CA3AF',
+    marginHorizontal: 12,
+    color: theme.colors.textTertiary,
+    fontSize: 12,
+  },
+  socialButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: theme.colors.card,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    gap: 8,
+    marginBottom: 20,
+  },
+  googleIcon: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#4285F4',
+  },
+  socialButtonText: {
     fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.text,
   },
   loginLink: {
     alignItems: 'center',
-    marginTop: 24,
+    marginTop: 8,
   },
   loginText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
   },
   loginTextBold: {
-    color: '#6366F1',
+    color: theme.colors.primary,
     fontWeight: '600',
   },
 });
