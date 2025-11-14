@@ -45,7 +45,7 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
   const { currentLanguage, availableLanguages, changeLanguage } = useLanguage();
   const { currentCurrency, availableCurrencies, changeCurrency } = useCurrency();
   const { notificationsEnabled, toggleNotifications, isLoading } = useNotifications();
-  const [refreshKey, setRefreshKey] = React.useState(0);
+  const [, forceUpdate] = React.useReducer(x => x + 1, 0);
   const darkModeEnabled = theme.isDark;
   const styles = getStyles(theme);
 
@@ -60,8 +60,8 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
             console.log('🌍 Cambiando idioma a:', lang.code);
             await changeLanguage(lang.code);
             console.log('✅ Idioma cambiado correctamente a:', lang.code);
-            // Forzar re-render
-            setRefreshKey(prev => prev + 1);
+            // Forzar re-render para que los hooks se actualicen
+            setTimeout(() => forceUpdate(), 100);
           },
         })),
         { text: 'Cancelar', style: 'cancel' }
@@ -81,8 +81,8 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
             console.log('💰 Cambiando moneda a:', curr.code);
             await changeCurrency(curr.code);
             console.log('✅ Moneda cambiada correctamente a:', curr.code);
-            // Forzar re-render
-            setRefreshKey(prev => prev + 1);
+            // Forzar re-render para que los hooks se actualicen
+            setTimeout(() => forceUpdate(), 100);
           },
         })),
         { text: 'Cancelar', style: 'cancel' }
@@ -165,7 +165,7 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container} key={refreshKey}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Ajustes</Text>
       </View>
