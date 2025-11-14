@@ -45,6 +45,7 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
   const { currentLanguage, availableLanguages, changeLanguage } = useLanguage();
   const { currentCurrency, availableCurrencies, changeCurrency } = useCurrency();
   const { notificationsEnabled, toggleNotifications, isLoading } = useNotifications();
+  const [refreshKey, setRefreshKey] = React.useState(0);
   const darkModeEnabled = theme.isDark;
   const styles = getStyles(theme);
 
@@ -52,15 +53,19 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
     Alert.alert(
       'Seleccionar idioma',
       'Elige el idioma de la aplicación',
-      availableLanguages.map(lang => ({
-        text: `${lang.nativeName} (${lang.name})`,
-        onPress: async () => {
-          console.log('🌍 Cambiando idioma a:', lang.code);
-          await changeLanguage(lang.code);
-          console.log('✅ Idioma cambiado correctamente a:', lang.code);
-          Alert.alert('Idioma cambiado', `El idioma se ha cambiado a ${lang.nativeName}`);
-        },
-      })),
+      [
+        ...availableLanguages.map(lang => ({
+          text: `${lang.nativeName} (${lang.name})`,
+          onPress: async () => {
+            console.log('🌍 Cambiando idioma a:', lang.code);
+            await changeLanguage(lang.code);
+            console.log('✅ Idioma cambiado correctamente a:', lang.code);
+            // Forzar re-render
+            setRefreshKey(prev => prev + 1);
+          },
+        })),
+        { text: 'Cancelar', style: 'cancel' }
+      ],
       { cancelable: true }
     );
   };
@@ -69,15 +74,19 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
     Alert.alert(
       'Seleccionar moneda',
       'Elige la moneda predeterminada para nuevos eventos',
-      availableCurrencies.map(curr => ({
-        text: `${curr.name} (${curr.symbol})`,
-        onPress: async () => {
-          console.log('💰 Cambiando moneda a:', curr.code);
-          await changeCurrency(curr.code);
-          console.log('✅ Moneda cambiada correctamente a:', curr.code);
-          Alert.alert('Moneda cambiada', `La moneda predeterminada ahora es ${curr.name}`);
-        },
-      })),
+      [
+        ...availableCurrencies.map(curr => ({
+          text: `${curr.name} (${curr.symbol})`,
+          onPress: async () => {
+            console.log('💰 Cambiando moneda a:', curr.code);
+            await changeCurrency(curr.code);
+            console.log('✅ Moneda cambiada correctamente a:', curr.code);
+            // Forzar re-render
+            setRefreshKey(prev => prev + 1);
+          },
+        })),
+        { text: 'Cancelar', style: 'cancel' }
+      ],
       { cancelable: true }
     );
   };
@@ -156,7 +165,7 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} key={refreshKey}>
       <View style={styles.header}>
         <Text style={styles.title}>Ajustes</Text>
       </View>
