@@ -65,6 +65,11 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
           },
         })),
         { text: 'Cancelar', style: 'cancel' }
+      ],
+      { cancelable: true }
+    );
+  };
+
   const handleCurrencyChange = () => {
     Alert.alert(
       'Seleccionar moneda',
