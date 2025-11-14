@@ -12,6 +12,7 @@ import {
   Dimensions,
   ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from './Button';
 
 const { width } = Dimensions.get('window');
@@ -116,12 +117,11 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
     <Modal
       visible={visible}
       animationType="slide"
-      transparent={true}
+      transparent={false}
       onRequestClose={onClose}
-      statusBarTranslucent={true}
-      presentationStyle="overFullScreen"
+      presentationStyle="pageSheet"
     >
-      <View style={styles.overlay}>
+      <SafeAreaView style={styles.safeArea}>
         <View style={styles.container}>
           {/* Header */}
           <View style={styles.header}>
@@ -186,23 +186,19 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
             />
           </View>
         </View>
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
+  safeArea: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
   },
   container: {
+    flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    width: width - 40,
-    maxWidth: 400,
     maxHeight: '85%',
     padding: 24,
     shadowColor: '#000',

@@ -72,6 +72,44 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
     setRefreshing(false);
   };
 
+  const handleEditEvent = () => {
+    navigation.navigate('CreateEvent', { 
+      eventId: eventId, 
+      mode: 'edit' 
+    });
+  };
+
+  const handleDeleteEvent = () => {
+    Alert.alert(
+      'Eliminar evento',
+      '¿Estás seguro? Se eliminarán todos los gastos y participantes.',
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { deleteEvent } = await import('../services/firebase');
+              await deleteEvent(eventId);
+              Alert.alert('Éxito', 'Evento eliminado correctamente', [
+                {
+                  text: 'Aceptar',
+                  onPress: () => navigation.navigate('MainTabs', { screen: 'Events' } as any),
+                },
+              ]);
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'No se pudo eliminar el evento');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleDeleteExpense = async (expenseId: string) => {
     Alert.alert(
       'Confirmar eliminación',
@@ -291,11 +329,17 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
           <Text style={styles.backButton}>← Atrás</Text>
         </TouchableOpacity>
         <Text style={styles.eventName} numberOfLines={1}>{event.name}</Text>
+        <TouchableOpacity onPress={handleEditEvent} style={styles.exportButton}>
+          <Text style={styles.exportIcon}>✏️</Text>
+        </TouchableOpacity>
         <TouchableOpacity onPress={handleShareEvent} style={styles.exportButton}>
           <Text style={styles.exportIcon}>🔗</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={handleExportToExcel} style={styles.exportButton}>
           <Text style={styles.exportIcon}>📊</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={handleDeleteEvent} style={styles.exportButton}>
+          <Text style={styles.exportIcon}>🗑️</Text>
         </TouchableOpacity>
       </View>
 

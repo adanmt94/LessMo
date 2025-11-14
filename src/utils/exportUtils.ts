@@ -133,8 +133,11 @@ export const exportAllEventsToExcel = async (
     // Crear libro de trabajo
     const workbook = XLSX.utils.book_new();
 
+    // Objeto para mantener track de nombres de hojas y evitar duplicados
+    const usedSheetNames = new Set<string>();
+
     // Para cada evento, crear una hoja
-    events.forEach((event) => {
+    events.forEach((event, index) => {
       const expenses = allExpenses[event.id] || [];
       const participants = allParticipants[event.id] || [];
 
@@ -164,8 +167,25 @@ export const exportAllEventsToExcel = async (
 
       // Crear hoja y agregar al libro
       const sheet = XLSX.utils.aoa_to_sheet(eventData);
-      const sheetName = event.name.substring(0, 31); // Excel limita nombres a 31 caracteres
-      XLSX.utils.book_append_sheet(workbook, sheet, sheetName);
+      
+      // Generar nombre único para la hoja (Excel limita a 31 caracteres)
+      let sheetName = event.name.substring(0, 28); // Dejar espacio para sufijo
+      let counter = 1;
+      let finalSheetName = sheetName;
+      
+      // Si el nombre ya existe, añadir un número
+      while (usedSheetNames.has(finalSheetName)) {
+        finalSheetName = `${sheetName}_${counter}`;
+        counter++;
+        // Asegurar que no exceda 31 caracteres
+        if (finalSheetName.length > 31) {
+          sheetName = event.name.substring(0, 28 - counter.toString().length);
+          finalSheetName = `${sheetName}_${counter}`;
+        }
+      }
+      
+      usedSheetNames.add(finalSheetName);
+      XLSX.utils.book_append_sheet(workbook, sheet, finalSheetName);
     });
 
     // Convertir a base64

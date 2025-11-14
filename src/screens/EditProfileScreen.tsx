@@ -86,7 +86,7 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
 
       // Abrir selector de imágenes
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ImagePicker.MediaType.Images,
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.5, // Comprimir para ahorrar espacio
