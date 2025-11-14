@@ -55,33 +55,33 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
       setLoading(true);
       const allActivities: ActivityItem[] = [];
 
-      // Cargar eventos recientes
+      // Cargar eventos recientes (sin índice compuesto)
       const eventsQuery = query(
         collection(db, 'events'),
-        where('createdBy', '==', user.uid),
-        orderBy('createdAt', 'desc'),
-        limit(20)
+        where('participantIds', 'array-contains', user.uid),
+        limit(50)
       );
       const eventsSnapshot = await getDocs(eventsQuery);
       
       eventsSnapshot.forEach(doc => {
         const data = doc.data();
-        allActivities.push({
-          id: `event_${doc.id}`,
-          type: 'event_created',
-          title: 'Evento creado',
-          description: data.name,
-          date: data.createdAt?.toDate() || new Date(),
-          icon: '📅',
-          eventId: doc.id,
-        });
+        if (data.createdBy === user.uid) { // Filtrar en cliente
+          allActivities.push({
+            id: `event_${doc.id}`,
+            type: 'event_created',
+            title: 'Evento creado',
+            description: data.name,
+            date: data.createdAt?.toDate() || new Date(),
+            icon: '📅',
+            eventId: doc.id,
+          });
+        }
       });
 
-      // Cargar gastos recientes
+      // Cargar gastos recientes (sin orderBy para evitar índice)
       const expensesQuery = query(
         collection(db, 'expenses'),
-        orderBy('date', 'desc'),
-        limit(30)
+        limit(50)
       );
       const expensesSnapshot = await getDocs(expensesQuery);
       
@@ -101,26 +101,27 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
         }
       });
 
-      // Cargar grupos recientes
+      // Cargar grupos recientes (sin índice compuesto)
       const groupsQuery = query(
         collection(db, 'groups'),
-        where('createdBy', '==', user.uid),
-        orderBy('createdAt', 'desc'),
-        limit(10)
+        where('memberIds', 'array-contains', user.uid),
+        limit(50)
       );
       const groupsSnapshot = await getDocs(groupsQuery);
       
       groupsSnapshot.forEach(doc => {
         const data = doc.data();
-        allActivities.push({
-          id: `group_${doc.id}`,
-          type: 'group_created',
-          title: 'Grupo creado',
-          description: data.name,
-          date: data.createdAt?.toDate() || new Date(),
-          icon: '👥',
-          groupId: doc.id,
-        });
+        if (data.createdBy === user.uid) { // Filtrar en cliente
+          allActivities.push({
+            id: `group_${doc.id}`,
+            type: 'group_created',
+            title: 'Grupo creado',
+            description: data.name,
+            date: data.createdAt?.toDate() || new Date(),
+            icon: '👥',
+            groupId: doc.id,
+          });
+        }
       });
 
       // Ordenar todas las actividades por fecha
@@ -224,24 +225,19 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
   },
   header: {
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
   },
   headerTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#111827',
     marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: '#6B7280',
   },
   content: {
     flex: 1,
@@ -252,7 +248,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#6B7280',
   },
   emptyState: {
     padding: 40,
@@ -265,12 +260,10 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#111827',
     marginBottom: 8,
   },
   emptyText: {
     fontSize: 14,
-    color: '#6B7280',
     textAlign: 'center',
   },
   activitiesList: {
@@ -288,7 +281,6 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#EEF2FF',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -302,16 +294,13 @@ const styles = StyleSheet.create({
   activityTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#111827',
     marginBottom: 2,
   },
   activityDescription: {
     fontSize: 13,
-    color: '#6B7280',
   },
   activityTime: {
     fontSize: 12,
-    color: '#9CA3AF',
     marginLeft: 8,
   },
 });

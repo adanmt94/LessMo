@@ -110,10 +110,14 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
     setRefreshing(false);
   };
 
-  // Filtrar eventos
+  // Filtrar eventos - SEPARAR eventos de grupos
   let filteredEvents = events;
   if (filterGroupId) {
+    // Mostrar solo eventos de este grupo
     filteredEvents = events.filter(e => e.groupId === filterGroupId);
+  } else {
+    // Mostrar solo eventos SIN grupo (individuales)
+    filteredEvents = events.filter(e => !e.groupId);
   }
 
   const activeEvents = filteredEvents.filter(e => e.status === 'active');
@@ -134,10 +138,10 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
         <View style={styles.headerButtons}>
           {filterGroupId && (
             <TouchableOpacity
-              style={styles.iconButton}
+              style={[styles.backButton, { backgroundColor: theme.colors.primary }]}
               onPress={() => setFilterGroupId(null)}
             >
-              <Text style={styles.iconButtonText}>✕</Text>
+              <Text style={[styles.backButtonText, { color: '#FFFFFF' }]}>← Atrás</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity
@@ -295,6 +299,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  backButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginRight: 8,
+  },
+  backButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   iconButton: {
     width: 40,

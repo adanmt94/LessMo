@@ -149,21 +149,29 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
 
     try {
       setUploading(true);
-      console.log('📤 Subiendo imagen desde:', uri);
+      console.log('📤 Iniciando upload de imagen desde:', uri);
 
       // Validar URI
       if (!uri || uri.trim() === '') {
         throw new Error('URI de imagen inválida');
       }
 
+      // Verificar que storage esté inicializado
+      if (!storage) {
+        console.error('❌ Firebase Storage no está inicializado');
+        throw new Error('Firebase Storage no disponible. Por favor reinicia la app.');
+      }
+      console.log('✅ Firebase Storage OK');
+
       // Obtener la imagen como blob
+      console.log('📥 Fetching image...');
       const response = await fetch(uri);
       if (!response.ok) {
         throw new Error(`Error al obtener imagen: ${response.status}`);
       }
       
       const blob = await response.blob();
-      console.log('✅ Blob creado, tamaño:', blob.size);
+      console.log('✅ Blob creado, tamaño:', blob.size, 'tipo:', blob.type);
 
       if (blob.size === 0) {
         throw new Error('La imagen está vacía');
@@ -171,8 +179,9 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
 
       // Crear referencia en Storage
       const filename = `profile_${user.uid}_${Date.now()}.jpg`;
+      console.log('📁 Creando referencia para:', filename);
       const storageRef = ref(storage, `profiles/${filename}`);
-      console.log('📁 Referencia creada:', filename);
+      console.log('✅ Referencia creada correctamente');
 
       // Subir imagen
       const uploadResult = await uploadBytes(storageRef, blob);

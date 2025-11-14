@@ -55,7 +55,9 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
       availableLanguages.map(lang => ({
         text: `${lang.nativeName} (${lang.name})`,
         onPress: async () => {
+          console.log('🌍 Cambiando idioma a:', lang.code);
           await changeLanguage(lang.code);
+          console.log('✅ Idioma cambiado correctamente a:', lang.code);
           Alert.alert('Idioma cambiado', `El idioma se ha cambiado a ${lang.nativeName}`);
         },
       })),
@@ -70,7 +72,9 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
       availableCurrencies.map(curr => ({
         text: `${curr.name} (${curr.symbol})`,
         onPress: async () => {
+          console.log('💰 Cambiando moneda a:', curr.code);
           await changeCurrency(curr.code);
+          console.log('✅ Moneda cambiada correctamente a:', curr.code);
           Alert.alert('Moneda cambiada', `La moneda predeterminada ahora es ${curr.name}`);
         },
       })),

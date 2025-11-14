@@ -77,7 +77,7 @@ const lightTheme: Theme = {
   },
 };
 
-// Tema oscuro
+// Tema oscuro - MEJORADO con mejor contraste
 const darkTheme: Theme = {
   mode: 'dark',
   isDark: true,
@@ -86,16 +86,16 @@ const darkTheme: Theme = {
     primaryLight: '#A5B4FC',
     primaryDark: '#6366F1',
     
-    background: '#111827',
-    surface: '#1F2937',
-    card: '#1F2937',
+    background: '#0F172A',      // Más oscuro para mejor contraste
+    surface: '#1E293B',          // Card background con buen contraste
+    card: '#1E293B',             // Mismo que surface
     
-    text: '#F9FAFB',
-    textSecondary: '#D1D5DB',
-    textTertiary: '#9CA3AF',
+    text: '#F1F5F9',            // Texto más brillante
+    textSecondary: '#CBD5E1',    // Secondary más claro
+    textTertiary: '#94A3B8',     // Tertiary visible
     
-    border: '#374151',
-    borderLight: '#4B5563',
+    border: '#334155',           // Bordes más visibles
+    borderLight: '#475569',      // Border light con contraste
     
     success: '#34D399',
     warning: '#FBBF24',
@@ -104,8 +104,8 @@ const darkTheme: Theme = {
     
     shadow: '#000000',
     overlay: 'rgba(0, 0, 0, 0.7)',
-    disabled: '#4B5563',
-    placeholder: '#6B7280',
+    disabled: '#475569',
+    placeholder: '#64748B',
   },
 };
 
