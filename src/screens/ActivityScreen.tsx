@@ -35,6 +35,8 @@ interface ActivityItem {
   icon: string;
   eventId?: string;
   groupId?: string;
+  userName?: string; // Nombre del usuario que realizó la acción
+  userId?: string; // ID del usuario
 }
 
 export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
@@ -54,6 +56,26 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
     try {
       setLoading(true);
       const allActivities: ActivityItem[] = [];
+      const userCache = new Map<string, string>(); // Cache de userId -> userName
+
+      // Helper para obtener nombre de usuario
+      const getUserName = async (userId: string): Promise<string> => {
+        if (userCache.has(userId)) {
+          return userCache.get(userId)!;
+        }
+        
+        try {
+          const userDoc = await getDocs(query(collection(db, 'users'), where('__name__', '==', userId), limit(1)));
+          if (!userDoc.empty) {
+            const userName = userDoc.docs[0].data().displayName || 'Usuario';
+            userCache.set(userId, userName);
+            return userName;
+          }
+        } catch (error) {
+          console.error('Error getting user name:', error);
+        }
+        return 'Usuario';
+      };
 
       // Cargar eventos recientes (sin índice compuesto)
       const eventsQuery = query(
@@ -63,20 +85,21 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
       );
       const eventsSnapshot = await getDocs(eventsQuery);
       
-      eventsSnapshot.forEach(doc => {
+      for (const doc of eventsSnapshot.docs) {
         const data = doc.data();
-        if (data.createdBy === user.uid) { // Filtrar en cliente
-          allActivities.push({
-            id: `event_${doc.id}`,
-            type: 'event_created',
-            title: 'Evento creado',
-            description: data.name,
-            date: data.createdAt?.toDate() || new Date(),
-            icon: '📅',
-            eventId: doc.id,
-          });
-        }
-      });
+        const userName = await getUserName(data.createdBy || user.uid);
+        allActivities.push({
+          id: `event_${doc.id}`,
+          type: 'event_created',
+          title: 'Evento creado',
+          description: data.name,
+          date: data.createdAt?.toDate() || new Date(),
+          icon: '📅',
+          eventId: doc.id,
+          userName,
+          userId: data.createdBy,
+        });
+      }
 
       // Cargar gastos recientes (sin orderBy para evitar índice)
       const expensesQuery = query(
@@ -85,21 +108,24 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
       );
       const expensesSnapshot = await getDocs(expensesQuery);
       
-      expensesSnapshot.forEach(doc => {
+      for (const doc of expensesSnapshot.docs) {
         const data = doc.data();
-        // Filtrar solo gastos donde el usuario es el pagador
-        if (data.paidBy === user.uid) {
+        // Filtrar solo gastos donde el usuario está involucrado
+        if (data.paidBy === user.uid || (data.beneficiaries && data.beneficiaries.includes(user.uid))) {
+          const userName = await getUserName(data.paidBy);
           allActivities.push({
             id: `expense_${doc.id}`,
             type: 'expense_added',
             title: 'Gasto agregado',
-            description: `${data.description} - €${data.amount}`,
+            description: data.description,
             date: data.date?.toDate() || new Date(),
             icon: '💰',
             eventId: data.eventId,
+            userName,
+            userId: data.paidBy,
           });
         }
-      });
+      }
 
       // Cargar grupos recientes (sin índice compuesto)
       const groupsQuery = query(
@@ -109,20 +135,21 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
       );
       const groupsSnapshot = await getDocs(groupsQuery);
       
-      groupsSnapshot.forEach(doc => {
+      for (const doc of groupsSnapshot.docs) {
         const data = doc.data();
-        if (data.createdBy === user.uid) { // Filtrar en cliente
-          allActivities.push({
-            id: `group_${doc.id}`,
-            type: 'group_created',
-            title: 'Grupo creado',
-            description: data.name,
-            date: data.createdAt?.toDate() || new Date(),
-            icon: '👥',
-            groupId: doc.id,
-          });
-        }
-      });
+        const userName = await getUserName(data.createdBy || user.uid);
+        allActivities.push({
+          id: `group_${doc.id}`,
+          type: 'group_created',
+          title: 'Grupo creado',
+          description: data.name,
+          date: data.createdAt?.toDate() || new Date(),
+          icon: '👥',
+          groupId: doc.id,
+          userName,
+          userId: data.createdBy,
+        });
+      }
 
       // Ordenar todas las actividades por fecha
       allActivities.sort((a, b) => b.date.getTime() - a.date.getTime());
@@ -174,7 +201,14 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={styles.activityIcon}>{activity.icon}</Text>
           </View>
           <View style={styles.activityContent}>
-            <Text style={[styles.activityTitle, { color: theme.colors.text }]}>{activity.title}</Text>
+            <View style={styles.titleRow}>
+              <Text style={[styles.activityTitle, { color: theme.colors.text }]}>{activity.title}</Text>
+              {activity.userName && (
+                <Text style={[styles.userName, { color: theme.colors.primary }]}>
+                  • {activity.userName}
+                </Text>
+              )}
+            </View>
             <Text style={[styles.activityDescription, { color: theme.colors.textSecondary }]} numberOfLines={2}>
               {activity.description}
             </Text>
@@ -291,10 +325,20 @@ const styles = StyleSheet.create({
   activityContent: {
     flex: 1,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    marginBottom: 2,
+  },
   activityTitle: {
     fontSize: 15,
     fontWeight: '600',
-    marginBottom: 2,
+  },
+  userName: {
+    fontSize: 13,
+    fontWeight: '500',
+    marginLeft: 6,
   },
   activityDescription: {
     fontSize: 13,
