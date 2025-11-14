@@ -7,7 +7,7 @@ import {
   View,
   Text,
   StyleSheet,
-  
+  TextInput,
   TouchableOpacity,
   ScrollView,
   RefreshControl,
@@ -39,6 +39,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   const [event, setEvent] = useState<Event | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('expenses');
   const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   
   const {
     expenses,
@@ -151,6 +152,14 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   const totalExpenses = getTotalExpenses();
   const remainingBalance = getRemainingBalance(event.initialBudget);
 
+  // Filtrar gastos por búsqueda
+  const filteredExpenses = searchQuery.trim()
+    ? expenses.filter(e => 
+        e.description.toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
+        getParticipantById(e.paidBy)?.name.toLowerCase().includes(searchQuery.toLowerCase().trim())
+      )
+    : expenses;
+
   const renderExpenses = () => (
     <View style={styles.tabContent}>
       {expenses.length === 0 ? (
@@ -163,11 +172,17 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
             style={styles.emptyButton}
           />
         </View>
+      ) : filteredExpenses.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyIcon}>🔍</Text>
+          <Text style={styles.emptyText}>No se encontraron gastos</Text>
+          <Text style={styles.emptySubtext}>Intenta con otro término</Text>
+        </View>
       ) : (
         <ScrollView
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
-          {expenses.map((expense) => {
+          {filteredExpenses.map((expense) => {
             const participant = getParticipantById(expense.paidBy);
             return (
               <ExpenseItem
@@ -353,6 +368,27 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
         </TouchableOpacity>
       </View>
 
+      {/* Search Bar - Solo en tab Gastos */}
+      {activeTab === 'expenses' && expenses.length > 0 && (
+        <View style={[styles.searchContainer, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.border }]}>
+          <TextInput
+            style={[styles.searchInput, { backgroundColor: theme.colors.background, color: theme.colors.text, borderColor: theme.colors.border }]}
+            placeholder="Buscar gastos..."
+            placeholderTextColor={theme.colors.textSecondary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity
+              style={[styles.clearButton, { backgroundColor: theme.colors.surface }]}
+              onPress={() => setSearchQuery('')}
+            >
+              <Text style={[styles.clearButtonText, { color: theme.colors.textSecondary }]}>✕</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
       {activeTab === 'expenses' && renderExpenses()}
       {activeTab === 'participants' && renderParticipants()}
       {activeTab === 'summary' && renderSummary()}
@@ -456,6 +492,12 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginBottom: 24,
   },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    marginTop: 8,
+  },
   emptyButton: {
     marginTop: 8,
   },
@@ -542,5 +584,31 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 32,
     fontWeight: '300',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  searchInput: {
+    flex: 1,
+    height: 40,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    fontSize: 15,
+    borderWidth: 1,
+  },
+  clearButton: {
+    marginLeft: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  clearButtonText: {
+    fontSize: 18,
   },
 });
