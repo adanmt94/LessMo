@@ -362,7 +362,7 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
               
               {uploading ? (
                 <View style={styles.uploadingOverlay}>
-                  <ActivityIndicator size="large" color="#FFFFFF" />
+                  <ActivityIndicator size="large" color={theme.colors.card} />
                 </View>
               ) : (
                 <View style={styles.cameraIcon}>
@@ -489,7 +489,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   photoPlaceholderText: {
     fontSize: 48,
-    color: '#FFFFFF',
+    color: theme.colors.card,
     fontWeight: '600',
   },
   uploadingOverlay: {

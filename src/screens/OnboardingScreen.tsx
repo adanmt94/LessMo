@@ -251,7 +251,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     elevation: 4,
   },
   buttonPrimaryText: {
-    color: '#FFFFFF',
+    color: theme.colors.card,
     fontSize: 18,
     fontWeight: '700',
   },

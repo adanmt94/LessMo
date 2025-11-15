@@ -307,7 +307,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     elevation: 8,
   },
   fabIcon: {
-    color: '#FFFFFF',
+    color: theme.colors.card,
     fontSize: 32,
     fontWeight: '300',
   },

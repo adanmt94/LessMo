@@ -283,7 +283,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   colorCheckmark: {
     fontSize: 24,
-    color: '#FFFFFF',
+    color: theme.colors.card,
     fontWeight: '700',
   },
   previewCard: {

@@ -351,7 +351,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   createButtonIcon: {
     fontSize: 28,
-    color: '#FFFFFF',
+    color: theme.colors.card,
     fontWeight: '300',
   },
   tabContainer: {

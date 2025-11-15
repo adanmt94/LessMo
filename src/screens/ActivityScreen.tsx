@@ -42,6 +42,7 @@ interface ActivityItem {
 export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
   const { user } = useAuth();
   const { theme } = useTheme();
+  const styles = getStyles(theme);
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -256,22 +257,27 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: theme.colors.background,
   },
   header: {
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
+    backgroundColor: theme.colors.card,
+    borderBottomColor: theme.colors.border,
   },
   headerTitle: {
     fontSize: 28,
     fontWeight: '700',
     marginBottom: 4,
+    color: theme.colors.text,
   },
   headerSubtitle: {
     fontSize: 14,
+    color: theme.colors.textSecondary,
   },
   content: {
     flex: 1,
@@ -282,6 +288,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
+    color: theme.colors.textSecondary,
   },
   emptyState: {
     padding: 40,
@@ -295,10 +302,12 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '600',
     marginBottom: 8,
+    color: theme.colors.text,
   },
   emptyText: {
     fontSize: 14,
     textAlign: 'center',
+    color: theme.colors.textSecondary,
   },
   activitiesList: {
     padding: 16,
@@ -306,6 +315,8 @@ const styles = StyleSheet.create({
   activityCard: {
     marginBottom: 12,
     padding: 12,
+    backgroundColor: theme.colors.card,
+    borderColor: theme.colors.border,
   },
   activityHeader: {
     flexDirection: 'row',
@@ -318,6 +329,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
+    backgroundColor: theme.colors.surface,
   },
   activityIcon: {
     fontSize: 22,
@@ -334,17 +346,21 @@ const styles = StyleSheet.create({
   activityTitle: {
     fontSize: 15,
     fontWeight: '600',
+    color: theme.colors.text,
   },
   userName: {
     fontSize: 13,
     fontWeight: '500',
     marginLeft: 6,
+    color: theme.colors.primary,
   },
   activityDescription: {
     fontSize: 13,
+    color: theme.colors.textSecondary,
   },
   activityTime: {
     fontSize: 12,
     marginLeft: 8,
+    color: theme.colors.textTertiary,
   },
 });

@@ -642,7 +642,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderColor: theme.colors.primary,
   },
   checkmark: {
-    color: '#FFFFFF',
+    color: theme.colors.card,
     fontSize: 14,
     fontWeight: '700',
   },

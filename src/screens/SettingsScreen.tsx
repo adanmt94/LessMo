@@ -509,7 +509,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   avatarText: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: theme.colors.card,
   },
   profileText: {
     flex: 1,

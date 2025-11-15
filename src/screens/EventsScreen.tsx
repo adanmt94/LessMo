@@ -152,7 +152,7 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
               style={[styles.backButton, { backgroundColor: theme.colors.primary }]}
               onPress={() => setFilterGroupId(null)}
             >
-              <Text style={[styles.backButtonText, { color: '#FFFFFF' }]}>← Atrás</Text>
+              <Text style={styles.backButtonText}>← Atrás</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity
