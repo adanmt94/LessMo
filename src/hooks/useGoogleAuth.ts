@@ -17,10 +17,20 @@ export const useGoogleAuth = () => {
 
   // Configurar Google Auth con tus credenciales de Firebase
   // IMPORTANTE: Debes obtener estos valores de Firebase Console
+  const androidClientId = Constants.expoConfig?.extra?.googleAndroidClientId;
+  const iosClientId = Constants.expoConfig?.extra?.googleIosClientId;
+  const webClientId = Constants.expoConfig?.extra?.googleWebClientId;
+
+  // DEBUG: Ver qué Client IDs se están usando
+  console.log('🔍 Google Sign-In Config:');
+  console.log('  Android Client ID:', androidClientId ? '✅ Configurado' : '❌ No configurado');
+  console.log('  iOS Client ID:', iosClientId ? '✅ Configurado' : '❌ No configurado');
+  console.log('  Web Client ID:', webClientId ? '✅ Configurado' : '❌ No configurado');
+
   const [request, response, promptAsync] = Google.useAuthRequest({
-    androidClientId: Constants.expoConfig?.extra?.googleAndroidClientId,
-    iosClientId: Constants.expoConfig?.extra?.googleIosClientId,
-    webClientId: Constants.expoConfig?.extra?.googleWebClientId,
+    androidClientId,
+    iosClientId,
+    webClientId,
     language: 'es-ES', // Forzar español de España en Google Sign-In
     // Para Expo Go, usar el redirect URI de desarrollo
     // Para standalone builds, usar el scheme de la app
