@@ -37,6 +37,7 @@ const GROUP_COLORS = ['#6366F1', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#3
 export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
   const { user } = useAuth();
   const { theme } = useTheme();
+  const styles = getStyles(theme);
   const { groupId, mode } = route.params || {};
   const isEditMode = mode === 'edit' && groupId;
   
@@ -188,10 +189,10 @@ export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.colors.background,
   },
   keyboardView: {
     flex: 1,
@@ -201,9 +202,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.card,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: theme.colors.border,
   },
   backButton: {
     width: 40,
@@ -213,13 +214,13 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 32,
-    color: '#6366F1',
+    color: theme.colors.primary,
     fontWeight: '300',
   },
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.colors.text,
   },
   content: {
     flex: 1,
@@ -233,7 +234,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
+    color: theme.colors.text,
     marginBottom: 16,
   },
   iconGrid: {
@@ -245,15 +246,15 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 12,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#F3F4F6',
+    borderColor: theme.colors.surface,
   },
   iconButtonSelected: {
-    borderColor: '#6366F1',
-    backgroundColor: '#EEF2FF',
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.isDark ? theme.colors.surface : '#EEF2FF',
   },
   iconText: {
     fontSize: 28,
@@ -273,8 +274,8 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   colorButtonSelected: {
-    borderColor: '#FFFFFF',
-    shadowColor: '#000',
+    borderColor: theme.colors.text,
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
@@ -289,7 +290,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.colors.surface,
     borderRadius: 12,
   },
   previewIcon: {
@@ -309,12 +310,12 @@ const styles = StyleSheet.create({
   previewName: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#111827',
+    color: theme.colors.text,
     marginBottom: 4,
   },
   previewDescription: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
   },
   spacing: {
     height: 32,

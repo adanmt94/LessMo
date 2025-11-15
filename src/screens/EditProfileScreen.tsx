@@ -35,6 +35,7 @@ interface Props {
 export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
   const { user } = useAuth();
   const { theme } = useTheme();
+  const styles = getStyles(theme);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [photoURL, setPhotoURL] = useState<string | null>(null);
@@ -165,17 +166,23 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
       console.log('📦 Storage bucket:', storage.app.options.storageBucket);
       console.log('🔐 Auth state:', user.email, 'UID:', user.uid);
 
-      // Obtener la imagen como blob
+      // Obtener la imagen como blob (método correcto para React Native)
       console.log('📥 Fetching image...');
       const response = await fetch(uri);
       if (!response.ok) {
         throw new Error(`Error al obtener imagen: ${response.status}`);
       }
       
-      // Crear blob con tipo de contenido explícito
-      const arrayBuffer = await response.arrayBuffer();
-      const blob = new Blob([arrayBuffer], { type: 'image/jpeg' });
+      // En React Native, response.blob() ya devuelve un blob válido
+      const blob = await response.blob();
       console.log('✅ Blob creado, tamaño:', blob.size, 'tipo:', blob.type);
+      
+      // Si el tipo no es correcto, crear uno nuevo (pero sin ArrayBuffer)
+      if (!blob.type || blob.type === '') {
+        console.log('⚠️ Blob sin tipo MIME, ajustando...');
+        // En React Native necesitamos usar el blob tal cual viene del fetch
+        // El tipo se infiere del archivo
+      }
       
       // LÍMITE: Verificar tamaño del archivo
       const fileSizeInKB = blob.size / 1024;
@@ -407,10 +414,10 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.colors.background,
   },
   keyboardView: {
     flex: 1,
@@ -423,7 +430,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
   },
   header: {
     flexDirection: 'row',
@@ -431,9 +438,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.card,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: theme.colors.border,
   },
   backButton: {
     width: 40,
@@ -443,13 +450,13 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 32,
-    color: '#6366F1',
+    color: theme.colors.primary,
     fontWeight: '300',
   },
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.colors.text,
   },
   content: {
     flex: 1,
@@ -470,13 +477,13 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: theme.colors.border,
   },
   photoPlaceholder: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#6366F1',
+    backgroundColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -503,18 +510,18 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#6366F1',
+    backgroundColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,
-    borderColor: '#FFFFFF',
+    borderColor: theme.colors.card,
   },
   cameraIconText: {
     fontSize: 20,
   },
   photoHint: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
   },
   infoSection: {
     padding: 16,
@@ -523,15 +530,15 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
+    color: theme.colors.text,
     marginBottom: 16,
   },
   emailInput: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.colors.surface,
   },
   emailHint: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: theme.colors.textTertiary,
     marginTop: -8,
     marginBottom: 8,
   },

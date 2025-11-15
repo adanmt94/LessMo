@@ -34,6 +34,7 @@ interface Props {
 export const JoinEventScreen: React.FC<Props> = ({ navigation, route }) => {
   const { user } = useAuth();
   const { theme } = useTheme();
+  const styles = getStyles(theme);
   const { inviteCode: routeInviteCode } = route.params || {};
   
   const [inviteCode, setInviteCode] = useState(routeInviteCode || '');
@@ -216,10 +217,10 @@ export const JoinEventScreen: React.FC<Props> = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.colors.background,
   },
   keyboardView: {
     flex: 1,
@@ -229,9 +230,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.card,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: theme.colors.border,
   },
   backButton: {
     width: 40,
@@ -241,13 +242,13 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 32,
-    color: '#6366F1',
+    color: theme.colors.primary,
     fontWeight: '300',
   },
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.colors.text,
   },
   content: {
     flex: 1,
@@ -262,7 +263,7 @@ const styles = StyleSheet.create({
   },
   instructions: {
     fontSize: 16,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 24,
@@ -279,12 +280,12 @@ const styles = StyleSheet.create({
   searchingText: {
     marginLeft: 8,
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
   },
   eventFoundCard: {
     marginBottom: 16,
     borderWidth: 2,
-    borderColor: '#10B981',
+    borderColor: theme.colors.success,
   },
   eventFoundHeader: {
     flexDirection: 'row',
@@ -294,28 +295,28 @@ const styles = StyleSheet.create({
   eventFoundIcon: {
     fontSize: 24,
     marginRight: 8,
-    color: '#10B981',
+    color: theme.colors.success,
   },
   eventFoundTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#10B981',
+    color: theme.colors.success,
   },
   eventInfo: {
     marginBottom: 16,
     padding: 16,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: theme.isDark ? theme.colors.surface : '#F0FDF4',
     borderRadius: 8,
   },
   eventName: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.colors.text,
     marginBottom: 8,
   },
   eventDescription: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
     marginBottom: 12,
   },
   eventStats: {
@@ -327,20 +328,20 @@ const styles = StyleSheet.create({
   },
   eventStatLabel: {
     fontSize: 12,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
     marginBottom: 4,
   },
   eventStatValue: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
+    color: theme.colors.text,
   },
   notFoundCard: {
     marginBottom: 16,
     alignItems: 'center',
     padding: 24,
     borderWidth: 2,
-    borderColor: '#EF4444',
+    borderColor: theme.colors.error,
   },
   notFoundIcon: {
     fontSize: 48,
@@ -349,12 +350,12 @@ const styles = StyleSheet.create({
   notFoundTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#EF4444',
+    color: theme.colors.error,
     marginBottom: 8,
   },
   notFoundText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
     textAlign: 'center',
   },
 });
