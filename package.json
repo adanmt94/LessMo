@@ -10,12 +10,21 @@
     "clean": "expo start -c",
     "type-check": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx",
-    "test": "wdio run wdio.conf.js",
-    "test:login": "wdio run wdio.conf.js --spec=./tests/appium/login.test.js",
-    "test:register": "wdio run wdio.conf.js --spec=./tests/appium/register.test.js",
-    "test:event": "wdio run wdio.conf.js --spec=./tests/appium/createEvent.test.js",
-    "test:expense": "wdio run wdio.conf.js --spec=./tests/appium/addExpense.test.js",
-    "test:summary": "wdio run wdio.conf.js --spec=./tests/appium/summary.test.js"
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:unit": "jest --testPathPattern='__tests__' --testPathIgnorePatterns='e2e'",
+    "test:integration": "jest --testPathPattern='screens/__tests__'",
+    "test:e2e": "jest --testPathPattern='e2e'",
+    "test:hooks": "jest --testPathPattern='hooks/__tests__'",
+    "test:utils": "jest --testPathPattern='utils/__tests__'",
+    "test:ci": "jest --ci --coverage --maxWorkers=2",
+    "test:appium": "wdio run wdio.conf.js",
+    "test:appium:login": "wdio run wdio.conf.js --spec=./tests/appium/login.test.js",
+    "test:appium:register": "wdio run wdio.conf.js --spec=./tests/appium/register.test.js",
+    "test:appium:event": "wdio run wdio.conf.js --spec=./tests/appium/createEvent.test.js",
+    "test:appium:expense": "wdio run wdio.conf.js --spec=./tests/appium/addExpense.test.js",
+    "test:appium:summary": "wdio run wdio.conf.js --spec=./tests/appium/summary.test.js"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.2.0",
@@ -52,11 +61,16 @@
   },
   "private": true,
   "devDependencies": {
+    "@testing-library/jest-native": "^5.4.3",
+    "@testing-library/react-native": "^13.3.3",
+    "@types/jest": "^30.0.0",
     "@wdio/cli": "^9.20.0",
     "@wdio/local-runner": "^9.20.0",
     "@wdio/mocha-framework": "^9.20.0",
     "@wdio/spec-reporter": "^9.20.0",
     "appium": "^3.1.1",
+    "jest-expo": "^54.0.13",
+    "react-test-renderer": "^19.2.0",
     "webdriverio": "^9.20.0"
   }
 }

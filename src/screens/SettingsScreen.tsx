@@ -89,11 +89,6 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
       ],
       { cancelable: true }
     );
-  };    })),
-        { text: 'Cancelar', style: 'cancel' }
-      ],
-      { cancelable: true }
-    );
   };
 
   const handleThemeChange = () => {
