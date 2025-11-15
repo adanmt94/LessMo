@@ -302,7 +302,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
 
         <Button
           title="Ver gráficos y liquidaciones"
-          onPress={() => setActiveTab('summary')}
+          onPress={() => navigation.navigate('Summary', { eventId })}
           variant="outline"
           fullWidth
         />

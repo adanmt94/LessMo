@@ -19,10 +19,12 @@ export const useGoogleAuth = () => {
   // IMPORTANTE: Debes obtener estos valores de Firebase Console
   const [request, response, promptAsync] = Google.useAuthRequest({
     androidClientId: Constants.expoConfig?.extra?.googleAndroidClientId,
-    iosClientId: Constants.expoConfig?.extra?.googleIosClientId || Constants.expoConfig?.extra?.googleWebClientId,
+    iosClientId: Constants.expoConfig?.extra?.googleIosClientId,
     webClientId: Constants.expoConfig?.extra?.googleWebClientId,
     language: 'es-ES', // Forzar español de España en Google Sign-In
-    redirectUri: `${Constants.expoConfig?.scheme || 'lessmo'}:/`, // Fix para redirect URI
+    // Para Expo Go, usar el redirect URI de desarrollo
+    // Para standalone builds, usar el scheme de la app
+    selectAccount: true, // Permitir elegir cuenta
   });
 
   useEffect(() => {

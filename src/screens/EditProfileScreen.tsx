@@ -172,12 +172,14 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
         throw new Error(`Error al obtener imagen: ${response.status}`);
       }
       
-      const blob = await response.blob();
+      // Crear blob con tipo de contenido explícito
+      const arrayBuffer = await response.arrayBuffer();
+      const blob = new Blob([arrayBuffer], { type: 'image/jpeg' });
       console.log('✅ Blob creado, tamaño:', blob.size, 'tipo:', blob.type);
       
-      // LÍMITE ESTRICTO: Verificar tamaño del archivo
+      // LÍMITE: Verificar tamaño del archivo
       const fileSizeInKB = blob.size / 1024;
-      const MAX_SIZE_KB = 500; // Máximo 500KB para no exceder cuota gratuita
+      const MAX_SIZE_KB = 1024; // Máximo 1MB para evitar problemas
       
       console.log(`📊 Tamaño de archivo: ${fileSizeInKB.toFixed(2)} KB`);
       

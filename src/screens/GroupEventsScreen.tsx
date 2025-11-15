@@ -32,8 +32,22 @@ interface Props {
 
 type EventTab = 'active' | 'past';
 
+const getGroupColor = (colorName?: string): string => {
+  const colors: Record<string, string> = {
+    blue: '#6366F1',
+    green: '#10B981',
+    red: '#EF4444',
+    yellow: '#F59E0B',
+    purple: '#8B5CF6',
+    pink: '#EC4899',
+    orange: '#F97316',
+    teal: '#14B8A6',
+  };
+  return colors[colorName || 'blue'] || colors.blue;
+};
+
 export const GroupEventsScreen: React.FC<Props> = ({ navigation, route }) => {
-  const { groupId, groupName } = route.params;
+  const { groupId, groupName, groupIcon, groupColor } = route.params;
   const { user } = useAuth();
   const { theme } = useTheme();
   const styles = getStyles(theme);
@@ -98,8 +112,8 @@ export const GroupEventsScreen: React.FC<Props> = ({ navigation, route }) => {
         </TouchableOpacity>
         
         <View style={styles.headerContent}>
-          <View style={styles.groupIconContainer}>
-            <Text style={styles.groupIcon}>👥</Text>
+          <View style={[styles.groupIconContainer, { backgroundColor: getGroupColor(groupColor) }]}>
+            <Text style={styles.groupIcon}>{groupIcon || '👥'}</Text>
           </View>
           <View style={styles.headerTextContainer}>
             <Text style={styles.groupName}>{groupName}</Text>

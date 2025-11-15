@@ -4,6 +4,7 @@
 
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getLocales } from 'expo-localization';
 import { Currency } from '../types';
 
 const CURRENCY_STORAGE_KEY = '@LessMo:currency';
@@ -40,9 +41,39 @@ export const useCurrency = () => {
     try {
       const savedCurrency = await AsyncStorage.getItem(CURRENCY_STORAGE_KEY);
       if (savedCurrency) {
+        console.log('💰 Moneda guardada encontrada:', savedCurrency);
         const currency = AVAILABLE_CURRENCIES.find(c => c.code === savedCurrency);
         if (currency) {
           setCurrentCurrency(currency);
+        }
+      } else {
+        // Autodetectar moneda del dispositivo
+        const locales = getLocales();
+        const deviceRegion = locales[0]?.regionCode || 'US';
+        
+        // Mapeo de región a moneda
+        const regionToCurrency: Record<string, Currency> = {
+          'ES': 'EUR', 'FR': 'EUR', 'DE': 'EUR', 'IT': 'EUR', 'PT': 'EUR',
+          'US': 'USD', 'CA': 'USD',
+          'GB': 'GBP',
+          'JP': 'JPY',
+          'CN': 'CNY',
+          'MX': 'MXN',
+          'AR': 'ARS',
+          'CO': 'COP',
+          'CL': 'CLP',
+          'BR': 'BRL',
+        };
+        
+        const detectedCurrency = regionToCurrency[deviceRegion] || 'EUR';
+        const currency = AVAILABLE_CURRENCIES.find(c => c.code === detectedCurrency);
+        
+        if (currency) {
+          console.log('🌍 Autodetectada moneda del dispositivo:', currency.code, 'para región:', deviceRegion);
+          setCurrentCurrency(currency);
+          await AsyncStorage.setItem(CURRENCY_STORAGE_KEY, currency.code);
+        } else {
+          console.log('💰 Moneda no soportada, usando EUR por defecto');
         }
       }
     } catch (error) {
@@ -52,13 +83,16 @@ export const useCurrency = () => {
 
   const changeCurrency = async (currencyCode: Currency) => {
     try {
+      console.log('💰 useCurrency.changeCurrency - Iniciando cambio a:', currencyCode);
       await AsyncStorage.setItem(CURRENCY_STORAGE_KEY, currencyCode);
+      console.log('💾 useCurrency.changeCurrency - Guardado en AsyncStorage');
       const currency = AVAILABLE_CURRENCIES.find(c => c.code === currencyCode);
       if (currency) {
         setCurrentCurrency(currency);
+        console.log('✅ useCurrency.changeCurrency - Completado. Nueva moneda:', currency);
       }
     } catch (error) {
-      console.error('Error changing currency:', error);
+      console.error('❌ Error changing currency:', error);
     }
   };
 
