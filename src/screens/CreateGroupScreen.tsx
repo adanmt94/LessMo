@@ -46,6 +46,32 @@ export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
   const [selectedIcon, setSelectedIcon] = useState('👥');
   const [selectedColor, setSelectedColor] = useState('#6366F1');
   const [loading, setLoading] = useState(false);
+  const [loadingData, setLoadingData] = useState(!!isEditMode);
+
+  // Cargar datos del grupo si estamos en modo edición
+  useEffect(() => {
+    if (isEditMode) {
+      loadGroupData();
+    }
+  }, [isEditMode, groupId]);
+
+  const loadGroupData = async () => {
+    try {
+      setLoadingData(true);
+      const { getGroup } = await import('../services/firebase');
+      const group = await getGroup(groupId!);
+      
+      setGroupName(group.name || '');
+      setDescription(group.description || '');
+      setSelectedIcon(group.icon || '👥');
+      setSelectedColor(group.color || '#6366F1');
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'No se pudo cargar el grupo');
+      navigation.goBack();
+    } finally {
+      setLoadingData(false);
+    }
+  };
 
   const handleCreateGroup = async () => {
     // Validaciones
@@ -62,36 +88,71 @@ export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
     setLoading(true);
 
     try {
-      const groupId = await createGroup(
-        groupName,
-        user!.uid,
-        description,
-        selectedColor,
-        selectedIcon
-      );
+      if (isEditMode) {
+        // Actualizar grupo existente
+        const { updateGroup } = await import('../services/firebase');
+        await updateGroup(
+          groupId!,
+          groupName,
+          description,
+          selectedColor,
+          selectedIcon
+        );
 
-      Alert.alert(
-        '¡Grupo creado!',
-        'El grupo se ha creado correctamente',
-        [
-          {
-            text: 'Aceptar',
-            onPress: () => navigation.navigate('MainTabs', { screen: 'Groups' } as any),
-          },
-        ]
-      );
+        Alert.alert(
+          '¡Grupo actualizado!',
+          'Los cambios se han guardado correctamente',
+          [
+            {
+              text: 'Aceptar',
+              onPress: () => navigation.goBack(),
+            },
+          ]
+        );
+      } else {
+        // Crear nuevo grupo
+        const newGroupId = await createGroup(
+          groupName,
+          user!.uid,
+          description,
+          selectedColor,
+          selectedIcon
+        );
+
+        Alert.alert(
+          '¡Grupo creado!',
+          'El grupo se ha creado correctamente',
+          [
+            {
+              text: 'Aceptar',
+              onPress: () => navigation.navigate('MainTabs', { screen: 'Groups' } as any),
+            },
+          ]
+        );
+      }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'No se pudo crear el grupo');
+      Alert.alert('Error', error.message || `No se pudo ${isEditMode ? 'actualizar' : 'crear'} el grupo`);
     } finally {
       setLoading(false);
     }
   };
 
+  if (loadingData) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
+          <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Cargando grupo...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.keyboardView}
+        enabled={Platform.OS === 'ios'}
       >
         <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
           {/* Información básica */}
@@ -193,6 +254,14 @@ const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
   },
   keyboardView: {
     flex: 1,

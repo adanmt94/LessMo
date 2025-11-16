@@ -29,7 +29,8 @@ import {
   orderBy,
   Timestamp,
   addDoc,
-  writeBatch
+  writeBatch,
+  serverTimestamp
 } from 'firebase/firestore';
 import { 
   getStorage 
@@ -289,38 +290,40 @@ export const updateEvent = async (eventId: string, updates: Partial<Event>): Pro
 };
 
 /**
- * Eliminar evento
+ * Eliminar un evento
  */
 export const deleteEvent = async (eventId: string): Promise<void> => {
   try {
-    // Eliminar evento
-    await deleteDoc(doc(db, 'events', eventId));
-    
-    // Eliminar participantes asociados
-    const participantsQuery = query(
-      collection(db, 'participants'),
-      where('eventId', '==', eventId)
-    );
-    const participantsSnapshot = await getDocs(participantsQuery);
-    
     const batch = writeBatch(db);
-    participantsSnapshot.docs.forEach(doc => {
-      batch.delete(doc.ref);
-    });
-    
-    // Eliminar gastos asociados
+
+    // Eliminar el evento
+    batch.delete(doc(db, 'events', eventId));
+
+    // Eliminar todos los gastos del evento
     const expensesQuery = query(
       collection(db, 'expenses'),
       where('eventId', '==', eventId)
     );
     const expensesSnapshot = await getDocs(expensesQuery);
-    expensesSnapshot.docs.forEach(doc => {
+    expensesSnapshot.docs.forEach((doc) => {
       batch.delete(doc.ref);
     });
-    
+
+    // Eliminar todos los participantes del evento
+    const participantsQuery = query(
+      collection(db, 'participants'),
+      where('eventId', '==', eventId)
+    );
+    const participantsSnapshot = await getDocs(participantsQuery);
+    participantsSnapshot.docs.forEach((doc) => {
+      batch.delete(doc.ref);
+    });
+
     await batch.commit();
+    console.log('✅ Evento eliminado:', eventId);
   } catch (error: any) {
-    throw new Error(error.message);
+    console.error('❌ Error deleting event:', error);
+    throw new Error(error.message || 'No se pudo eliminar el evento');
   }
 };
 
@@ -807,6 +810,59 @@ export const getUserGroups = async (userId: string): Promise<any[]> => {
 };
 
 /**
+ * Obtener un grupo por ID
+ */
+export const getGroup = async (groupId: string): Promise<any> => {
+  try {
+    const groupDoc = await getDoc(doc(db, 'groups', groupId));
+    if (!groupDoc.exists()) {
+      throw new Error('Grupo no encontrado');
+    }
+    return {
+      id: groupDoc.id,
+      ...groupDoc.data()
+    };
+  } catch (error: any) {
+    console.error('❌ Error loading group:', error);
+    throw new Error(error.message || 'No se pudo cargar el grupo');
+  }
+};
+
+/**
+ * Actualizar un grupo
+ */
+export const updateGroup = async (
+  groupId: string,
+  name: string,
+  description?: string,
+  color?: string,
+  icon?: string
+): Promise<void> => {
+  try {
+    const groupData: any = {
+      name,
+      updatedAt: serverTimestamp(),
+    };
+
+    if (description) {
+      groupData.description = description;
+    }
+    if (color) {
+      groupData.color = color;
+    }
+    if (icon) {
+      groupData.icon = icon;
+    }
+
+    await updateDoc(doc(db, 'groups', groupId), groupData);
+    console.log('✅ Grupo actualizado:', groupId);
+  } catch (error: any) {
+    console.error('❌ Error updating group:', error);
+    throw new Error(error.message || 'No se pudo actualizar el grupo');
+  }
+};
+
+/**
  * Eliminar un grupo
  */
 export const deleteGroup = async (groupId: string): Promise<void> => {
@@ -932,6 +988,9 @@ export default {
   updateExpense,
   deleteExpense,
   createGroup,
+  getGroup,
+  updateGroup,
+  deleteGroup,
   getUserGroups,
   generateInviteCode,
   getEventByInviteCode,

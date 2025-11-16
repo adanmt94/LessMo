@@ -2,7 +2,7 @@
  * EventDetailScreen - Pantalla de detalle del evento con tabs
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -52,6 +52,28 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
     getParticipantById,
     getParticipantBalances,
   } = useExpenses(eventId);
+
+  // Configure header buttons
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <View style={{ flexDirection: 'row', marginRight: 8 }}>
+          <TouchableOpacity 
+            onPress={handleEditEvent}
+            style={{ padding: 8 }}
+          >
+            <Text style={{ fontSize: 20 }}>✏️</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            onPress={handleDeleteEvent}
+            style={{ padding: 8, marginLeft: 4 }}
+          >
+            <Text style={{ fontSize: 20 }}>🗑️</Text>
+          </TouchableOpacity>
+        </View>
+      ),
+    });
+  }, [navigation]);
 
   // Reload event data when screen gains focus
   useFocusEffect(
