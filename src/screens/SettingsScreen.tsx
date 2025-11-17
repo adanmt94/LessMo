@@ -60,8 +60,9 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
             console.log('🌍 Cambiando idioma a:', lang.code);
             await changeLanguage(lang.code);
             console.log('✅ Idioma cambiado correctamente a:', lang.code);
-            // Forzar re-render con más tiempo para AsyncStorage + i18n
-            setTimeout(() => forceUpdate(), 1000);
+            // Forzar re-render inmediatamente
+            forceUpdate();
+            Alert.alert('Idioma cambiado', `Idioma cambiado a ${lang.nativeName}`);
           },
         })),
         { text: 'Cancelar', style: 'cancel' }
@@ -81,8 +82,9 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
             console.log('💰 Cambiando moneda a:', curr.code);
             await changeCurrency(curr.code);
             console.log('✅ Moneda cambiada correctamente a:', curr.code);
-            // Forzar re-render con más tiempo para AsyncStorage
-            setTimeout(() => forceUpdate(), 1000);
+            // Forzar re-render inmediatamente
+            forceUpdate();
+            Alert.alert('Moneda cambiada', `Moneda cambiada a ${curr.name} (${curr.symbol})`);
           },
         })),
         { text: 'Cancelar', style: 'cancel' }
@@ -104,7 +106,11 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
       themeOptions.map(option => ({
         text: option.label,
         onPress: async () => {
+          console.log('🎨 Cambiando tema a:', option.mode);
           await setThemeMode(option.mode);
+          console.log('✅ Tema cambiado correctamente a:', option.mode);
+          // Forzar re-render inmediato
+          forceUpdate();
           Alert.alert('Tema cambiado', option.description);
         },
       })),

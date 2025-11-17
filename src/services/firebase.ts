@@ -5,7 +5,7 @@
 import Constants from 'expo-constants';
 import { initializeApp } from 'firebase/app';
 import { 
-  getAuth, 
+  getAuth,
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
