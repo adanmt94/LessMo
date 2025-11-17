@@ -5,6 +5,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColorScheme } from 'react-native';
+import { emitGlobalUpdate } from '../utils/globalEvents';
 
 export type ThemeMode = 'light' | 'dark' | 'auto';
 
@@ -171,6 +172,9 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     try {
       await AsyncStorage.setItem(THEME_STORAGE_KEY, mode);
       setThemeModeState(mode);
+      
+      // EMITIR EVENTO GLOBAL para forzar actualización en TODA la app
+      emitGlobalUpdate('THEME_CHANGED');
     } catch (error) {
       console.error('Error saving theme preference:', error);
     }

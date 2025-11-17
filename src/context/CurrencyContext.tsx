@@ -7,6 +7,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Localization from 'expo-localization';
 import { Currency } from '../types';
+import { emitGlobalUpdate } from '../utils/globalEvents';
 
 const CURRENCY_STORAGE_KEY = '@LessMo:currency_v2';
 
@@ -109,6 +110,9 @@ export const CurrencyProvider: React.FC<CurrencyProviderProps> = ({ children }) 
 
       // Actualizar estado (esto fuerza re-render de TODA la app)
       setCurrentCurrency(currency);
+
+      // EMITIR EVENTO GLOBAL para forzar actualización en TODA la app
+      emitGlobalUpdate('CURRENCY_CHANGED');
 
       console.log('✅ Moneda cambiada exitosamente a:', currency.name);
     } catch (error) {

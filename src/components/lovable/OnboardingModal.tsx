@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from './Button';
+import { useTheme } from '../../context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -92,9 +93,11 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   visible,
   onClose,
 }) => {
+  const { theme } = useTheme();
   const [currentStep, setCurrentStep] = useState(0);
   const step = STEPS[currentStep];
   const isLastStep = currentStep === STEPS.length - 1;
+  const styles = getStyles(theme);
 
   const handleNext = () => {
     if (isLastStep) {
@@ -192,17 +195,17 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.background,
   },
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.card,
     maxHeight: '85%',
     padding: 24,
-    shadowColor: '#000',
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
@@ -216,12 +219,12 @@ const styles = StyleSheet.create({
   },
   stepIndicator: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
     fontWeight: '600',
   },
   skipText: {
     fontSize: 14,
-    color: '#6366F1',
+    color: theme.colors.primary,
     fontWeight: '600',
   },
   content: {
@@ -237,13 +240,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.colors.text,
     textAlign: 'center',
     marginBottom: 12,
   },
   description: {
     fontSize: 16,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 24,
@@ -259,13 +262,13 @@ const styles = StyleSheet.create({
   },
   featureBullet: {
     fontSize: 18,
-    color: '#10B981',
+    color: theme.colors.success,
     marginRight: 12,
     fontWeight: '700',
   },
   featureText: {
     fontSize: 14,
-    color: '#374151',
+    color: theme.colors.text,
     flex: 1,
     lineHeight: 20,
   },
@@ -279,11 +282,11 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#D1D5DB',
+    backgroundColor: theme.colors.disabled,
     marginHorizontal: 4,
   },
   dotActive: {
-    backgroundColor: '#6366F1',
+    backgroundColor: theme.colors.primary,
     width: 24,
   },
   navigation: {
@@ -297,7 +300,7 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 16,
-    color: '#6366F1',
+    color: theme.colors.primary,
     fontWeight: '600',
   },
   nextButton: {

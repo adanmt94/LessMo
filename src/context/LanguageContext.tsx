@@ -12,6 +12,7 @@ import en from '../i18n/en.json';
 import fr from '../i18n/fr.json';
 import de from '../i18n/de.json';
 import pt from '../i18n/pt.json';
+import { emitGlobalUpdate } from '../utils/globalEvents';
 
 const LANGUAGE_STORAGE_KEY = '@LessMo:language_v2';
 
@@ -117,6 +118,9 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
       setCurrentLanguage(lang);
       setLocale(languageCode);
       i18n.locale = languageCode;
+
+      // EMITIR EVENTO GLOBAL para forzar actualización en TODA la app
+      emitGlobalUpdate('LANGUAGE_CHANGED');
 
       console.log('✅ Idioma cambiado exitosamente a:', lang.nativeName);
     } catch (error) {

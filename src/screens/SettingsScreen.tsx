@@ -22,6 +22,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useCurrency } from '../context/CurrencyContext';
 import { useNotifications } from '../hooks/useNotifications';
+import { useForceUpdate } from '../utils/globalEvents';
 
 type SettingsScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -45,7 +46,10 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
   const { currentLanguage, availableLanguages, changeLanguage } = useLanguage();
   const { currentCurrency, availableCurrencies, changeCurrency } = useCurrency();
   const { notificationsEnabled, toggleNotifications, isLoading } = useNotifications();
-  const [, forceUpdate] = React.useReducer(x => x + 1, 0);
+  
+  // Hook para forzar re-render cuando cambien idioma/moneda
+  useForceUpdate();
+  
   const darkModeEnabled = theme.isDark;
   const styles = getStyles(theme);
 
@@ -115,8 +119,7 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
           console.log('🎨 Cambiando tema a:', option.mode);
           await setThemeMode(option.mode);
           console.log('✅ Tema cambiado correctamente a:', option.mode);
-          // Forzar re-render inmediato
-          forceUpdate();
+          // El EventEmitter se encarga de forzar el re-render
           Alert.alert('Tema cambiado', option.description);
         },
       })),
