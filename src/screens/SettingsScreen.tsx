@@ -19,8 +19,8 @@ import { RootStackParamList } from '../types';
 import { Card } from '../components/lovable';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
-import { useLanguage } from '../hooks/useLanguage';
-import { useCurrency } from '../hooks/useCurrency';
+import { useLanguage } from '../context/LanguageContext';
+import { useCurrency } from '../context/CurrencyContext';
 import { useNotifications } from '../hooks/useNotifications';
 
 type SettingsScreenNavigationProp = StackNavigationProp<RootStackParamList>;
@@ -57,12 +57,15 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
         ...availableLanguages.map(lang => ({
           text: `${lang.nativeName} (${lang.name})`,
           onPress: async () => {
-            console.log('🌍 Cambiando idioma a:', lang.code);
-            await changeLanguage(lang.code);
-            console.log('✅ Idioma cambiado correctamente a:', lang.code);
-            // Forzar re-render inmediatamente
-            forceUpdate();
-            Alert.alert('Idioma cambiado', `Idioma cambiado a ${lang.nativeName}`);
+            try {
+              console.log('🌍 Iniciando cambio de idioma a:', lang.code);
+              await changeLanguage(lang.code);
+              console.log('✅ Idioma cambiado exitosamente');
+              Alert.alert('✅ Idioma cambiado', `Ahora usando: ${lang.nativeName}`);
+            } catch (error: any) {
+              console.error('❌ Error cambiando idioma:', error);
+              Alert.alert('Error', 'No se pudo cambiar el idioma');
+            }
           },
         })),
         { text: 'Cancelar', style: 'cancel' }
@@ -79,12 +82,15 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
         ...availableCurrencies.map(curr => ({
           text: `${curr.name} (${curr.symbol})`,
           onPress: async () => {
-            console.log('💰 Cambiando moneda a:', curr.code);
-            await changeCurrency(curr.code);
-            console.log('✅ Moneda cambiada correctamente a:', curr.code);
-            // Forzar re-render inmediatamente
-            forceUpdate();
-            Alert.alert('Moneda cambiada', `Moneda cambiada a ${curr.name} (${curr.symbol})`);
+            try {
+              console.log('💰 Iniciando cambio de moneda a:', curr.code);
+              await changeCurrency(curr.code);
+              console.log('✅ Moneda cambiada exitosamente');
+              Alert.alert('✅ Moneda cambiada', `Ahora usando: ${curr.name} (${curr.symbol})`);
+            } catch (error: any) {
+              console.error('❌ Error cambiando moneda:', error);
+              Alert.alert('Error', 'No se pudo cambiar la moneda');
+            }
           },
         })),
         { text: 'Cancelar', style: 'cancel' }
