@@ -8,6 +8,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native
 import { Swipeable } from 'react-native-gesture-handler';
 import { Expense, CategoryLabels, CategoryColors, CurrencySymbols, Currency } from '../../types';
 import { Card } from './Card';
+import { useTheme } from '../../context/ThemeContext';
 
 interface ExpenseItemProps {
   expense: Expense;
@@ -24,9 +25,11 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({
   onPress,
   onDelete,
 }) => {
+  const { theme } = useTheme();
   const categoryColor = CategoryColors[expense.category];
   const categoryLabel = CategoryLabels[expense.category];
   const currencySymbol = CurrencySymbols[currency];
+  const styles = getStyles(theme);
 
   const formatDate = (date: Date) => {
     // Manejar timestamps de Firestore
@@ -120,7 +123,7 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({
   return content;
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   card: {
     marginBottom: 12,
   },
@@ -142,17 +145,17 @@ const styles = StyleSheet.create({
   },
   categoryText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
     fontWeight: '500',
   },
   amount: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.colors.text,
   },
   description: {
     fontSize: 16,
-    color: '#374151',
+    color: theme.colors.text,
     marginBottom: 8,
     fontWeight: '500',
   },
@@ -163,14 +166,14 @@ const styles = StyleSheet.create({
   },
   participant: {
     fontSize: 12,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
   },
   date: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: theme.colors.textTertiary,
   },
   deleteButton: {
-    backgroundColor: '#EF4444',
+    backgroundColor: theme.colors.error,
     justifyContent: 'center',
     alignItems: 'center',
     width: 100,

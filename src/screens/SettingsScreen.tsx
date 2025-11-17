@@ -23,6 +23,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { useCurrency } from '../context/CurrencyContext';
 import { useNotifications } from '../hooks/useNotifications';
 import { useForceUpdate } from '../utils/globalEvents';
+import { CommonActions } from '@react-navigation/native';
 
 type SettingsScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -65,6 +66,15 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
               console.log('🌍 Iniciando cambio de idioma a:', lang.code);
               await changeLanguage(lang.code);
               console.log('✅ Idioma cambiado exitosamente');
+              
+              // FORZAR navegación refresh para actualizar UI
+              navigation.dispatch(
+                CommonActions.reset({
+                  index: 0,
+                  routes: [{ name: 'MainTabs' as any, params: { screen: 'Settings' } }],
+                })
+              );
+              
               Alert.alert('✅ Idioma cambiado', `Ahora usando: ${lang.nativeName}`);
             } catch (error: any) {
               console.error('❌ Error cambiando idioma:', error);
@@ -90,6 +100,15 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
               console.log('💰 Iniciando cambio de moneda a:', curr.code);
               await changeCurrency(curr.code);
               console.log('✅ Moneda cambiada exitosamente');
+              
+              // FORZAR navegación refresh para actualizar UI
+              navigation.dispatch(
+                CommonActions.reset({
+                  index: 0,
+                  routes: [{ name: 'MainTabs' as any, params: { screen: 'Settings' } }],
+                })
+              );
+              
               Alert.alert('✅ Moneda cambiada', `Ahora usando: ${curr.name} (${curr.symbol})`);
             } catch (error: any) {
               console.error('❌ Error cambiando moneda:', error);

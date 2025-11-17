@@ -5,19 +5,16 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     
-    // Profile images - usuarios autenticados pueden subir UNA SOLA foto de perfil
+    // Profile images - usuarios autenticados pueden subir fotos de perfil
     // Formato: profiles/userId_cualquiernombre.jpg
     match /profiles/{fileName} {
       // Permitir lectura a todos
       allow read: if true;
       
-      // Permitir escritura solo si:
-      // 1. Está autenticado
-      // 2. Imagen menor a 1MB (antes 500KB, aumentado para evitar rechazos)
-      // 3. Solo imágenes JPG/PNG/JPEG
+      // Permitir escritura solo si está autenticado
+      // Aumentado límite a 2MB para evitar rechazos
       allow create, update: if request.auth != null 
-                   && request.resource.size < 1 * 1024 * 1024 // Máximo 1MB
-                   && request.resource.contentType.matches('image/(jpeg|jpg|png)');
+                   && request.resource.size < 2 * 1024 * 1024; // Máximo 2MB
       
       // Permitir eliminar solo si está autenticado
       allow delete: if request.auth != null;

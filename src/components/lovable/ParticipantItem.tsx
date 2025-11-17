@@ -7,6 +7,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Participant, CurrencySymbols, Currency } from '../../types';
 import { Card } from './Card';
+import { useTheme } from '../../context/ThemeContext';
 
 interface ParticipantItemProps {
   participant: Participant;
@@ -23,7 +24,9 @@ export const ParticipantItem: React.FC<ParticipantItemProps> = ({
   totalOwed,
   balance,
 }) => {
+  const { theme } = useTheme();
   const currencySymbol = CurrencySymbols[currency];
+  const styles = getStyles(theme);
   
   // Si tenemos balance calculado (desde el resumen de gastos), usarlo
   // Si no, usar el sistema de presupuesto individual
@@ -137,7 +140,7 @@ export const ParticipantItem: React.FC<ParticipantItemProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   card: {
     marginBottom: 12,
   },
@@ -152,7 +155,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#6366F1',
+    backgroundColor: theme.colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -168,12 +171,12 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
+    color: theme.colors.text,
     marginBottom: 2,
   },
   email: {
     fontSize: 12,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
   },
   budgetContainer: {
     marginBottom: 12,
@@ -185,17 +188,17 @@ const styles = StyleSheet.create({
   },
   budgetLabel: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
   },
   budgetValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#111827',
+    color: theme.colors.text,
   },
   budgetLabelBold: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.colors.text,
   },
   budgetValueBold: {
     fontSize: 16,
@@ -203,19 +206,19 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: theme.colors.border,
     marginVertical: 8,
   },
   balanceDescription: {
     fontSize: 13,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
     marginTop: 8,
     textAlign: 'center',
     fontStyle: 'italic',
   },
   progressBarContainer: {
     height: 8,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: theme.colors.disabled,
     borderRadius: 4,
     overflow: 'hidden',
     marginBottom: 4,
@@ -226,7 +229,7 @@ const styles = StyleSheet.create({
   },
   percentageText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
     textAlign: 'right',
   },
 });

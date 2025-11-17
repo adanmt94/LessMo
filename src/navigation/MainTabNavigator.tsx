@@ -10,28 +10,31 @@ import { GroupsScreen } from '../screens/GroupsScreen';
 import { ActivityScreen } from '../screens/ActivityScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { EventsIcon, GroupsIcon, ActivityIcon, SettingsIcon } from '../components/TabIcons';
+import { useTheme } from '../context/ThemeContext';
 
 const Tab = createBottomTabNavigator<TabParamList>();
 
 export const MainTabNavigator: React.FC = () => {
+  const { theme } = useTheme();
+  
   return (
     <Tab.Navigator
       screenOptions={{
-        tabBarActiveTintColor: '#6366F1',
-        tabBarInactiveTintColor: '#9CA3AF',
+        tabBarActiveTintColor: theme.colors.primary,
+        tabBarInactiveTintColor: theme.colors.textSecondary,
         tabBarStyle: {
           position: 'absolute',
           bottom: 0,
           left: 0,
           right: 0,
           elevation: 8,
-          backgroundColor: '#FFFFFF',
+          backgroundColor: theme.colors.surface,
           borderTopWidth: 0,
           height: 90,
           paddingBottom: 25,
           paddingTop: 8,
           paddingHorizontal: 10,
-          shadowColor: '#000',
+          shadowColor: theme.colors.shadow,
           shadowOffset: { width: 0, height: -2 },
           shadowOpacity: 0.1,
           shadowRadius: 8,
