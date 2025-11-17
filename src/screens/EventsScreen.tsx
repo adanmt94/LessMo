@@ -433,10 +433,10 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 12,
   },
   statusActive: {
-    backgroundColor: theme.dark ? '#064E3B' : '#DCFCE7',
+    backgroundColor: theme.isDark ? '#10B981' : '#DCFCE7',
   },
   statusPast: {
-    backgroundColor: theme.dark ? '#374151' : '#F3F4F6',
+    backgroundColor: theme.isDark ? '#6B7280' : '#F3F4F6',
   },
   statusText: {
     fontSize: 12,

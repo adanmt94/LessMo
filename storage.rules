@@ -5,19 +5,11 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     
-    // Profile images - usuarios autenticados pueden subir fotos de perfil
+    // Profile images - TEMPORALMENTE PERMISIVO PARA DEBUGGING
     // Formato: profiles/userId_cualquiernombre.jpg
     match /profiles/{fileName} {
-      // Permitir lectura a todos
-      allow read: if true;
-      
-      // Permitir escritura solo si está autenticado
-      // Aumentado límite a 2MB para evitar rechazos
-      allow create, update: if request.auth != null 
-                   && request.resource.size < 2 * 1024 * 1024; // Máximo 2MB
-      
-      // Permitir eliminar solo si está autenticado
-      allow delete: if request.auth != null;
+      // Permitir TODO temporalmente
+      allow read, write: if true;
     }
     
     // Denegar todo lo demás
