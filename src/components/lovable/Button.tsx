@@ -1,6 +1,6 @@
 /**
  * Componente Button - Botón personalizado reutilizable
- * Generado con estilo Lovable.dev
+ * REDISEÑADO para soporte completo de modo oscuro
  */
 
 import React from 'react';
@@ -12,6 +12,7 @@ import {
   ViewStyle,
   TextStyle,
 } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 
 interface ButtonProps {
   title: string;
@@ -38,34 +39,86 @@ export const Button: React.FC<ButtonProps> = ({
   textStyle,
   testID,
 }) => {
+  const { theme } = useTheme();
   const isDisabled = disabled || loading;
+
+  const getButtonStyle = () => {
+    const baseStyle = {
+      borderRadius: 12,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      flexDirection: 'row' as const,
+    };
+
+    const sizes = {
+      small: { paddingHorizontal: 16, paddingVertical: 8 },
+      medium: { paddingHorizontal: 24, paddingVertical: 12 },
+      large: { paddingHorizontal: 32, paddingVertical: 16 },
+    };
+
+    const variants = {
+      primary: {
+        backgroundColor: theme.colors.primary,
+        shadowColor: theme.colors.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 4,
+      },
+      secondary: {
+        backgroundColor: theme.colors.success,
+        shadowColor: theme.colors.success,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 4,
+      },
+      outline: {
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        borderColor: theme.colors.primary,
+      },
+      danger: {
+        backgroundColor: theme.colors.error,
+        shadowColor: theme.colors.error,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 4,
+      },
+    };
+
+    return {
+      ...baseStyle,
+      ...variants[variant],
+      ...sizes[size],
+      ...(fullWidth && { width: '100%' as any }),
+      ...(isDisabled && { opacity: 0.5 }),
+    };
+  };
+
+  const getTextColor = () => {
+    if (variant === 'outline') return theme.colors.primary;
+    return '#FFFFFF'; // Siempre blanco para botones sólidos
+  };
 
   return (
     <TouchableOpacity
       testID={testID}
-      style={[
-        styles.button,
-        styles[variant],
-        styles[size],
-        fullWidth && styles.fullWidth,
-        isDisabled && styles.disabled,
-        style,
-      ]}
+      style={[getButtonStyle(), style]}
       onPress={onPress}
       disabled={isDisabled}
       activeOpacity={0.7}
     >
       {loading ? (
         <ActivityIndicator
-          color={variant === 'outline' ? '#6366F1' : '#FFFFFF'}
+          color={getTextColor()}
           size="small"
         />
       ) : (
         <Text
           style={[
-            styles.text,
-            styles[`${variant}Text`],
-            styles[`${size}Text`],
+            { fontWeight: '600', color: getTextColor() },
             textStyle,
           ]}
         >
@@ -76,90 +129,4 @@ export const Button: React.FC<ButtonProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  button: {
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  
-  // Variants
-  primary: {
-    backgroundColor: '#6366F1',
-    shadowColor: '#6366F1',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  secondary: {
-    backgroundColor: '#10B981',
-    shadowColor: '#10B981',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  outline: {
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: '#6366F1',
-  },
-  danger: {
-    backgroundColor: '#EF4444',
-    shadowColor: '#EF4444',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  
-  // Sizes
-  small: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  medium: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-  },
-  large: {
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-  },
-  
-  // States
-  disabled: {
-    opacity: 0.5,
-  },
-  fullWidth: {
-    width: '100%',
-  },
-  
-  // Text styles
-  text: {
-    fontWeight: '600',
-  },
-  primaryText: {
-    color: '#FFFFFF',
-  },
-  secondaryText: {
-    color: '#FFFFFF',
-  },
-  outlineText: {
-    color: '#6366F1',
-  },
-  dangerText: {
-    color: '#FFFFFF',
-  },
-  smallText: {
-    fontSize: 14,
-  },
-  mediumText: {
-    fontSize: 16,
-  },
-  largeText: {
-    fontSize: 18,
-  },
-});
+// Sin estilos estáticos - todo se calcula dinámicamente con el tema

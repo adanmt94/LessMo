@@ -267,7 +267,7 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
           nestedScrollEnabled={true}
         >
           <Text style={[styles.title, { color: theme.colors.text }]}>
-            {isEditMode ? 'Editar participantes' : 'Crear nuevo evento'}
+            {isEditMode ? 'Editar Evento' : 'Crear Nuevo Evento'}
           </Text>
 
           <Card style={styles.section}>
@@ -455,12 +455,14 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   scrollContent: {
     padding: 24,
+    paddingTop: 8, // Reduce el espacio superior
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
     color: theme.colors.text,
-    marginBottom: 24,
+    marginBottom: 20,
+    marginTop: 0, // Sin margen superior
   },
   section: {
     marginBottom: 24,

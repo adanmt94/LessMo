@@ -114,11 +114,11 @@ export const Navigation: React.FC = () => {
             <Stack.Screen 
               name="CreateEvent" 
               component={CreateEventScreen}
-              options={{ 
+              options={({ route }) => ({ 
                 headerShown: true,
-                title: 'Crear Evento',
+                title: route.params?.mode === 'edit' ? 'Editar Evento' : 'Crear Evento',
                 headerBackTitle: 'Atrás'
-              }}
+              })}
             />
             <Stack.Screen 
               name="CreateGroup" 

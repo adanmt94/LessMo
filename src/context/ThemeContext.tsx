@@ -77,35 +77,40 @@ const lightTheme: Theme = {
   },
 };
 
-// Tema oscuro - MEJORADO con mejor contraste
+// Tema oscuro - REDISEÑADO COMPLETAMENTE para máxima visibilidad
 const darkTheme: Theme = {
   mode: 'dark',
   isDark: true,
   colors: {
-    primary: '#818CF8',
-    primaryLight: '#A5B4FC',
-    primaryDark: '#6366F1',
+    // Primarios con excelente contraste
+    primary: '#A78BFA',          // Púrpura brillante
+    primaryLight: '#C4B5FD',     // Púrpura muy claro
+    primaryDark: '#8B5CF6',      // Púrpura intenso
     
-    background: '#0F172A',      // Más oscuro para mejor contraste
-    surface: '#1E293B',          // Card background con buen contraste
-    card: '#1E293B',             // Mismo que surface
+    // Fondos con contraste dramático
+    background: '#0A0A0A',       // Negro casi puro
+    surface: '#1A1A1A',          // Gris muy oscuro
+    card: '#252525',             // Gris oscuro con separación clara
     
-    text: '#F1F5F9',            // Texto más brillante
-    textSecondary: '#CBD5E1',    // Secondary más claro
-    textTertiary: '#94A3B8',     // Tertiary visible
+    // Textos con máximo contraste
+    text: '#FFFFFF',             // Blanco puro para texto principal
+    textSecondary: '#E5E5E5',    // Gris muy claro para secundario
+    textTertiary: '#B3B3B3',     // Gris claro para terciario
     
-    border: '#334155',           // Bordes más visibles
-    borderLight: '#475569',      // Border light con contraste
+    // Bordes claramente visibles
+    border: '#404040',           // Gris medio
+    borderLight: '#333333',      // Gris oscuro pero visible
     
-    success: '#34D399',
-    warning: '#FBBF24',
-    error: '#F87171',
-    info: '#60A5FA',
+    // Estados con colores vibrantes
+    success: '#4ADE80',          // Verde brillante
+    warning: '#FBBF24',          // Amarillo brillante
+    error: '#F87171',            // Rojo brillante
+    info: '#60A5FA',             // Azul brillante
     
     shadow: '#000000',
-    overlay: 'rgba(0, 0, 0, 0.7)',
-    disabled: '#475569',
-    placeholder: '#64748B',
+    overlay: 'rgba(0, 0, 0, 0.85)',
+    disabled: '#666666',         // Gris medio visible
+    placeholder: '#999999',      // Gris claro visible
   },
 };
 
