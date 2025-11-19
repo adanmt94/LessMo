@@ -18,7 +18,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import * as ImagePicker from 'expo-image-picker';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db, storage } from '../services/firebase';
 import { RootStackParamList } from '../types';
@@ -208,11 +208,31 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
       const storageRef = ref(storage, `profiles/${filename}`);
       console.log('✅ Referencia creada correctamente');
 
-      // Subir imagen
-      console.log('🚀 Iniciando uploadBytes...');
-      const uploadResult = await uploadBytes(storageRef, blob);
-      console.log('✅ Imagen subida:', uploadResult.metadata.fullPath);
-      console.log('📊 Metadata completo:', JSON.stringify(uploadResult.metadata, null, 2));
+      // Subir imagen con uploadBytesResumable (más robusto)
+      console.log('🚀 Iniciando uploadBytesResumable...');
+      
+      const uploadTask = uploadBytesResumable(storageRef, blob, {
+        contentType: 'image/jpeg',
+      });
+
+      // Esperar a que termine el upload
+      await new Promise((resolve, reject) => {
+        uploadTask.on(
+          'state_changed',
+          (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            console.log(`📊 Progreso: ${progress.toFixed(0)}%`);
+          },
+          (error) => {
+            console.error('❌ Error en uploadTask:', error);
+            reject(error);
+          },
+          () => {
+            console.log('✅ Upload completado');
+            resolve(true);
+          }
+        );
+      });
 
       // Obtener URL de descarga
       const downloadURL = await getDownloadURL(storageRef);

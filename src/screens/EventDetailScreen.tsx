@@ -363,8 +363,8 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
-      <View style={[styles.tabs, { backgroundColor: theme.colors.background, borderBottomColor: theme.colors.border }]}>
+    <View style={styles.container}>
+      <View style={[styles.tabs, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.border }]}>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'expenses' && { borderBottomColor: theme.colors.primary, borderBottomWidth: 2 }]}
           onPress={() => setActiveTab('expenses')}
