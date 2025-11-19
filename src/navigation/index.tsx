@@ -4,10 +4,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { NavigationContainer, LinkingOptions } from '@react-navigation/native';
+import { NavigationContainer, LinkingOptions, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { RootStackParamList } from '../types';
 import { useAuthContext } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import {
   LoginScreen,
   RegisterScreen,
@@ -53,6 +54,7 @@ const linking: LinkingOptions<RootStackParamList> = {
 
 export const Navigation: React.FC = () => {
   const { isAuthenticated, loading } = useAuthContext();
+  const { theme } = useTheme();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
 
@@ -81,12 +83,32 @@ export const Navigation: React.FC = () => {
     return <OnboardingScreen onComplete={handleOnboardingComplete} />;
   }
 
+  // Configurar tema de navegación
+  const navigationTheme = {
+    dark: theme.isDark,
+    colors: {
+      primary: theme.colors.primary,
+      background: theme.colors.background,
+      card: theme.colors.surface,
+      text: theme.colors.text,
+      border: theme.colors.border,
+      notification: theme.colors.primary,
+    },
+  };
+
   return (
-    <NavigationContainer linking={linking}>
+    <NavigationContainer linking={linking} theme={navigationTheme}>
       <Stack.Navigator
         screenOptions={{
           headerShown: false,
           headerBackTitle: 'Atrás',
+          headerStyle: {
+            backgroundColor: theme.colors.surface,
+          },
+          headerTintColor: theme.colors.primary,
+          headerTitleStyle: {
+            color: theme.colors.text,
+          },
         }}
       >
         {!isAuthenticated ? (

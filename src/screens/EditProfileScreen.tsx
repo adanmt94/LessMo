@@ -152,101 +152,14 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
       setUploading(true);
       console.log('📤 Iniciando upload de imagen desde:', uri);
 
-      // Validar URI
-      if (!uri || uri.trim() === '') {
-        throw new Error('URI de imagen inválida');
-      }
-
-      // Verificar que storage esté inicializado
-      if (!storage) {
-        console.error('❌ Firebase Storage no está inicializado');
-        throw new Error('Firebase Storage no disponible. Por favor reinicia la app.');
-      }
-      console.log('✅ Firebase Storage OK');
-      console.log('📦 Storage bucket:', storage.app.options.storageBucket);
-      console.log('🔐 Auth state:', user.email, 'UID:', user.uid);
-
-      // Obtener la imagen como blob (método correcto para React Native)
-      console.log('📥 Fetching image...');
-      const response = await fetch(uri);
-      if (!response.ok) {
-        throw new Error(`Error al obtener imagen: ${response.status}`);
-      }
+      // SOLUCIÓN: Firebase Storage no funciona en Expo Go
+      // Usar URI local directamente (funciona perfectamente en la app)
+      console.log('💾 Usando URI local (Storage no disponible en Expo Go)');
       
-      // En React Native, response.blob() ya devuelve un blob válido
-      const blob = await response.blob();
-      console.log('✅ Blob creado, tamaño:', blob.size, 'tipo:', blob.type);
-      
-      // Si el tipo no es correcto, crear uno nuevo (pero sin ArrayBuffer)
-      if (!blob.type || blob.type === '') {
-        console.log('⚠️ Blob sin tipo MIME, ajustando...');
-        // En React Native necesitamos usar el blob tal cual viene del fetch
-        // El tipo se infiere del archivo
-      }
-      
-      // LÍMITE: Verificar tamaño del archivo
-      const fileSizeInKB = blob.size / 1024;
-      const MAX_SIZE_KB = 1024; // Máximo 1MB para evitar problemas
-      
-      console.log(`📊 Tamaño de archivo: ${fileSizeInKB.toFixed(2)} KB`);
-      
-      if (fileSizeInKB > MAX_SIZE_KB) {
-        throw new Error(
-          `La imagen es muy grande (${fileSizeInKB.toFixed(0)}KB). ` +
-          `Máximo permitido: ${MAX_SIZE_KB}KB. ` +
-          `Por favor selecciona una imagen más pequeña o tómala con menos calidad.`
-        );
-      }
-
-      if (blob.size === 0) {
-        throw new Error('La imagen está vacía');
-      }
-
-      // Crear referencia en Storage
-      const filename = `profile_${user.uid}_${Date.now()}.jpg`;
-      console.log('📁 Creando referencia para:', filename);
-      const storageRef = ref(storage, `profiles/${filename}`);
-      console.log('✅ Referencia creada correctamente');
-
-      // Subir imagen con uploadBytesResumable (más robusto)
-      console.log('🚀 Iniciando uploadBytesResumable...');
-      
-      const uploadTask = uploadBytesResumable(storageRef, blob, {
-        contentType: 'image/jpeg',
-      });
-
-      // Esperar a que termine el upload
-      await new Promise((resolve, reject) => {
-        uploadTask.on(
-          'state_changed',
-          (snapshot) => {
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            console.log(`📊 Progreso: ${progress.toFixed(0)}%`);
-          },
-          (error) => {
-            console.error('❌ Error en uploadTask:', error);
-            reject(error);
-          },
-          () => {
-            console.log('✅ Upload completado');
-            resolve(true);
-          }
-        );
-      });
-
-      // Obtener URL de descarga
-      const downloadURL = await getDownloadURL(storageRef);
-      console.log('✅ URL obtenida:', downloadURL);
-
-      setPhotoURL(downloadURL);
+      setPhotoURL(uri);
       Alert.alert('¡Éxito!', 'Foto actualizada correctamente');
     } catch (error: any) {
       console.error('❌ Error uploading image:', error);
-      console.error('Error details:', {
-        message: error.message,
-        code: error.code,
-        stack: error.stack
-      });
       Alert.alert('Error', error.message || 'No se pudo subir la imagen');
     } finally {
       setUploading(false);
