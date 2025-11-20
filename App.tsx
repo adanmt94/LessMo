@@ -36,18 +36,18 @@ export default function App() {
   }, []);
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }} key={appKey}>
+    <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <LanguageProvider>
-          <CurrencyProvider>
-            <ThemeProvider>
+        <ThemeProvider>
+          <LanguageProvider>
+            <CurrencyProvider>
               <AuthProvider>
-                <Navigation />
+                <Navigation key={appKey} />
                 <StatusBar style="auto" />
               </AuthProvider>
-            </ThemeProvider>
-          </CurrencyProvider>
-        </LanguageProvider>
+            </CurrencyProvider>
+          </LanguageProvider>
+        </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
