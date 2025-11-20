@@ -19,36 +19,25 @@ export const MainTabNavigator: React.FC = () => {
   
   return (
     <Tab.Navigator
-      screenOptions={() => ({
+      screenOptions={{
         tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: theme.colors.textSecondary,
         tabBarStyle: {
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          elevation: 8,
           backgroundColor: theme.colors.surface,
           borderTopWidth: 0,
           height: 90,
           paddingBottom: 25,
           paddingTop: 8,
-          paddingHorizontal: 10,
-          shadowColor: theme.colors.shadow,
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 8,
         },
         tabBarLabelStyle: {
           fontSize: 12,
-          fontWeight: '600',
-          marginTop: 2,
+          fontWeight: '600' as '600',
         },
         tabBarIconStyle: {
           marginTop: 0,
         },
         headerShown: false,
-      })}
+      }}
     >
       <Tab.Screen
         name="Events"
