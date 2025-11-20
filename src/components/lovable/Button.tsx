@@ -41,6 +41,9 @@ export const Button: React.FC<ButtonProps> = ({
 }) => {
   const { theme } = useTheme();
   const isDisabled = disabled || loading;
+  
+  // Asegurar que size nunca sea undefined
+  const buttonSize = size || 'medium';
 
   const getButtonStyle = () => {
     const baseStyle = {
@@ -91,7 +94,7 @@ export const Button: React.FC<ButtonProps> = ({
     return {
       ...baseStyle,
       ...variants[variant],
-      ...sizes[size],
+      ...sizes[buttonSize],
       ...(fullWidth && { width: '100%' as any }),
       ...(isDisabled && { opacity: 0.5 }),
     };
