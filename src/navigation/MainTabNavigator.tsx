@@ -25,16 +25,6 @@ export const MainTabNavigator: React.FC = () => {
         tabBarStyle: {
           backgroundColor: theme.colors.surface,
           borderTopWidth: 0,
-          height: 90,
-          paddingBottom: 25,
-          paddingTop: 8,
-        },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '600' as '600',
-        },
-        tabBarIconStyle: {
-          marginTop: 0,
         },
         headerShown: false,
       }}
