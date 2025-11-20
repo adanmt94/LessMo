@@ -18,22 +18,12 @@ export const MainTabNavigator: React.FC = () => {
   const { theme } = useTheme();
   
   return (
-    <Tab.Navigator
-      screenOptions={{
-        tabBarActiveTintColor: theme.colors.primary,
-        tabBarInactiveTintColor: theme.colors.textSecondary,
-        tabBarLabelPosition: 'below-icon',
-        tabBarStyle: {
-          backgroundColor: theme.colors.surface,
-          borderTopWidth: 0,
-        },
-        headerShown: false,
-      }}
-    >
+    <Tab.Navigator>
       <Tab.Screen
         name="Events"
         component={EventsScreen}
         options={{
+          headerShown: false,
           tabBarLabel: 'Eventos',
           tabBarIcon: ({ color, focused }) => (
             <EventsIcon color={color} focused={focused} />
@@ -44,6 +34,7 @@ export const MainTabNavigator: React.FC = () => {
         name="Groups"
         component={GroupsScreen}
         options={{
+          headerShown: false,
           tabBarLabel: 'Grupos',
           tabBarIcon: ({ color, focused }) => (
             <GroupsIcon color={color} focused={focused} />
@@ -54,6 +45,7 @@ export const MainTabNavigator: React.FC = () => {
         name="Activity"
         component={ActivityScreen}
         options={{
+          headerShown: false,
           tabBarLabel: 'Actividad',
           tabBarIcon: ({ color, focused }) => (
             <ActivityIcon color={color} focused={focused} />
@@ -64,6 +56,7 @@ export const MainTabNavigator: React.FC = () => {
         name="Settings"
         component={SettingsScreen}
         options={{
+          headerShown: false,
           tabBarLabel: 'Ajustes',
           tabBarIcon: ({ color, focused }) => (
             <SettingsIcon color={color} focused={focused} />
