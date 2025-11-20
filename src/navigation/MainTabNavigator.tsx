@@ -19,7 +19,7 @@ export const MainTabNavigator: React.FC = () => {
   
   return (
     <Tab.Navigator
-      screenOptions={{
+      screenOptions={() => ({
         tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: theme.colors.textSecondary,
         tabBarStyle: {
@@ -48,7 +48,7 @@ export const MainTabNavigator: React.FC = () => {
           marginTop: 0,
         },
         headerShown: false,
-      }}
+      })}
     >
       <Tab.Screen
         name="Events"
