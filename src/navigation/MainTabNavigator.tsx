@@ -22,6 +22,7 @@ export const MainTabNavigator: React.FC = () => {
       screenOptions={{
         tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: theme.colors.textSecondary,
+        tabBarLabelPosition: 'below-icon',
         tabBarStyle: {
           backgroundColor: theme.colors.surface,
           borderTopWidth: 0,
