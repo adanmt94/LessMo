@@ -42,6 +42,11 @@ export const Button: React.FC<ButtonProps> = ({
   const { theme } = useTheme();
   const isDisabled = disabled || loading;
 
+  // Seguridad: si theme no está cargado, usar valores por defecto
+  if (!theme || !theme.colors) {
+    return null;
+  }
+
   const getButtonStyle = () => {
     const baseStyle = {
       borderRadius: 12,
