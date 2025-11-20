@@ -42,6 +42,17 @@ export const Button: React.FC<ButtonProps> = ({
   const { theme } = useTheme();
   const isDisabled = disabled || loading;
   
+  // DEBUG: Log para identificar el problema
+  if (!theme || !theme.colors) {
+    console.error('❌ Button: theme o theme.colors es undefined', {
+      theme,
+      title,
+      variant,
+      size
+    });
+    return null;
+  }
+  
   // Asegurar que size nunca sea undefined
   const buttonSize = size || 'medium';
 
