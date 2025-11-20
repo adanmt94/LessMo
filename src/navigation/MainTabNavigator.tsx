@@ -17,11 +17,6 @@ const Tab = createBottomTabNavigator<TabParamList>();
 export const MainTabNavigator: React.FC = () => {
   const { theme } = useTheme();
   
-  // Seguridad: si theme no está cargado, no renderizar aún
-  if (!theme || !theme.colors) {
-    return null;
-  }
-  
   return (
     <Tab.Navigator
       screenOptions={{

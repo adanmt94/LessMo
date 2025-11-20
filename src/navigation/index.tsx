@@ -83,11 +83,6 @@ export const Navigation: React.FC = () => {
     return <OnboardingScreen onComplete={handleOnboardingComplete} />;
   }
 
-  // Seguridad: verificar que theme esté cargado
-  if (!theme || !theme.colors) {
-    return null;
-  }
-
   // Configurar tema de navegación
   const navigationTheme = {
     dark: theme.isDark,

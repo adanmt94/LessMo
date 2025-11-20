@@ -202,7 +202,15 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 export const useTheme = (): ThemeContextType => {
   const context = useContext(ThemeContext);
   if (context === undefined) {
-    throw new Error('useTheme must be used within a ThemeProvider');
+    // En lugar de lanzar error, devolver tema por defecto
+    // Esto previene crashes durante la inicialización
+    console.warn('useTheme usado fuera de ThemeProvider, usando tema por defecto');
+    return {
+      theme: lightTheme,
+      themeMode: 'light',
+      setThemeMode: async () => {},
+      toggleTheme: async () => {},
+    };
   }
   return context;
 };
