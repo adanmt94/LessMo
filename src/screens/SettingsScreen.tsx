@@ -22,6 +22,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useCurrency } from '../context/CurrencyContext';
 import { useNotifications } from '../hooks/useNotifications';
+import { useBiometricAuth } from '../hooks/useBiometricAuth';
 import { useForceUpdate } from '../utils/globalEvents';
 import { CommonActions } from '@react-navigation/native';
 
@@ -47,6 +48,15 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
   const { currentLanguage, availableLanguages, changeLanguage } = useLanguage();
   const { currentCurrency, availableCurrencies, changeCurrency } = useCurrency();
   const { notificationsEnabled, toggleNotifications, isLoading } = useNotifications();
+  const { 
+    isAvailable: biometricAvailable, 
+    isEnrolled: biometricEnrolled,
+    isEnabled: biometricEnabled, 
+    biometricType,
+    enableBiometricAuth,
+    disableBiometricAuth,
+    isLoading: biometricLoading,
+  } = useBiometricAuth();
   
   // Hook para forzar re-render cuando cambien idioma/moneda
   useForceUpdate();
@@ -66,15 +76,7 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
               console.log('🌍 Iniciando cambio de idioma a:', lang.code);
               await changeLanguage(lang.code);
               console.log('✅ Idioma cambiado exitosamente');
-              
-              // FORZAR navegación refresh para actualizar UI
-              navigation.dispatch(
-                CommonActions.reset({
-                  index: 0,
-                  routes: [{ name: 'MainTabs' as any, params: { screen: 'Settings' } }],
-                })
-              );
-              
+              // El evento global en LanguageContext ya forzó el remount
               Alert.alert('✅ Idioma cambiado', `Ahora usando: ${lang.nativeName}`);
             } catch (error: any) {
               console.error('❌ Error cambiando idioma:', error);
@@ -100,15 +102,7 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
               console.log('💰 Iniciando cambio de moneda a:', curr.code);
               await changeCurrency(curr.code);
               console.log('✅ Moneda cambiada exitosamente');
-              
-              // FORZAR navegación refresh para actualizar UI
-              navigation.dispatch(
-                CommonActions.reset({
-                  index: 0,
-                  routes: [{ name: 'MainTabs' as any, params: { screen: 'Settings' } }],
-                })
-              );
-              
+              // El evento global en CurrencyContext ya forzó el remount
               Alert.alert('✅ Moneda cambiada', `Ahora usando: ${curr.name} (${curr.symbol})`);
             } catch (error: any) {
               console.error('❌ Error cambiando moneda:', error);
@@ -263,8 +257,37 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
             }
           />
           
+          {/* Autenticación Biométrica */}
+          {biometricAvailable && biometricEnrolled && (
+            <SettingItem styles={styles}
+              icon="🔐"
+              title={biometricType}
+              subtitle={
+                biometricEnabled 
+                  ? "Protección activada" 
+                  : "Activar para proteger tu cuenta"
+              }
+              showArrow={false}
+              rightElement={
+                <Switch
+                  value={biometricEnabled}
+                  onValueChange={(value) => {
+                    if (value) {
+                      enableBiometricAuth();
+                    } else {
+                      disableBiometricAuth();
+                    }
+                  }}
+                  disabled={biometricLoading}
+                  trackColor={{ false: '#E5E7EB', true: '#A5B4FC' }}
+                  thumbColor={biometricEnabled ? '#6366F1' : '#F3F4F6'}
+                />
+              }
+            />
+          )}
+          
           <SettingItem styles={styles}
-            icon="�"
+            icon="🎨"
             title="Tema de la aplicación"
             subtitle={
               themeMode === 'light' ? '☀️ Claro' :

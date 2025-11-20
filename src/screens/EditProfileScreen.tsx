@@ -19,7 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import * as ImagePicker from 'expo-image-picker';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { db, storage } from '../services/firebase';
 import { RootStackParamList } from '../types';
 import { Button, Input, Card } from '../components/lovable';
@@ -153,10 +153,19 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
       console.log('📤 Iniciando upload de imagen desde:', uri);
 
       // SOLUCIÓN: Firebase Storage no funciona en Expo Go
-      // Usar URI local directamente (funciona perfectamente en la app)
-      console.log('💾 Usando URI local (Storage no disponible en Expo Go)');
+      // Usar URI local directamente y guardar en Firestore
+      console.log('💾 Guardando URI local en Firestore...');
       
+      const userDocRef = doc(db, 'users', user.uid);
+      await setDoc(userDocRef, {
+        photoURL: uri,
+        updatedAt: new Date(),
+      }, { merge: true });
+
+      // Actualizar estado local
       setPhotoURL(uri);
+      
+      console.log('✅ Foto guardada exitosamente');
       Alert.alert('¡Éxito!', 'Foto actualizada correctamente');
     } catch (error: any) {
       console.error('❌ Error uploading image:', error);
