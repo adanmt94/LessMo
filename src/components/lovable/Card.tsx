@@ -29,10 +29,10 @@ export const Card: React.FC<CardProps> = ({
       return {
         ...baseStyle,
         shadowColor: theme.colors.shadow,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: theme.isDark ? 0.3 : 0.1,
-        shadowRadius: 12,
-        elevation: 5,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: theme.isDark ? 0.4 : 0.15,
+        shadowRadius: 16,
+        elevation: 8,
       };
     }
     
@@ -56,7 +56,7 @@ export const Card: React.FC<CardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 20,
+    padding: 20,
   },
 });

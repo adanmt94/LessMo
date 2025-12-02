@@ -18,6 +18,8 @@ import {
   Settlement,
   ExpenseCategory,
 } from '../types';
+import { withCache, cache } from '../utils/cache';
+import { logger, LogCategory } from '../utils/logger';
 
 export const useExpenses = (eventId: string) => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -30,16 +32,25 @@ export const useExpenses = (eventId: string) => {
    */
   const loadData = useCallback(async () => {
     try {
-      console.log('🔄 useExpenses - Cargando datos para evento:', eventId);
+      logger.info(LogCategory.EXPENSE, 'Cargando datos para evento', { eventId });
       setLoading(true);
       setError(null);
       
+      // Usar caché para mejorar rendimiento
       const [expensesData, participantsData] = await Promise.all([
-        getEventExpenses(eventId),
-        getEventParticipants(eventId),
+        withCache(
+          `expenses_${eventId}`,
+          () => getEventExpenses(eventId),
+          2 * 60 * 1000 // 2 minutos
+        ),
+        withCache(
+          `participants_${eventId}`,
+          () => getEventParticipants(eventId),
+          2 * 60 * 1000 // 2 minutos
+        ),
       ]);
       
-      console.log('📦 useExpenses - Datos cargados:', {
+      logger.debug(LogCategory.EXPENSE, 'Datos cargados', {
         expenses: expensesData.length,
         participants: participantsData.length
       });
@@ -47,7 +58,7 @@ export const useExpenses = (eventId: string) => {
       setExpenses(expensesData);
       setParticipants(participantsData);
     } catch (err: any) {
-      console.error('❌ useExpenses - Error:', err);
+      logger.error(LogCategory.EXPENSE, 'Error al cargar datos', err);
       setError(err.message || 'Error al cargar datos');
     } finally {
       setLoading(false);
@@ -67,11 +78,12 @@ export const useExpenses = (eventId: string) => {
     description: string,
     category: ExpenseCategory,
     beneficiaries: string[],
-    splitType: 'equal' | 'custom' = 'equal',
-    customSplits?: { [participantId: string]: number }
+    splitType: 'equal' | 'custom' | 'items' = 'equal',
+    customSplits?: { [participantId: string]: number },
+    receiptPhoto?: string
   ): Promise<boolean> => {
     try {
-      console.log('🚀 useExpenses.addExpense - Llamando a createExpense...');
+      logger.info(LogCategory.EXPENSE, 'Creando gasto', { amount, description, category });
       setError(null);
       const expenseId = await createExpense(
         eventId,
@@ -81,17 +93,19 @@ export const useExpenses = (eventId: string) => {
         category,
         beneficiaries,
         splitType,
-        customSplits
+        customSplits,
+        receiptPhoto
       );
-      console.log('✅ useExpenses.addExpense - Gasto creado con ID:', expenseId);
-      console.log('🔄 useExpenses.addExpense - Recargando datos...');
-      await loadData(); // Recargar datos
-      console.log('✅ useExpenses.addExpense - Datos recargados correctamente');
+      logger.info(LogCategory.EXPENSE, 'Gasto creado', { expenseId });
+      
+      // Invalidar caché y recargar
+      cache.invalidatePattern(`expenses_${eventId}`);
+      cache.invalidatePattern(`participants_${eventId}`);
+      await loadData();
+      
       return true;
     } catch (err: any) {
-      console.error('❌ useExpenses.addExpense - Error capturado:', err);
-      console.error('❌ useExpenses.addExpense - Error message:', err.message);
-      console.error('❌ useExpenses.addExpense - Error stack:', err.stack);
+      logger.error(LogCategory.EXPENSE, 'Error al crear gasto', err);
       setError(err.message || 'Error al crear gasto');
       return false;
     }
@@ -107,11 +121,12 @@ export const useExpenses = (eventId: string) => {
     description: string,
     category: ExpenseCategory,
     beneficiaries: string[],
-    splitType: 'equal' | 'custom' = 'equal',
-    customSplits?: { [participantId: string]: number }
+    splitType: 'equal' | 'custom' | 'items' = 'equal',
+    customSplits?: { [participantId: string]: number },
+    receiptPhoto?: string
   ): Promise<boolean> => {
     try {
-      console.log('🚀 useExpenses.editExpense - Llamando a updateExpense...');
+      logger.info(LogCategory.EXPENSE, 'Actualizando gasto', { expenseId, amount, description });
       setError(null);
       await updateExpense(
         expenseId,
@@ -122,15 +137,19 @@ export const useExpenses = (eventId: string) => {
         category,
         beneficiaries,
         splitType,
-        customSplits
+        customSplits,
+        receiptPhoto
       );
-      console.log('✅ useExpenses.editExpense - Gasto actualizado');
-      console.log('🔄 useExpenses.editExpense - Recargando datos...');
-      await loadData(); // Recargar datos
-      console.log('✅ useExpenses.editExpense - Datos recargados correctamente');
+      logger.info(LogCategory.EXPENSE, 'Gasto actualizado', { expenseId });
+      
+      // Invalidar caché y recargar
+      cache.invalidatePattern(`expenses_${eventId}`);
+      cache.invalidatePattern(`participants_${eventId}`);
+      await loadData();
+      
       return true;
     } catch (err: any) {
-      console.error('❌ useExpenses.editExpense - Error capturado:', err);
+      logger.error(LogCategory.EXPENSE, 'Error al actualizar gasto', err);
       setError(err.message || 'Error al actualizar gasto');
       return false;
     }
@@ -141,11 +160,18 @@ export const useExpenses = (eventId: string) => {
    */
   const deleteExpense = async (expenseId: string): Promise<boolean> => {
     try {
+      logger.info(LogCategory.EXPENSE, 'Eliminando gasto', { expenseId });
       setError(null);
       await firebaseDeleteExpense(expenseId);
-      await loadData(); // Recargar datos
+      
+      // Invalidar caché y recargar
+      cache.invalidatePattern(`expenses_${eventId}`);
+      cache.invalidatePattern(`participants_${eventId}`);
+      await loadData();
+      
       return true;
     } catch (err: any) {
+      logger.error(LogCategory.EXPENSE, 'Error al eliminar gasto', err);
       setError(err.message || 'Error al eliminar gasto');
       return false;
     }

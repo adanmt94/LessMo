@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const { width, height } = Dimensions.get('window');
 const ONBOARDING_KEY = '@LessMo:onboarding_completed';
@@ -23,36 +24,37 @@ interface OnboardingStep {
   description: string;
 }
 
-const ONBOARDING_STEPS: OnboardingStep[] = [
+// This will be dynamically generated using translations
+const getOnboardingSteps = (t: (key: string) => string): OnboardingStep[] => [
   {
     emoji: '👋',
-    title: 'Bienvenido a LessMo',
-    description: 'La forma más simple de dividir gastos con amigos y familia. Viajes, cenas, eventos... ¡todo en un solo lugar!',
+    title: t('onboarding.step1Title'),
+    description: t('onboarding.step1Description'),
   },
   {
     emoji: '🎉',
-    title: 'Crea Eventos',
-    description: 'Organiza cualquier actividad: viajes, cenas, fiestas. Define el presupuesto y añade participantes fácilmente.',
+    title: t('onboarding.step2Title'),
+    description: t('onboarding.step2Description'),
   },
   {
     emoji: '💰',
-    title: 'Registra Gastos',
-    description: 'Añade cada gasto y selecciona quién lo pagó y entre quiénes dividir. LessMo calcula todo automáticamente.',
+    title: t('onboarding.step3Title'),
+    description: t('onboarding.step3Description'),
   },
   {
     emoji: '📊',
-    title: 'Ve el Resumen',
-    description: 'Consulta quién debe a quién, cuánto se ha gastado y cuánto queda del presupuesto. Todo claro y transparente.',
+    title: t('onboarding.step4Title'),
+    description: t('onboarding.step4Description'),
   },
   {
     emoji: '👥',
-    title: 'Comparte con Grupos',
-    description: 'Crea grupos para eventos recurrentes. Ideal para compañeros de piso, grupos de amigos o familias.',
+    title: t('onboarding.step5Title'),
+    description: t('onboarding.step5Description'),
   },
   {
     emoji: '🚀',
-    title: '¡Comencemos!',
-    description: 'Estás listo para empezar. Crea tu primer evento o únete a uno existente con un código de invitación.',
+    title: t('onboarding.step6Title'),
+    description: t('onboarding.step6Description'),
   },
 ];
 
@@ -62,9 +64,11 @@ interface Props {
 
 export const OnboardingScreen: React.FC<Props> = ({ onComplete }) => {
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const styles = getStyles(theme);
   const [currentStep, setCurrentStep] = useState(0);
 
+  const ONBOARDING_STEPS = getOnboardingSteps(t);
   const step = ONBOARDING_STEPS[currentStep];
   const isLastStep = currentStep === ONBOARDING_STEPS.length - 1;
   const progress = ((currentStep + 1) / ONBOARDING_STEPS.length) * 100;
@@ -90,11 +94,11 @@ export const OnboardingScreen: React.FC<Props> = ({ onComplete }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['top']} style={styles.container}>
       {/* Skip button */}
       {!isLastStep && (
         <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
-          <Text style={styles.skipText}>Saltar</Text>
+          <Text style={styles.skipText}>{t('onboarding.skip')}</Text>
         </TouchableOpacity>
       )}
 
@@ -135,7 +139,7 @@ export const OnboardingScreen: React.FC<Props> = ({ onComplete }) => {
             style={[styles.button, styles.buttonSecondary]}
             onPress={handleBack}
           >
-            <Text style={styles.buttonSecondaryText}>← Atrás</Text>
+            <Text style={styles.buttonSecondaryText}>{t('onboarding.back')}</Text>
           </TouchableOpacity>
         )}
 
@@ -148,7 +152,7 @@ export const OnboardingScreen: React.FC<Props> = ({ onComplete }) => {
           onPress={handleNext}
         >
           <Text style={styles.buttonPrimaryText}>
-            {isLastStep ? '¡Empezar!' : 'Siguiente →'}
+            {isLastStep ? t('onboarding.start') : t('onboarding.next')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -177,11 +181,11 @@ const getStyles = (theme: any) => StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: 20,
   },
   emoji: {
     fontSize: 120,
-    marginBottom: 40,
+    marginBottom: 24,
   },
   title: {
     fontSize: 32,
@@ -196,7 +200,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     color: theme.colors.textSecondary,
     textAlign: 'center',
     lineHeight: 28,
-    marginBottom: 50,
+    marginBottom: 24,
     paddingHorizontal: 10,
   },
   progressContainer: {
@@ -280,4 +284,9 @@ export const shouldShowOnboarding = async (): Promise<boolean> => {
 // Función para resetear el onboarding (útil para testing)
 export const resetOnboarding = async (): Promise<void> => {
   await AsyncStorage.removeItem(ONBOARDING_KEY);
+};
+
+// Función para marcar el onboarding como completado
+export const markOnboardingComplete = async (): Promise<void> => {
+  await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
 };

@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   Alert,
+  Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -21,6 +22,7 @@ import { Button, Card } from '../components/lovable';
 import { getUserEventsByStatus } from '../services/firebase';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 type GroupEventsScreenNavigationProp = StackNavigationProp<RootStackParamList, 'GroupEvents'>;
 type GroupEventsScreenRouteProp = RouteProp<RootStackParamList, 'GroupEvents'>;
@@ -47,21 +49,44 @@ const getGroupColor = (colorName?: string): string => {
 };
 
 export const GroupEventsScreen: React.FC<Props> = ({ navigation, route }) => {
-  const { groupId, groupName, groupIcon, groupColor } = route.params;
+  const { groupId, groupName: initialGroupName, groupIcon: initialGroupIcon, groupColor: initialGroupColor } = route.params;
   const { user } = useAuth();
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const styles = getStyles(theme);
   const [events, setEvents] = useState<Event[]>([]);
   const [activeTab, setActiveTab] = useState<EventTab>('active');
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [groupName, setGroupName] = useState(initialGroupName || '');
+  const [groupIcon, setGroupIcon] = useState(initialGroupIcon);
+  const [groupColor, setGroupColor] = useState(initialGroupColor);
+  const [groupType, setGroupType] = useState<'project' | 'recurring'>('project');
+  const [defaultEventId, setDefaultEventId] = useState<string | undefined>();
 
   useFocusEffect(
     useCallback(() => {
+      loadGroupData();
       loadEvents();
     }, [user, groupId])
   );
+
+  const loadGroupData = async () => {
+    try {
+      const { getGroup } = await import('../services/firebase');
+      const groupData = await getGroup(groupId);
+      if (groupData) {
+        setGroupName(groupData.name);
+        setGroupIcon(groupData.icon);
+        setGroupColor(groupData.color);
+        setGroupType(groupData.type || 'project'); // Cargar tipo
+        setDefaultEventId(groupData.defaultEventId); // Cargar evento default si existe
+      }
+    } catch (error) {
+      console.error('Error loading group data:', error);
+    }
+  };
 
   const loadEvents = async () => {
     if (!user) return;
@@ -74,7 +99,7 @@ export const GroupEventsScreen: React.FC<Props> = ({ navigation, route }) => {
       setEvents(groupEvents);
     } catch (error) {
       console.error('Error loading group events:', error);
-      Alert.alert('Error', 'No se pudieron cargar los eventos del grupo');
+      Alert.alert(t('common.error'), t('groupEvents.errorLoading'));
     } finally {
       setLoading(false);
     }
@@ -84,6 +109,22 @@ export const GroupEventsScreen: React.FC<Props> = ({ navigation, route }) => {
     setRefreshing(true);
     await loadEvents();
     setRefreshing(false);
+  };
+
+  const handleShareGroup = async () => {
+    try {
+      const deepLink = `lessmo://group/${groupId}`;
+      const message = `🎯 ¡Únete al grupo "${groupName}" ${groupIcon || '👥'}!\n\n📊 ${activeEvents.length} ${t('groups.activeEvents')}\n\n🔗 Enlace directo: ${deepLink}\n\n📱 Descarga LessMo para gestionar gastos compartidos en grupo`;
+
+      await Share.share({
+        message: message,
+        title: `${t('home.groupEvents')} ${groupName}`,
+      });
+    } catch (error: any) {
+      if (error.message !== 'User did not share') {
+        Alert.alert('Error', 'No se pudo compartir el grupo');
+      }
+    }
   };
 
   // Aplicar filtro de búsqueda
@@ -96,55 +137,135 @@ export const GroupEventsScreen: React.FC<Props> = ({ navigation, route }) => {
     );
   }
 
-  const activeEvents = filteredEvents.filter(e => e.status === 'active');
-  const pastEvents = filteredEvents.filter(e => e.status === 'completed' || e.status === 'archived');
+  // Ocultar evento "General" en grupos recurring
+  const visibleEvents = groupType === 'recurring' 
+    ? filteredEvents.filter(e => e.name !== 'General')
+    : filteredEvents;
+
+  const activeEvents = visibleEvents.filter(e => e.status === 'active');
+  const pastEvents = visibleEvents.filter(e => e.status === 'completed' || e.status === 'archived');
   const displayEvents = activeTab === 'active' ? activeEvents : pastEvents;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['top']} style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={styles.backIcon}>←</Text>
-        </TouchableOpacity>
-        
-        <View style={styles.headerContent}>
-          <View style={[styles.groupIconContainer, { backgroundColor: getGroupColor(groupColor) }]}>
-            <Text style={styles.groupIcon}>{groupIcon || '👥'}</Text>
-          </View>
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.groupName}>{groupName}</Text>
-            <Text style={styles.subtitle}>{activeEvents.length} evento(s) activo(s)</Text>
+      <View style={[styles.header, { shadowColor: theme.colors.text }]}>
+        <View style={styles.headerTop}>
+          <TouchableOpacity 
+            style={[styles.backButton, { backgroundColor: theme.colors.surface }]}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={[styles.backIcon, { color: theme.colors.text }]}>←</Text>
+          </TouchableOpacity>
+          
+          <View style={styles.headerContent}>
+            <View style={[styles.groupIconContainer, { 
+              backgroundColor: getGroupColor(groupColor) + '20',
+              borderColor: getGroupColor(groupColor) + '40',
+              shadowColor: getGroupColor(groupColor)
+            }]}>
+              <Text style={styles.groupIcon}>{groupIcon || '👥'}</Text>
+            </View>
+            <View style={styles.headerTextContainer}>
+              <Text style={[styles.groupName, { color: theme.colors.text }]}>{groupName}</Text>
+              <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
+                {activeEvents.length} {activeEvents.length === 1 ? 'evento activo' : 'eventos activos'}
+              </Text>
+            </View>
           </View>
         </View>
         
-        <TouchableOpacity
-          style={styles.createButton}
-          onPress={() => navigation.navigate('CreateEvent', { mode: 'create', groupId })}
-        >
-          <Text style={styles.createButtonIcon}>+</Text>
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={[styles.actionButton, { 
+              backgroundColor: theme.colors.primary + '15',
+              borderColor: theme.colors.primary + '30',
+              shadowColor: theme.colors.primary 
+            }]}
+            onPress={() => navigation.navigate('Chat', { 
+              groupId: groupId, 
+              title: groupName 
+            })}
+          >
+            <View style={[styles.actionIconCircle, { backgroundColor: theme.colors.primary + '20' }]}>
+              <Text style={[styles.actionIcon, { color: theme.colors.primary }]}>💬</Text>
+            </View>
+            <Text style={[styles.actionLabel, { color: theme.colors.primary }]}>Chat</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionButton, { 
+              backgroundColor: theme.colors.primary + '15',
+              borderColor: theme.colors.primary + '30',
+              shadowColor: theme.colors.primary
+            }]}
+            onPress={handleShareGroup}
+          >
+            <View style={[styles.actionIconCircle, { backgroundColor: theme.colors.primary + '20' }]}>
+              <Text style={[styles.actionIcon, { color: theme.colors.primary }]}>↗</Text>
+            </View>
+            <Text style={[styles.actionLabel, { color: theme.colors.primary }]}>Compartir</Text>
+          </TouchableOpacity>
+          
+          {/* Botón principal según tipo de grupo */}
+          {groupType === 'recurring' && defaultEventId ? (
+            <TouchableOpacity
+              style={[styles.createButton, { 
+                backgroundColor: '#10B981',
+                shadowColor: '#10B981'
+              }]}
+              onPress={() => navigation.navigate('AddExpense', { 
+                eventId: defaultEventId,
+                mode: 'create'
+              })}
+            >
+              <Text style={[styles.actionIcon, { color: '#FFFFFF' }]}>+</Text>
+              <Text style={[styles.actionLabel, { color: '#FFFFFF' }]}>Añadir Gasto</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[styles.createButton, { 
+                backgroundColor: theme.colors.primary,
+                shadowColor: theme.colors.primary
+              }]}
+              onPress={() => navigation.navigate('CreateEvent', { mode: 'create', groupId })}
+            >
+              <Text style={[styles.actionIcon, { color: '#FFFFFF' }]}>+</Text>
+              <Text style={[styles.actionLabel, { color: '#FFFFFF' }]}>Crear Evento</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {/* Tabs */}
-      <View style={styles.tabContainer}>
+      <View style={[styles.tabContainer, { backgroundColor: theme.colors.background }]}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'active' && styles.tabActive]}
+          style={[styles.tab, 
+            activeTab === 'active' && [styles.tabActive, { 
+              backgroundColor: theme.colors.primary + '15',
+              borderColor: theme.colors.primary,
+              shadowColor: theme.colors.primary
+            }]
+          ]}
           onPress={() => setActiveTab('active')}
         >
-          <Text style={[styles.tabText, activeTab === 'active' && styles.tabTextActive]}>
+          <Text style={styles.tabEmoji}>🟢</Text>
+          <Text style={[styles.tabText, { color: activeTab === 'active' ? theme.colors.primary : theme.colors.textSecondary }]}>
             Activos ({activeEvents.length})
           </Text>
         </TouchableOpacity>
         
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'past' && styles.tabActive]}
+          style={[styles.tab, 
+            activeTab === 'past' && [styles.tabActive, { 
+              backgroundColor: theme.colors.primary + '15',
+              borderColor: theme.colors.primary,
+              shadowColor: theme.colors.primary
+            }]
+          ]}
           onPress={() => setActiveTab('past')}
         >
-          <Text style={[styles.tabText, activeTab === 'past' && styles.tabTextActive]}>
+          <Text style={styles.tabEmoji}>⏸️</Text>
+          <Text style={[styles.tabText, { color: activeTab === 'past' ? theme.colors.primary : theme.colors.textSecondary }]}>
             Pasados ({pastEvents.length})
           </Text>
         </TouchableOpacity>
@@ -154,7 +275,7 @@ export const GroupEventsScreen: React.FC<Props> = ({ navigation, route }) => {
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Buscar eventos..."
+          placeholder={t('groupEvents.searchPlaceholder')}
           placeholderTextColor={theme.colors.textSecondary}
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -178,16 +299,16 @@ export const GroupEventsScreen: React.FC<Props> = ({ navigation, route }) => {
         {loading ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>⏳</Text>
-            <Text style={styles.emptyText}>Cargando eventos...</Text>
+            <Text style={styles.emptyText}>{t('groupEvents.loading')}</Text>
           </View>
         ) : displayEvents.length === 0 && !searchQuery.trim() ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>📅</Text>
             <Text style={styles.emptyText}>
-              {activeTab === 'active' ? 'No hay eventos activos' : 'No hay eventos pasados'}
+              {activeTab === 'active' ? t('groupEvents.noActiveEvents') : t('groupEvents.noPastEvents')}
             </Text>
             <Button
-              title="Crear evento"
+              title={t('groupEvents.createEvent')}
               onPress={() => navigation.navigate('CreateEvent', { mode: 'create', groupId })}
               style={styles.emptyButton}
             />
@@ -195,74 +316,91 @@ export const GroupEventsScreen: React.FC<Props> = ({ navigation, route }) => {
         ) : displayEvents.length === 0 && searchQuery.trim() ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>🔍</Text>
-            <Text style={styles.emptyText}>No se encontraron eventos</Text>
-            <Text style={styles.emptySubtext}>Intenta con otro término</Text>
+            <Text style={styles.emptyText}>{t('groupEvents.noResults')}</Text>
+            <Text style={styles.emptySubtext}>{t('groupEvents.tryAnotherTerm')}</Text>
           </View>
         ) : (
           displayEvents.map((event) => (
             <TouchableOpacity
               key={event.id}
-              onPress={() => navigation.navigate('EventDetail', { eventId: event.id })}
+              onPress={() => navigation.navigate('EventDetail', { eventId: event.id, eventName: event.name })}
               activeOpacity={0.7}
+              style={[styles.eventCard, { 
+                backgroundColor: theme.colors.card,
+                shadowColor: event.status === 'active' ? '#10B981' : theme.colors.textSecondary,
+                borderColor: theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)'
+              }]}
             >
-              <Card style={styles.eventCard}>
-                <View style={styles.eventHeader}>
-                  <Text style={styles.eventName}>{event.name}</Text>
-                  <View style={[styles.statusBadge, event.status === 'active' ? styles.statusActive : styles.statusPast]}>
-                    <Text style={styles.statusText}>
-                      {event.status === 'active' ? '🟢 Activo' : '⚪ Finalizado'}
-                    </Text>
-                  </View>
+              <View style={styles.eventHeader}>
+                <View style={[styles.eventIconContainer, {
+                  backgroundColor: event.status === 'active' ? '#10B981' + '20' : '#6B7280' + '20',
+                  borderColor: event.status === 'active' ? '#10B981' + '40' : '#6B7280' + '40',
+                  shadowColor: event.status === 'active' ? '#10B981' : '#6B7280'
+                }]}>
+                  <Text style={styles.eventIconLarge}>🎉</Text>
                 </View>
-                
-                {event.description && (
-                  <Text style={styles.eventDescription} numberOfLines={2}>
-                    {event.description}
-                  </Text>
-                )}
-                
-                <View style={styles.eventDetails}>
-                  <View style={styles.eventDetail}>
-                    <Text style={styles.detailLabel}>Presupuesto</Text>
-                    <Text style={styles.detailValue}>
-                      {CurrencySymbols[event.currency]}{event.initialBudget.toFixed(2)}
+                <View style={styles.eventInfo}>
+                  <Text style={[styles.eventName, { color: theme.colors.text }]}>{event.name}</Text>
+                  {event.description && (
+                    <Text style={[styles.eventDescription, { color: theme.colors.textSecondary }]} numberOfLines={2}>
+                      {event.description}
                     </Text>
-                  </View>
-                  
-                  <View style={styles.eventDetail}>
-                    <Text style={styles.detailLabel}>Participantes</Text>
-                    <Text style={styles.detailValue}>
-                      👥 {event.participantIds.length}
-                    </Text>
-                  </View>
-                  
-                  <View style={styles.eventDetail}>
-                    <Text style={styles.detailLabel}>Creado</Text>
-                    <Text style={styles.detailValue}>
-                      {(() => {
-                        try {
-                          const date = (event.createdAt as any)?.toDate 
-                            ? (event.createdAt as any).toDate() 
-                            : new Date(event.createdAt);
-                          return date.toLocaleDateString('es-ES', { 
-                            day: 'numeric',
-                            month: 'short' 
-                          });
-                        } catch {
-                          return 'N/A';
-                        }
-                      })()}
-                    </Text>
-                  </View>
+                  )}
                 </View>
+              </View>
 
+              {/* Budget Section con Progress Bar */}
+              <View style={[styles.budgetSection, { backgroundColor: theme.isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }]}>
+                <View style={styles.budgetHeader}>
+                  <Text style={[styles.budgetLabel, { color: theme.colors.textSecondary }]}>💰 Presupuesto</Text>
+                  <Text style={[styles.budgetValue, { color: theme.colors.text }]}>
+                    {CurrencySymbols[event.currency]}{event.initialBudget.toFixed(2)}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Footer con estadísticas */}
+              <View style={styles.eventFooter}>
+                <View style={[styles.statusDot, 
+                  event.status === 'active' ? styles.statusDotActive : styles.statusDotPast
+                ]} />
+                <View style={styles.footerItem}>
+                  <Text style={styles.footerIcon}>👥</Text>
+                  <Text style={[styles.footerText, { color: theme.colors.textSecondary }]}>
+                    {event.participantIds.length} {event.participantIds.length === 1 ? 'persona' : 'personas'}
+                  </Text>
+                </View>
+                <View style={styles.footerDivider} />
+                <View style={styles.footerItem}>
+                  <Text style={styles.footerIcon}>📅</Text>
+                  <Text style={[styles.footerText, { color: theme.colors.textSecondary }]}>
+                    {(() => {
+                      try {
+                        const date = (event.createdAt as any)?.toDate 
+                          ? (event.createdAt as any).toDate() 
+                          : new Date(event.createdAt);
+                        return date.toLocaleDateString('es-ES', { 
+                          day: 'numeric',
+                          month: 'short' 
+                        });
+                      } catch {
+                        return 'N/A';
+                      }
+                    })()}
+                  </Text>
+                </View>
                 {event.inviteCode && (
-                  <View style={styles.inviteCodeContainer}>
-                    <Text style={styles.inviteCodeLabel}>Código:</Text>
-                    <Text style={styles.inviteCode}>{event.inviteCode}</Text>
-                  </View>
+                  <>
+                    <View style={styles.footerDivider} />
+                    <View style={styles.footerItem}>
+                      <Text style={styles.footerIcon}>🔑</Text>
+                      <Text style={[styles.footerText, { color: theme.colors.primary, fontWeight: '700' }]}>
+                        {event.inviteCode}
+                      </Text>
+                    </View>
+                  </>
                 )}
-              </Card>
+              </View>
             </TouchableOpacity>
           ))
         )}
@@ -277,106 +415,149 @@ const getStyles = (theme: any) => StyleSheet.create({
     backgroundColor: theme.colors.background,
   },
   header: {
+    padding: 20,
+    paddingBottom: 12,
+    backgroundColor: theme.colors.background,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
+    gap: 14,
+  },
+  headerTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    paddingTop: 8,
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    gap: 12,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: theme.colors.background,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   backIcon: {
-    fontSize: 24,
-    color: theme.colors.text,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
   },
   headerContent: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
   },
   groupIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: theme.colors.primary,
+    width: 56,
+    height: 56,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    borderWidth: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3,
   },
   groupIcon: {
-    fontSize: 24,
+    fontSize: 28,
   },
   headerTextContainer: {
     flex: 1,
   },
   groupName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: theme.colors.text,
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: -0.5,
     marginBottom: 2,
   },
   subtitle: {
     fontSize: 13,
-    color: theme.colors.textSecondary,
-    fontWeight: '500',
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
-  createButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: theme.colors.primary,
+  headerActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 8,
-    shadowColor: theme.colors.primary,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    gap: 6,
+    borderWidth: 1.5,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
+    shadowOpacity: 0.12,
+    shadowRadius: 5,
+    elevation: 3,
   },
-  createButtonIcon: {
-    fontSize: 28,
-    color: theme.colors.card,
-    fontWeight: '300',
+  createButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    gap: 8,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  actionIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionIcon: {
+    fontSize: 16,
+  },
+  actionLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    gap: 12,
+    backgroundColor: theme.colors.background,
   },
   tab: {
     flex: 1,
-    paddingVertical: 16,
+    flexDirection: 'row',
     alignItems: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    gap: 8,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 2,
+    borderColor: 'transparent',
   },
   tabActive: {
-    borderBottomColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  tabEmoji: {
+    fontSize: 16,
   },
   tabText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: theme.colors.textSecondary,
-  },
-  tabTextActive: {
-    color: theme.colors.primary,
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -415,14 +596,14 @@ const getStyles = (theme: any) => StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
-    paddingBottom: 90,
+    paddingTop: 12,
+    paddingBottom: 20,
   },
   emptyState: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 64,
+    paddingVertical: 24,
   },
   emptyIcon: {
     fontSize: 64,
@@ -443,81 +624,139 @@ const getStyles = (theme: any) => StyleSheet.create({
     marginTop: 16,
   },
   eventCard: {
-    marginBottom: 16,
+    marginBottom: 14,
+    marginHorizontal: 16,
+    padding: 20,
+    borderRadius: 20,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 6,
+    borderWidth: 1,
+    position: 'relative',
+  },
+  statusBadgeFloating: {
+    position: 'absolute',
+    top: -8,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    gap: 6,
+    zIndex: 10,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  statusTextFloating: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   eventHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 8,
+    marginBottom: 14,
+    gap: 14,
+  },
+  eventIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  eventIconLarge: {
+    fontSize: 28,
+  },
+  eventInfo: {
+    flex: 1,
+    paddingTop: 2,
   },
   eventName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: theme.colors.text,
-    flex: 1,
-    marginRight: 12,
-  },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusActive: {
-    backgroundColor: theme.dark ? '#064E3B' : '#DCFCE7',
-  },
-  statusPast: {
-    backgroundColor: theme.dark ? '#374151' : '#F3F4F6',
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.colors.text,
+    fontSize: 20,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+    marginBottom: 6,
   },
   eventDescription: {
     fontSize: 14,
-    color: theme.colors.textSecondary,
-    marginBottom: 12,
+    lineHeight: 20,
+    fontWeight: '500',
   },
-  eventDetails: {
+  budgetSection: {
+    padding: 14,
+    borderRadius: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: theme.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+  },
+  budgetHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-  },
-  eventDetail: {
-    flex: 1,
     alignItems: 'center',
   },
-  detailLabel: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-    marginBottom: 4,
-  },
-  detailValue: {
-    fontSize: 14,
+  budgetLabel: {
+    fontSize: 13,
     fontWeight: '600',
-    color: theme.colors.text,
+    letterSpacing: 0.3,
   },
-  inviteCodeContainer: {
+  budgetValue: {
+    fontSize: 20,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+  },
+  eventFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 12,
-    paddingTop: 12,
+    paddingTop: 14,
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
   },
-  inviteCodeLabel: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-    marginRight: 8,
+  footerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
   },
-  inviteCode: {
+  footerIcon: {
     fontSize: 14,
+  },
+  footerText: {
+    fontSize: 12,
     fontWeight: '600',
-    color: theme.colors.primary,
-    fontFamily: 'Courier',
+    letterSpacing: 0.2,
+  },
+  footerDivider: {
+    width: 1,
+    height: 16,
+    backgroundColor: theme.colors.border,
+    marginHorizontal: 8,
+  },
+  statusDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: 12,
+  },
+  statusDotActive: {
+    backgroundColor: '#10B981',
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 4,
+  },
+  statusDotPast: {
+    backgroundColor: '#9CA3AF',
   },
 });

@@ -50,7 +50,14 @@ export default {
       firebaseAppId: process.env.FIREBASE_APP_ID,
       googleAndroidClientId: process.env.GOOGLE_ANDROID_CLIENT_ID,
       googleIosClientId: process.env.GOOGLE_IOS_CLIENT_ID,
-      googleWebClientId: process.env.GOOGLE_WEB_CLIENT_ID
+      googleWebClientId: process.env.GOOGLE_WEB_CLIENT_ID,
+      // Configuración de pagos
+      PAYPAL_ME_USERNAME: process.env.PAYPAL_ME_USERNAME,
+      STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY,
+      BANK_ACCOUNT_NAME: process.env.BANK_ACCOUNT_NAME,
+      BANK_ACCOUNT_NUMBER: process.env.BANK_ACCOUNT_NUMBER,
+      BANK_NAME: process.env.BANK_NAME,
+      BANK_SWIFT_BIC: process.env.BANK_SWIFT_BIC
     }
   }
 };

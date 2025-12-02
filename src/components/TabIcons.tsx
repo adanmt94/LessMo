@@ -1,5 +1,5 @@
 /**
- * TabIcons - Iconos minimalistas para la barra de navegación
+ * TabIcons - Iconos ULTRA MINIMALISTAS rediseñados desde 0
  */
 
 import React from 'react';
@@ -10,162 +10,133 @@ interface TabIconProps {
   color: string;
 }
 
+// 📅 EVENTOS - Línea simple con punto
 export const EventsIcon: React.FC<TabIconProps> = ({ focused, color }) => (
   <View style={styles.iconContainer}>
-    <View style={[styles.calendarIcon, { borderColor: color }]}>
-      <View style={[styles.calendarTop, { backgroundColor: color }]} />
-      <View style={styles.calendarDots}>
-        <View style={[styles.dot, { backgroundColor: color, opacity: focused ? 1 : 0.6 }]} />
-        <View style={[styles.dot, { backgroundColor: color, opacity: focused ? 1 : 0.6 }]} />
-        <View style={[styles.dot, { backgroundColor: color, opacity: focused ? 1 : 0.6 }]} />
-        <View style={[styles.dot, { backgroundColor: color, opacity: focused ? 1 : 0.6 }]} />
-      </View>
-    </View>
+    <View style={[styles.lineIcon, { backgroundColor: color, opacity: focused ? 1 : 0.5 }]} />
+    {focused && (
+      <View style={[styles.focusDot, { backgroundColor: color }]} />
+    )}
   </View>
 );
 
+// 👥 GRUPOS - Dos círculos superpuestos
 export const GroupsIcon: React.FC<TabIconProps> = ({ focused, color }) => (
   <View style={styles.iconContainer}>
-    <View style={styles.groupsContainer}>
-      <View style={[styles.personCircle, styles.personLeft, { 
-        backgroundColor: color,
-        opacity: focused ? 1 : 0.6,
-        transform: [{ scale: focused ? 1 : 0.9 }]
-      }]} />
-      <View style={[styles.personCircle, styles.personRight, { 
-        backgroundColor: color,
-        opacity: focused ? 1 : 0.6,
-        transform: [{ scale: focused ? 1 : 0.9 }]
-      }]} />
-    </View>
+    <View style={[styles.circleLeft, { 
+      borderColor: color,
+      borderWidth: focused ? 2 : 1.5,
+      opacity: focused ? 1 : 0.6
+    }]} />
+    <View style={[styles.circleRight, { 
+      borderColor: color,
+      borderWidth: focused ? 2 : 1.5,
+      opacity: focused ? 1 : 0.6
+    }]} />
   </View>
 );
 
+// 📊 ACTIVIDAD - Tres líneas verticales minimalistas
 export const ActivityIcon: React.FC<TabIconProps> = ({ focused, color }) => (
   <View style={styles.iconContainer}>
-    <View style={styles.activityContainer}>
-      <View style={[styles.activityBar, styles.activityBar1, { 
+    <View style={styles.barsContainer}>
+      <View style={[styles.thinBar, { 
         backgroundColor: color,
-        opacity: focused ? 1 : 0.6,
-        height: focused ? 18 : 14
+        height: focused ? 16 : 12,
+        opacity: focused ? 1 : 0.5
       }]} />
-      <View style={[styles.activityBar, styles.activityBar2, { 
+      <View style={[styles.thinBar, { 
         backgroundColor: color,
-        opacity: focused ? 0.8 : 0.5,
-        height: focused ? 14 : 10
+        height: focused ? 20 : 16,
+        opacity: focused ? 0.8 : 0.4
       }]} />
-      <View style={[styles.activityBar, styles.activityBar3, { 
+      <View style={[styles.thinBar, { 
         backgroundColor: color,
-        opacity: focused ? 0.6 : 0.4,
-        height: focused ? 10 : 6
+        height: focused ? 12 : 8,
+        opacity: focused ? 0.6 : 0.3
       }]} />
     </View>
   </View>
 );
 
+// ⚙️ AJUSTES - Círculo con cruz minimalista
 export const SettingsIcon: React.FC<TabIconProps> = ({ focused, color }) => (
   <View style={styles.iconContainer}>
-    <View style={[styles.settingsCircle, { 
+    <View style={[styles.settingsOuter, { 
       borderColor: color,
-      transform: [{ rotate: focused ? '45deg' : '0deg' }]
+      borderWidth: focused ? 2 : 1.5,
+      opacity: focused ? 1 : 0.6
     }]}>
-      <View style={[styles.settingsLine, styles.settingsLineH, { backgroundColor: color }]} />
-      <View style={[styles.settingsLine, styles.settingsLineV, { backgroundColor: color }]} />
+      {focused && (
+        <View style={[styles.settingsInner, { backgroundColor: color }]} />
+      )}
     </View>
   </View>
 );
 
 const styles = StyleSheet.create({
   iconContainer: {
-    width: 28,
-    height: 28,
+    width: 24,
+    height: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // Calendar Icon
-  calendarIcon: {
-    width: 22,
-    height: 22,
-    borderWidth: 2,
-    borderRadius: 4,
-    overflow: 'hidden',
+  
+  // EVENTOS - Línea con punto
+  lineIcon: {
+    width: 20,
+    height: 1.5,
+    borderRadius: 1,
   },
-  calendarTop: {
-    height: 6,
-    width: '100%',
+  focusDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    position: 'absolute',
+    top: 10,
   },
-  calendarDots: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    padding: 3,
-    gap: 2,
-  },
-  dot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-  },
-  // Groups Icon
-  groupsContainer: {
-    flexDirection: 'row',
-    width: 24,
-    height: 24,
-    position: 'relative',
-  },
-  personCircle: {
+  
+  // GRUPOS - Círculos superpuestos
+  circleLeft: {
     width: 14,
     height: 14,
     borderRadius: 7,
     position: 'absolute',
-  },
-  personLeft: {
     left: 0,
     top: 5,
   },
-  personRight: {
+  circleRight: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    position: 'absolute',
     right: 0,
     top: 5,
   },
-  // Activity Icon
-  activityContainer: {
+  
+  // ACTIVIDAD - Barras minimalistas
+  barsContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: 3,
-    height: 22,
+    gap: 4,
+    height: 20,
   },
-  activityBar: {
-    width: 4,
-    borderRadius: 2,
+  thinBar: {
+    width: 2,
+    borderRadius: 1,
   },
-  activityBar1: {
-    height: 18,
-  },
-  activityBar2: {
-    height: 14,
-  },
-  activityBar3: {
-    height: 10,
-  },
-  // Settings Icon
-  settingsCircle: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
+  
+  // AJUSTES - Círculo con centro
+  settingsOuter: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  settingsLine: {
-    position: 'absolute',
-  },
-  settingsLineH: {
-    width: 12,
-    height: 2,
-    borderRadius: 1,
-  },
-  settingsLineV: {
-    width: 2,
-    height: 12,
-    borderRadius: 1,
+  settingsInner: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
   },
 });

@@ -7,7 +7,7 @@ import {
   View,
   Text,
   StyleSheet,
-  
+  Share,
   ScrollView,
   TouchableOpacity,
   Alert,
@@ -22,8 +22,16 @@ import { Card, Button } from '../components/lovable';
 import { getEvent } from '../services/firebase';
 import { useExpenses } from '../hooks/useExpenses';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
+import { useAuthContext } from '../context/AuthContext';
+import { optimizeSettlements } from '../services/settlementOptimizationService';
+import { SettlementOptimizationCard } from '../components/SettlementOptimizationCard';
+import { exportAndSharePDF } from '../services/pdfService';
 import * as Sharing from 'expo-sharing';
 import ViewShot from 'react-native-view-shot';
+import { formatCurrency, formatNumber } from '../utils/numberUtils';
+import { MarkPaymentModal } from '../components/MarkPaymentModal';
+import { getEventPayments, Payment } from '../services/paymentConfirmationService';
 
 type SummaryScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Summary'>;
 type SummaryScreenRouteProp = RouteProp<RootStackParamList, 'Summary'>;
@@ -38,11 +46,17 @@ const screenWidth = Dimensions.get('window').width;
 export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
   const { eventId } = route.params;
   const { theme } = useTheme();
+  const { t } = useLanguage();
+  const { user } = useAuthContext();
   const styles = getStyles(theme);
   const [event, setEvent] = useState<Event | null>(null);
+  const [sharing, setSharing] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [expandedParticipant, setExpandedParticipant] = useState<string | null>(null);
   const viewShotRef = useRef<ViewShot>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedSettlement, setSelectedSettlement] = useState<any>(null);
+  const [payments, setPayments] = useState<Payment[]>([]);
 
   const {
     expenses,
@@ -57,34 +71,86 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
 
   useEffect(() => {
     loadEvent();
+    scheduleSettlementReminders();
+    loadPayments();
   }, [eventId]);
+
+  // Programar recordatorios para los settlements
+  const scheduleSettlementReminders = async () => {
+    try {
+      const settlements = calculateSettlements();
+      if (settlements.length === 0) return;
+
+      const { scheduleRemindersForEvent } = await import('../services/debtReminderService');
+      await scheduleRemindersForEvent(eventId, event?.name || 'Evento', settlements, participants);
+    } catch (error) {
+      console.error('Error scheduling settlement reminders:', error);
+    }
+  };
 
   const loadEvent = async () => {
     try {
       const eventData = await getEvent(eventId);
       setEvent(eventData);
     } catch (error) {
-      Alert.alert('Error', 'No se pudo cargar el evento');
+      Alert.alert(t('common.error'), t('eventSummary.errorLoading'));
     }
   };
 
-  const exportAsImage = async () => {
+  const loadPayments = async () => {
+    try {
+      const eventPayments = await getEventPayments(eventId);
+      setPayments(eventPayments);
+    } catch (error) {
+      console.error('Error loading payments:', error);
+    }
+  };
+
+  const handleMarkPayment = (settlement: any) => {
+    const from = getParticipantById(settlement.from);
+    const to = getParticipantById(settlement.to);
+    
+    if (!from || !to) return;
+    
+    setSelectedSettlement({
+      ...settlement,
+      fromName: from.name,
+      toName: to.name,
+    });
+    setShowPaymentModal(true);
+  };
+
+  const handlePaymentMarked = () => {
+    loadPayments(); // Recargar pagos
+    scheduleSettlementReminders(); // Actualizar recordatorios
+  };
+
+  const exportToPDF = async () => {
+    if (!event) return;
+
     try {
       setExporting(true);
-      if (!viewShotRef.current || !viewShotRef.current.capture) return;
 
-      const uri = await viewShotRef.current.capture();
-      
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, {
-          mimeType: 'image/png',
-          dialogTitle: 'Compartir resumen',
-        });
-      } else {
-        Alert.alert('Info', 'Compartir no está disponible en este dispositivo');
-      }
-    } catch (error) {
-      Alert.alert('Error', 'No se pudo exportar la imagen');
+      await exportAndSharePDF(event, expenses, participants, {
+        includeExpenses: true,
+        includeSettlements: true,
+        includeStatistics: true,
+        includePhotos: false,
+        language: t === undefined ? 'es' : (t('common.language') === 'es' ? 'es' : 'en'),
+      });
+
+      Alert.alert(
+        t('common.success') || 'Éxito',
+        t('eventSummary.pdfExported') || 'PDF exportado correctamente',
+        [{ text: 'OK' }]
+      );
+    } catch (error: any) {
+      console.error('Error exporting PDF:', error);
+      Alert.alert(
+        t('common.error') || 'Error',
+        error.message || (t('eventSummary.errorExporting') || 'Error al exportar PDF'),
+        [{ text: 'OK' }]
+      );
     } finally {
       setExporting(false);
     }
@@ -92,11 +158,11 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const shareAsText = async () => {
     try {
-      setExporting(true);
+      setSharing(true);
       const totalExpenses = getTotalExpenses();
       const remainingBalance = getRemainingBalance(event!.initialBudget);
       const settlements = calculateSettlements();
-      const currencySymbol = CurrencySymbols[event!.currency];
+      const currencySymbol = CurrencySymbols[event!.currency as keyof typeof CurrencySymbols];
 
       let text = `📊 RESUMEN DE ${event!.name.toUpperCase()}\n\n`;
       text += `💰 Presupuesto: ${currencySymbol}${event!.initialBudget.toFixed(2)}\n`;
@@ -117,14 +183,38 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
         });
       }
 
-      // En React Native, puedes usar Share API nativo
-      const { Share } = await import('react-native');
       await Share.share({
         message: text,
-        title: `Resumen de ${event!.name}`,
+        title: `${t('eventSummary.title')} - ${event!.name}`,
       });
     } catch (error) {
-      Alert.alert('Error', 'No se pudo compartir el resumen');
+      Alert.alert(t('common.error'), t('eventSummary.errorSharing'));
+    } finally {
+      setSharing(false);
+    }
+  };
+
+  const exportAsImage = async () => {
+    try {
+      setExporting(true);
+      if (!viewShotRef.current?.capture) {
+        Alert.alert(t('common.error'), t('eventSummary.errorExporting'));
+        return;
+      }
+
+      const uri = await viewShotRef.current.capture();
+
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'image/png',
+          dialogTitle: t('eventSummary.shareImage'),
+        });
+      } else {
+        Alert.alert(t('common.info'), t('eventSummary.sharingNotAvailable'));
+      }
+    } catch (error) {
+      console.error('Error exporting image:', error);
+      Alert.alert(t('common.error'), t('eventSummary.errorExporting'));
     } finally {
       setExporting(false);
     }
@@ -134,13 +224,13 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text>Cargando...</Text>
+          <Text>{t('eventSummary.loading')}</Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  const currencySymbol = CurrencySymbols[event.currency];
+  const currencySymbol = CurrencySymbols[event.currency as keyof typeof CurrencySymbols];
   const totalExpenses = getTotalExpenses();
   const remainingBalance = getRemainingBalance(event.initialBudget);
   const expensesByCategory = getExpensesByCategory();
@@ -201,53 +291,72 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <ViewShot ref={viewShotRef} options={{ format: 'png', quality: 0.9 }}>
-          {/* Resumen general */}
+        {/* Resumen general */}
         <Card style={styles.card}>
-          <Text style={styles.cardTitle}>💰 Resumen general</Text>
+          <Text style={styles.cardTitle}>{t('eventSummary.generalSummary')}</Text>
           
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Presupuesto inicial</Text>
+            <Text style={styles.summaryLabel}>{t('eventSummary.initialBudget')}</Text>
             <Text style={styles.summaryValue}>
-              {currencySymbol}{event.initialBudget.toFixed(2)}
+              {formatCurrency(event.initialBudget, event.currency as any)}
             </Text>
           </View>
 
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Total gastado</Text>
+            <Text style={styles.summaryLabel}>{t('eventSummary.totalSpent')}</Text>
             <Text style={[styles.summaryValue, { color: '#EF4444' }]}>
-              {currencySymbol}{totalExpenses.toFixed(2)}
+              {formatCurrency(totalExpenses, event.currency as any)}
             </Text>
           </View>
 
           <View style={styles.divider} />
 
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabelBold}>Saldo restante</Text>
+            <Text style={styles.summaryLabelBold}>{t('eventSummary.remainingBalance')}</Text>
             <Text
               style={[
                 styles.summaryValueBold,
                 { color: remainingBalance >= 0 ? '#10B981' : '#EF4444' },
               ]}
             >
-              {currencySymbol}{remainingBalance.toFixed(2)}
+              {formatCurrency(remainingBalance, event.currency as any)}
             </Text>
           </View>
 
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Total de gastos</Text>
+            <Text style={styles.summaryLabel}>{t('eventSummary.totalExpenses')}</Text>
             <Text style={styles.summaryValue}>{expenses.length}</Text>
           </View>
 
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Participantes</Text>
+            <Text style={styles.summaryLabel}>{t('eventSummary.participants')}</Text>
             <Text style={styles.summaryValue}>{participants.length}</Text>
           </View>
         </Card>
 
+        {/* Accesos rápidos a funciones avanzadas */}
+        <View style={styles.quickActionsRow}>
+          <TouchableOpacity 
+            style={[styles.quickActionButton, { backgroundColor: theme.colors.primary }]}
+            onPress={() => navigation.navigate('Analytics', { eventId })}
+          >
+            <Text style={styles.quickActionIcon}>📊</Text>
+            <Text style={styles.quickActionText}>Analíticas</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.quickActionButton, { backgroundColor: theme.colors.success }]}
+            onPress={() => navigation.navigate('PaymentHistory', { eventId, eventName: event.name })}
+          >
+            <Text style={styles.quickActionIcon}>💳</Text>
+            <Text style={styles.quickActionText}>Pagos</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Gráfico de gastos por categoría */}
         {chartData.length > 0 && (
           <Card style={styles.card}>
-            <Text style={styles.cardTitle}>📊 Gastos por categoría</Text>
+            <Text style={styles.cardTitle}>{t('eventSummary.expensesByCategory')}</Text>
             
             <PieChart
               data={chartData}
@@ -278,10 +387,10 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
                   </View>
                   <View style={styles.categoryStats}>
                     <Text style={styles.categoryAmount}>
-                      {currencySymbol}{item.total.toFixed(2)}
+                      {formatCurrency(item.total, event.currency as any)}
                     </Text>
                     <Text style={styles.categoryPercentage}>
-                      ({item.percentage.toFixed(1)}%)
+                      ({formatNumber(item.percentage, 1)}%)
                     </Text>
                   </View>
                 </View>
@@ -292,7 +401,7 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
 
         {/* Balances de participantes */}
         <Card style={styles.card}>
-          <Text style={styles.cardTitle}>👥 Balance de participantes</Text>
+          <Text style={styles.cardTitle}>{t('eventSummary.participantBalance')}</Text>
           
           {participantBalances.map((balance) => {
             const breakdown = getParticipantExpenseBreakdown(balance.participantId);
@@ -312,19 +421,19 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
                 
                 <View style={styles.balanceDetails}>
                   <View style={styles.balanceRow}>
-                    <Text style={styles.balanceLabel}>Pagó:</Text>
+                    <Text style={styles.balanceLabel}>{t('eventSummary.paid')}</Text>
                     <Text style={styles.balanceAmount}>
-                      {currencySymbol}{balance.totalPaid.toFixed(2)}
+                      {formatCurrency(balance.totalPaid, event.currency as any)}
                     </Text>
                   </View>
                   <View style={styles.balanceRow}>
-                    <Text style={styles.balanceLabel}>Debe:</Text>
+                    <Text style={styles.balanceLabel}>{t('eventSummary.owes')}</Text>
                     <Text style={styles.balanceAmount}>
-                      {currencySymbol}{balance.totalOwed.toFixed(2)}
+                      {formatCurrency(balance.totalOwed, event.currency as any)}
                     </Text>
                   </View>
                   <View style={styles.balanceRow}>
-                    <Text style={styles.balanceLabelBold}>Balance:</Text>
+                    <Text style={styles.balanceLabelBold}>{t('eventSummary.balance')}</Text>
                     <Text
                       style={[
                         styles.balanceAmountBold,
@@ -332,7 +441,7 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
                       ]}
                     >
                       {balance.balance >= 0 ? '+' : ''}
-                      {currencySymbol}{balance.balance.toFixed(2)}
+                      {formatCurrency(Math.abs(balance.balance), event.currency as any)}
                     </Text>
                   </View>
                 </View>
@@ -343,7 +452,7 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
                     {/* Gastos pagados */}
                     {breakdown.paid.length > 0 && (
                       <View style={styles.breakdownSection}>
-                        <Text style={styles.breakdownTitle}>💳 Gastos pagados:</Text>
+                        <Text style={styles.breakdownTitle}>{t('eventSummary.expensesPaid')}</Text>
                         {breakdown.paid.map((item, index) => (
                           <View key={`paid-${index}`} style={styles.breakdownItem}>
                             <Text style={styles.breakdownDescription}>
@@ -360,7 +469,7 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
                     {/* Gastos que debe */}
                     {breakdown.owes.length > 0 && (
                       <View style={styles.breakdownSection}>
-                        <Text style={styles.breakdownTitle}>💸 Debe por gastos:</Text>
+                        <Text style={styles.breakdownTitle}>{t('eventSummary.expensesReceived')}</Text>
                         {breakdown.owes.map((item, index) => (
                           <View key={`owes-${index}`} style={styles.breakdownItem}>
                             <View style={styles.breakdownTextContainer}>
@@ -385,28 +494,70 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
           })}
         </Card>
 
+        {/* Optimización de Liquidaciones */}
+        {event && participants.length > 0 && expenses.length > 0 && (
+          <SettlementOptimizationCard
+            optimization={optimizeSettlements(expenses, participants)}
+            onSelectSettlement={(settlement) => {
+              navigation.navigate('PaymentMethod', {
+                recipientName: settlement.to.name,
+                amount: settlement.amount,
+                currency: event.currency,
+                description: `Liquidación - ${event.name}`,
+                eventId: eventId,
+                eventName: event.name,
+              });
+            }}
+          />
+        )}
+
         {/* Liquidaciones sugeridas */}
         {settlements.length > 0 && (
           <Card style={styles.card}>
-            <Text style={styles.cardTitle}>💸 Liquidaciones sugeridas</Text>
+            <Text style={styles.cardTitle}>{t('eventSummary.settlements')}</Text>
             <Text style={styles.cardSubtitle}>
-              Para saldar las cuentas, realiza las siguientes transferencias:
+              {t('eventSummary.settlementsSubtitle')}
             </Text>
 
             {settlements.map((settlement, index) => {
               const fromParticipant = getParticipantById(settlement.from);
               const toParticipant = getParticipantById(settlement.to);
+              
+              // Buscar si hay un pago asociado a este settlement
+              const relatedPayment = payments.find(p => 
+                p.fromUserId === settlement.from && 
+                p.toUserId === settlement.to &&
+                (p.status === 'pending' || p.status === 'sent_waiting_confirmation')
+              );
+              
+              const paymentStatus = relatedPayment?.status;
 
               return (
                 <View key={index} style={styles.settlementItem}>
-                  <Text style={styles.settlementText}>
-                    <Text style={styles.settlementName}>{fromParticipant?.name}</Text>
-                    {' → '}
-                    <Text style={styles.settlementName}>{toParticipant?.name}</Text>
-                  </Text>
-                  <Text style={styles.settlementAmount}>
-                    {currencySymbol}{settlement.amount.toFixed(2)}
-                  </Text>
+                  <View style={styles.settlementInfo}>
+                    <Text style={styles.settlementText}>
+                      <Text style={styles.settlementName}>{fromParticipant?.name}</Text>
+                      {' → '}
+                      <Text style={styles.settlementName}>{toParticipant?.name}</Text>
+                    </Text>
+                    <Text style={styles.settlementAmount}>
+                      {currencySymbol}{settlement.amount.toFixed(2)}
+                    </Text>
+                    {paymentStatus === 'sent_waiting_confirmation' && (
+                      <Text style={styles.paymentStatusBadge}>⏳ Pendiente confirmación</Text>
+                    )}
+                  </View>
+                  <TouchableOpacity
+                    style={[
+                      styles.payButton,
+                      paymentStatus === 'sent_waiting_confirmation' && styles.payButtonPending
+                    ]}
+                    onPress={() => handleMarkPayment(settlement)}
+                  >
+                    <Text style={styles.payButtonText}>
+                      {paymentStatus === 'sent_waiting_confirmation' ? '✓ Confirmar' : '💳 Marcar Pago'}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               );
             })}
@@ -414,24 +565,69 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
         )}
         </ViewShot>
 
-        {/* Botones de exportar */}
-        <View style={styles.exportButtons}>
-          <Button
-            title="📤 Compartir Texto"
-            onPress={shareAsText}
-            loading={exporting}
-            variant="outline"
-            style={{ flex: 1, marginRight: 8 }}
-          />
-          <Button
-            title="📸 Compartir Imagen"
+        {/* Botones de compartir */}
+        <View style={styles.shareActions}>
+          <TouchableOpacity
+            style={[styles.shareButton, styles.shareButtonOutline, { borderColor: theme.colors.primary }]}
             onPress={exportAsImage}
-            loading={exporting}
-            variant="outline"
-            style={{ flex: 1, marginLeft: 8 }}
-          />
+            disabled={exporting}
+          >
+            <View style={[styles.shareIconContainer, { backgroundColor: theme.colors.primary + '15' }]}>
+              <Text style={[styles.shareIcon, { color: theme.colors.primary }]}>📸</Text>
+            </View>
+            <Text style={[styles.shareButtonText, { color: theme.colors.text, fontWeight: '800' }]} numberOfLines={2}>
+              {t('eventSummary.exportAsImage')}
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.shareButton, styles.shareButtonOutline, { borderColor: theme.colors.primary }]}
+            onPress={shareAsText}
+            disabled={sharing}
+          >
+            <View style={[styles.shareIconContainer, { backgroundColor: theme.colors.primary + '15' }]}>
+              <Text style={[styles.shareIcon, { color: theme.colors.primary }]}>↗</Text>
+            </View>
+            <Text style={[styles.shareButtonText, { color: theme.colors.text, fontWeight: '800' }]} numberOfLines={2}>
+              {t('eventSummary.shareAsText')}
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.shareButton, styles.shareButtonPrimary, { backgroundColor: theme.colors.primary }]}
+            onPress={exportToPDF}
+            disabled={exporting}
+          >
+            <View style={[styles.shareIconContainer, { backgroundColor: 'rgba(255,255,255,0.25)' }]}>
+              <Text style={[styles.shareIcon, { color: '#FFFFFF' }]}>📄</Text>
+            </View>
+            <Text style={[styles.shareButtonText, { color: '#FFFFFF', fontWeight: '800', fontSize: 14 }]} numberOfLines={1}>
+              PDF
+            </Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Modal de marcar pago */}
+      {selectedSettlement && event && (
+        <MarkPaymentModal
+          visible={showPaymentModal}
+          settlement={selectedSettlement}
+          fromUserName={selectedSettlement.fromName}
+          toUserName={selectedSettlement.toName}
+          eventId={eventId}
+          eventName={event.name}
+          currency={event.currency}
+          currentUserId={user?.uid || ''}
+          onClose={() => setShowPaymentModal(false)}
+          onPaymentMarked={handlePaymentMarked}
+          existingPayment={payments.find(p => 
+            p.fromUserId === selectedSettlement.from && 
+            p.toUserId === selectedSettlement.to &&
+            (p.status === 'pending' || p.status === 'sent_waiting_confirmation')
+          )}
+        />
+      )}
     </SafeAreaView>
   );
 };
@@ -466,10 +662,11 @@ const getStyles = (theme: any) => StyleSheet.create({
     color: theme.colors.text,
   },
   scrollContent: {
-    padding: 24,
+    padding: 16,
+    paddingBottom: 24,
   },
   card: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   cardTitle: {
     fontSize: 18,
@@ -598,12 +795,16 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontWeight: '700',
   },
   settlementItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'column',
     padding: 12,
     backgroundColor: theme.colors.inputBackground,
     borderRadius: 8,
+    marginBottom: 8,
+  },
+  settlementInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 8,
   },
   settlementText: {
@@ -619,6 +820,27 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: theme.colors.primary,
+  },
+  payButton: {
+    backgroundColor: theme.colors.primary,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  payButtonPending: {
+    backgroundColor: theme.colors.success || '#10B981',
+  },
+  payButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  paymentStatusBadge: {
+    fontSize: 11,
+    color: theme.colors.warning || '#F59E0B',
+    fontWeight: '600',
+    marginTop: 4,
   },
   exportButtons: {
     flexDirection: 'row',
@@ -669,5 +891,77 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   breakdownDebt: {
     color: theme.colors.error,
+  },
+  shareActions: {
+    flexDirection: 'row',
+    padding: 12,
+    paddingBottom: 16,
+    gap: 8,
+  },
+  shareButton: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    gap: 8,
+    minHeight: 75,
+    justifyContent: 'center',
+  },
+  shareButtonOutline: {
+    borderWidth: 2,
+    backgroundColor: 'transparent',
+  },
+  shareButtonPrimary: {
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  quickActionsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
+  quickActionButton: {
+    flex: 1,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  quickActionIcon: {
+    fontSize: 40,
+    marginBottom: 8,
+  },
+  quickActionText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  shareIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  shareIcon: {
+    fontSize: 22,
+  },
+  shareButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    textAlign: 'center',
+    letterSpacing: 0.3,
+    lineHeight: 16,
   },
 });

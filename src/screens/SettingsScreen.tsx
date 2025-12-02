@@ -2,12 +2,12 @@
  * SettingsScreen - Pantalla de ajustes y configuración
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  
+  Image,
   ScrollView,
   TouchableOpacity,
   Alert,
@@ -15,6 +15,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../services/firebase';
 import { RootStackParamList } from '../types';
 import { Card } from '../components/lovable';
 import { useAuth } from '../hooks/useAuth';
@@ -23,6 +25,9 @@ import { useLanguage } from '../context/LanguageContext';
 import { useCurrency } from '../context/CurrencyContext';
 import { useNotifications } from '../hooks/useNotifications';
 import { useBiometricAuth } from '../hooks/useBiometricAuth';
+import { useDailyReminder } from '../hooks/useDailyReminder';
+import { useSpendingAlerts } from '../hooks/useSpendingAlerts';
+import { AVAILABLE_SHORTCUTS } from '../hooks/useSiriShortcuts';
 import { useForceUpdate } from '../utils/globalEvents';
 import { CommonActions } from '@react-navigation/native';
 
@@ -45,7 +50,7 @@ interface SettingItemProps {
 export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
   const { user, signOut } = useAuth();
   const { theme, themeMode, setThemeMode } = useTheme();
-  const { currentLanguage, availableLanguages, changeLanguage } = useLanguage();
+  const { currentLanguage, availableLanguages, changeLanguage, t } = useLanguage();
   const { currentCurrency, availableCurrencies, changeCurrency } = useCurrency();
   const { notificationsEnabled, toggleNotifications, isLoading } = useNotifications();
   const { 
@@ -57,17 +62,85 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
     disableBiometricAuth,
     isLoading: biometricLoading,
   } = useBiometricAuth();
+  const {
+    isEnabled: dailyReminderEnabled,
+    isLoading: dailyReminderLoading,
+    toggleReminder,
+  } = useDailyReminder();
+  const {
+    config: alertsConfig,
+    isLoading: alertsLoading,
+    updateMinAvailableAmount,
+    updateMaxSpentAmount,
+    toggleMinAvailableAlert,
+    toggleMaxSpentAlert,
+  } = useSpendingAlerts();
+  
+  // Estado para configuración de recordatorios de deudas
+  const [debtRemindersEnabled, setDebtRemindersEnabled] = useState(true);
+  const [reminderFrequency, setReminderFrequency] = useState('weekly');
+  
+  // Estado para la foto de perfil y nombre
+  const [photoURL, setPhotoURL] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string>('');
   
   // Hook para forzar re-render cuando cambien idioma/moneda
   useForceUpdate();
+  
+  // Cargar foto de perfil, nombre y configuración de recordatorios
+  useEffect(() => {
+    loadUserProfile();
+    loadDebtReminderSettings();
+  }, [user]);
+
+  // Cargar configuración de recordatorios
+  const loadDebtReminderSettings = async () => {
+    try {
+      const { getReminderSettings } = await import('../services/debtReminderService');
+      const settings = await getReminderSettings();
+      setDebtRemindersEnabled(settings.enabled);
+      setReminderFrequency(settings.frequency);
+    } catch (error) {
+      console.error('Error loading debt reminder settings:', error);
+    }
+  };
+  
+  // Recargar cuando se vuelve a esta pantalla
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadUserProfile();
+    });
+    return unsubscribe;
+  }, [navigation]);
+  
+  const loadUserProfile = async () => {
+    if (!user) return;
+    
+    try {
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userDocRef);
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        setPhotoURL(userData.photoURL || user.photoURL || null);
+        setUserName(userData.name || user.displayName || user.email?.split('@')[0] || 'Usuario');
+        console.log('📷 Perfil cargado desde Firestore:', { photoURL: userData.photoURL, name: userData.name });
+      } else {
+        setUserName(user.displayName || user.email?.split('@')[0] || 'Usuario');
+      }
+    } catch (error) {
+      console.error('❌ Error loading user profile:', error);
+      setUserName(user.displayName || user.email?.split('@')[0] || 'Usuario');
+    }
+  };
   
   const darkModeEnabled = theme.isDark;
   const styles = getStyles(theme);
 
   const handleLanguageChange = () => {
     Alert.alert(
-      'Seleccionar idioma',
-      'Elige el idioma de la aplicación',
+      t('settings.selectLanguage'),
+      t('settings.selectLanguage'),
       [
         ...availableLanguages.map(lang => ({
           text: `${lang.nativeName} (${lang.name})`,
@@ -77,14 +150,14 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
               await changeLanguage(lang.code);
               console.log('✅ Idioma cambiado exitosamente');
               // El evento global en LanguageContext ya forzó el remount
-              Alert.alert('✅ Idioma cambiado', `Ahora usando: ${lang.nativeName}`);
+              Alert.alert(t('common.success'), `${t('settings.language')}: ${lang.nativeName}`);
             } catch (error: any) {
               console.error('❌ Error cambiando idioma:', error);
-              Alert.alert('Error', 'No se pudo cambiar el idioma');
+              Alert.alert(t('common.error'), t('common.error'));
             }
           },
         })),
-        { text: 'Cancelar', style: 'cancel' }
+        { text: t('common.cancel'), style: 'cancel' }
       ],
       { cancelable: true }
     );
@@ -92,8 +165,8 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
 
   const handleCurrencyChange = () => {
     Alert.alert(
-      'Seleccionar moneda',
-      'Elige la moneda predeterminada para nuevos eventos',
+      t('expense.selectCurrency'),
+      t('expense.selectCurrency'),
       [
         ...availableCurrencies.map(curr => ({
           text: `${curr.name} (${curr.symbol})`,
@@ -103,14 +176,14 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
               await changeCurrency(curr.code);
               console.log('✅ Moneda cambiada exitosamente');
               // El evento global en CurrencyContext ya forzó el remount
-              Alert.alert('✅ Moneda cambiada', `Ahora usando: ${curr.name} (${curr.symbol})`);
+              Alert.alert(t('common.success'), `${curr.name} (${curr.symbol})`);
             } catch (error: any) {
               console.error('❌ Error cambiando moneda:', error);
-              Alert.alert('Error', 'No se pudo cambiar la moneda');
+              Alert.alert(t('common.error'), t('common.error'));
             }
           },
         })),
-        { text: 'Cancelar', style: 'cancel' }
+        { text: t('common.cancel'), style: 'cancel' }
       ],
       { cancelable: true }
     );
@@ -118,14 +191,14 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
 
   const handleThemeChange = () => {
     const themeOptions = [
-      { mode: 'light' as const, label: '☀️ Claro', description: 'Tema claro siempre' },
-      { mode: 'dark' as const, label: '🌙 Oscuro', description: 'Tema oscuro siempre' },
-      { mode: 'auto' as const, label: '🔄 Automático', description: 'Según el sistema' },
+      { mode: 'light' as const, label: t('settings.themeLight'), description: t('settings.lightTheme') },
+      { mode: 'dark' as const, label: t('settings.themeDark'), description: t('settings.darkTheme') },
+      { mode: 'auto' as const, label: t('settings.themeAuto'), description: t('settings.autoTheme') },
     ];
 
     Alert.alert(
-      'Seleccionar tema',
-      'Elige el modo de visualización',
+      t('settings.selectTheme'),
+      t('settings.themeTitle'),
       themeOptions.map(option => ({
         text: option.label,
         onPress: async () => {
@@ -133,10 +206,114 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
           await setThemeMode(option.mode);
           console.log('✅ Tema cambiado correctamente a:', option.mode);
           // El EventEmitter se encarga de forzar el re-render
-          Alert.alert('Tema cambiado', option.description);
+          Alert.alert(t('settings.themeChanged'), option.description);
         },
       })),
       { cancelable: true }
+    );
+  };
+
+  const handleMinAvailableAlert = () => {
+    Alert.prompt(
+      t('settings.lowBalanceAlert'),
+      `${t('settings.lowBalanceEnabled')}\n\n${t('settings.defaultCurrency')}: ${alertsConfig.minAvailableAmount} ${currentCurrency.symbol}`,
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('common.save'),
+          onPress: async (value?: string) => {
+            const amount = parseFloat(value || '0');
+            if (isNaN(amount) || amount < 0) {
+              Alert.alert(t('common.error'), t('settings.saveConfig'));
+              return;
+            }
+            try {
+              await updateMinAvailableAmount(amount);
+              Alert.alert(t('common.success'), `${t('settings.lowBalanceEnabled')} ${amount} ${currentCurrency.symbol}`);
+            } catch (error) {
+              Alert.alert(t('common.error'), t('settings.saveConfig'));
+            }
+          },
+        },
+      ],
+      'plain-text',
+      alertsConfig.minAvailableAmount.toString()
+    );
+  };
+
+  const handleMaxSpentAlert = () => {
+    Alert.prompt(
+      t('settings.maxSpending'),
+      `${t('settings.maxSpentEnabled')}\n\n${t('settings.defaultCurrency')}: ${alertsConfig.maxSpentAmount} ${currentCurrency.symbol}`,
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('common.save'),
+          onPress: async (value?: string) => {
+            const amount = parseFloat(value || '0');
+            if (isNaN(amount) || amount < 0) {
+              Alert.alert(t('common.error'), t('settings.saveConfig'));
+              return;
+            }
+            try {
+              await updateMaxSpentAmount(amount);
+              Alert.alert(t('common.success'), `${t('settings.maxSpentEnabled')} ${amount} ${currentCurrency.symbol}`);
+            } catch (error) {
+              Alert.alert(t('common.error'), t('settings.saveConfig'));
+            }
+          },
+        },
+      ],
+      'plain-text',
+      alertsConfig.maxSpentAmount.toString()
+    );
+  };
+
+  // Configuración de recordatorios de deudas
+  const handleToggleDebtReminders = async (enabled: boolean) => {
+    try {
+      const { saveReminderSettings } = await import('../services/debtReminderService');
+      await saveReminderSettings({ enabled });
+      setDebtRemindersEnabled(enabled);
+      Alert.alert(
+        'Recordatorios de deudas',
+        enabled ? 'Los recordatorios están activados' : 'Los recordatorios están desactivados'
+      );
+    } catch (error) {
+      console.error('Error toggling debt reminders:', error);
+      Alert.alert('Error', 'No se pudo actualizar la configuración');
+    }
+  };
+
+  const handleReminderFrequency = () => {
+    const frequencies = [
+      { label: 'Nunca', value: 'none' },
+      { label: 'Diario', value: 'daily' },
+      { label: 'Semanal', value: 'weekly' },
+      { label: 'Quincenal', value: 'biweekly' },
+    ];
+
+    Alert.alert(
+      'Frecuencia de recordatorios',
+      'Selecciona cada cuánto quieres recibir recordatorios de deudas pendientes',
+      frequencies.map(freq => ({
+        text: freq.label,
+        onPress: async () => {
+          try {
+            const { saveReminderSettings } = await import('../services/debtReminderService');
+            await saveReminderSettings({ 
+              frequency: freq.value as any,
+              enabled: freq.value !== 'none',
+            });
+            setReminderFrequency(freq.value);
+            setDebtRemindersEnabled(freq.value !== 'none');
+            Alert.alert('Frecuencia actualizada', `Recordatorios: ${freq.label}`);
+          } catch (error) {
+            console.error('Error updating reminder frequency:', error);
+            Alert.alert('Error', 'No se pudo actualizar la frecuencia');
+          }
+        },
+      }))
     );
   };
 
@@ -172,19 +349,19 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
 
   const handleSignOut = () => {
     Alert.alert(
-      'Cerrar sesión',
-      '¿Estás seguro de que quieres cerrar sesión?',
+      t('home.signOut'),
+      t('home.signOutConfirm'),
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Cerrar sesión',
+          text: t('home.signOut'),
           style: 'destructive',
           onPress: async () => {
             try {
               await signOut();
               // La navegación se manejará automáticamente por el AuthContext
             } catch (error) {
-              Alert.alert('Error', 'No se pudo cerrar sesión');
+              Alert.alert(t('common.error'), t('auth.logoutSuccess'));
             }
           },
         },
@@ -193,58 +370,65 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['top']} style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Ajustes</Text>
+        <Text style={styles.title}>{t('settings.title')}</Text>
       </View>
 
       <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
         {/* Perfil */}
         <Card style={styles.section}>
-          <Text style={styles.sectionTitle}>Perfil</Text>
+          <Text style={styles.sectionTitle}>{t('auth.name')}</Text>
           
           <View style={styles.profileInfo}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {user?.displayName?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
-              </Text>
+              {photoURL ? (
+                <Image 
+                  source={{ uri: photoURL }} 
+                  style={styles.avatarImage}
+                />
+              ) : (
+                <Text style={styles.avatarText}>
+                  {userName.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
+                </Text>
+              )}
             </View>
             <View style={styles.profileText}>
-              <Text style={styles.profileName}>{user?.displayName || 'Usuario'}</Text>
-              <Text style={styles.profileEmail}>{user?.email || 'Usuario anónimo'}</Text>
+              <Text style={styles.profileName}>{userName}</Text>
+              <Text style={styles.profileEmail}>{user?.email || t('settings.anonymousUser')}</Text>
             </View>
           </View>
 
           <SettingItem styles={styles}
             icon="✏️"
-            title="Editar perfil"
-            subtitle="Cambiar nombre y foto"
+            title={t('settings.editProfile')}
+            subtitle={t('settings.editProfileSubtitle')}
             onPress={() => navigation.navigate('EditProfile')}
           />
         </Card>
 
         {/* Preferencias */}
         <Card style={styles.section}>
-          <Text style={styles.sectionTitle}>Preferencias</Text>
+          <Text style={styles.sectionTitle}>{t('settings.preferences')}</Text>
           
           <SettingItem styles={styles}
             icon="🌍"
-            title="Idioma"
+            title={t('settings.language')}
             subtitle={currentLanguage.nativeName}
             onPress={handleLanguageChange}
           />
           
           <SettingItem styles={styles}
             icon="💰"
-            title="Moneda predeterminada"
+            title={t('settings.defaultCurrency')}
             subtitle={`${currentCurrency.name} (${currentCurrency.symbol})`}
             onPress={handleCurrencyChange}
           />
           
           <SettingItem styles={styles}
             icon="🔔"
-            title="Notificaciones"
-            subtitle="Alertas de gastos y liquidaciones"
+            title={t('settings.notifications')}
+            subtitle={t('settings.notificationsSubtitle')}
             showArrow={false}
             rightElement={
               <Switch
@@ -257,6 +441,132 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
             }
           />
           
+          <SettingItem styles={styles}
+            icon="⏰"
+            title={t('settings.dailyReminder')}
+            subtitle={
+              dailyReminderEnabled
+                ? t('settings.dailyReminderActive')
+                : t('settings.dailyReminderInactive')
+            }
+            showArrow={false}
+            rightElement={
+              <Switch
+                value={dailyReminderEnabled}
+                onValueChange={(value) => { 
+                  toggleReminder(value)
+                    .then(() => {
+                      Alert.alert(
+                        value ? t('settings.dailyReminderActive') : t('settings.dailyReminderInactive'),
+                        value 
+                          ? t('settings.dailyReminderActive')
+                          : t('settings.dailyReminderInactive')
+                      );
+                    })
+                    .catch(() => {
+                      Alert.alert(t('common.error'), t('settings.saveConfig'));
+                    });
+                }}
+                disabled={dailyReminderLoading}
+                trackColor={{ false: '#E5E7EB', true: '#A5B4FC' }}
+                thumbColor={dailyReminderEnabled ? '#6366F1' : '#F3F4F6'}
+              />
+            }
+          />
+
+          {/* NUEVA SECCIÓN: Alertas de Gastos */}
+          <View style={{ paddingHorizontal: 20, paddingVertical: 12, paddingTop: 24 }}>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: theme.colors.textSecondary, textTransform: 'uppercase' }}>
+              {t('settings.spendingAlerts')}
+            </Text>
+          </View>
+          
+          <SettingItem styles={styles}
+            icon="💰"
+            title={t('settings.lowBalanceAlert')}
+            subtitle={
+              alertsConfig.minAvailableEnabled
+                ? `${t('settings.lowBalanceEnabled')} ${alertsConfig.minAvailableAmount} ${currentCurrency.symbol}`
+                : t('settings.lowBalanceDisabled')
+            }
+            onPress={handleMinAvailableAlert}
+            rightElement={
+              <Switch
+                value={alertsConfig.minAvailableEnabled}
+                onValueChange={() => {
+                  toggleMinAvailableAlert()
+                    .then(() => {
+                      Alert.alert(
+                        alertsConfig.minAvailableEnabled ? t('settings.lowBalanceDisabled') : t('settings.lowBalanceEnabled'),
+                        alertsConfig.minAvailableEnabled
+                          ? t('settings.lowBalanceDisabled')
+                          : `${t('settings.lowBalanceEnabled')} ${alertsConfig.minAvailableAmount} ${currentCurrency.symbol}`
+                      );
+                    })
+                    .catch(() => {
+                      Alert.alert(t('common.error'), t('settings.saveConfig'));
+                    });
+                }}
+                disabled={alertsLoading}
+                trackColor={{ false: '#E5E7EB', true: '#A5B4FC' }}
+                thumbColor={alertsConfig.minAvailableEnabled ? '#6366F1' : '#F3F4F6'}
+              />
+            }
+          />
+          
+          <SettingItem styles={styles}
+            icon="🚨"
+            title={t('settings.maxSpentAlert')}
+            subtitle={
+              alertsConfig.maxSpentEnabled
+                ? `${t('settings.maxSpentEnabled')} ${alertsConfig.maxSpentAmount} ${currentCurrency.symbol}`
+                : t('settings.maxSpentDisabled')
+            }
+            onPress={handleMaxSpentAlert}
+            rightElement={
+              <Switch
+                value={alertsConfig.maxSpentEnabled}
+                onValueChange={() => {
+                  toggleMaxSpentAlert()
+                    .then(() => {
+                      Alert.alert(
+                        alertsConfig.maxSpentEnabled ? t('settings.maxSpentDisabled') : t('settings.maxSpentEnabled'),
+                        alertsConfig.maxSpentEnabled
+                          ? t('settings.maxSpentDisabled')
+                          : `${t('settings.maxSpentEnabled')} ${alertsConfig.maxSpentAmount} ${currentCurrency.symbol}`
+                      );
+                    })
+                    .catch(() => {
+                      Alert.alert(t('common.error'), t('settings.saveConfig'));
+                    });
+                }}
+                disabled={alertsLoading}
+                trackColor={{ false: '#E5E7EB', true: '#A5B4FC' }}
+                thumbColor={alertsConfig.maxSpentEnabled ? '#6366F1' : '#F3F4F6'}
+              />
+            }
+          />
+
+          {/* Recordatorios de Deudas */}
+          <SettingItem styles={styles}
+            icon="💸"
+            title="Recordatorios de Deudas"
+            subtitle={
+              debtRemindersEnabled
+                ? `Activo - ${reminderFrequency === 'daily' ? 'Diario' : reminderFrequency === 'weekly' ? 'Semanal' : 'Quincenal'}`
+                : 'Desactivado'
+            }
+            onPress={handleReminderFrequency}
+            rightElement={
+              <Switch
+                value={debtRemindersEnabled}
+                onValueChange={handleToggleDebtReminders}
+                trackColor={{ false: '#E5E7EB', true: '#A5B4FC' }}
+                thumbColor={debtRemindersEnabled ? '#6366F1' : '#F3F4F6'}
+              />
+            }
+          />
+          
           {/* Autenticación Biométrica */}
           {biometricAvailable && biometricEnrolled && (
             <SettingItem styles={styles}
@@ -264,8 +574,8 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
               title={biometricType}
               subtitle={
                 biometricEnabled 
-                  ? "Protección activada" 
-                  : "Activar para proteger tu cuenta"
+                  ? t('settings.biometricEnabled')
+                  : t('settings.biometricDisabled')
               }
               showArrow={false}
               rightElement={
@@ -288,51 +598,75 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
           
           <SettingItem styles={styles}
             icon="🎨"
-            title="Tema de la aplicación"
+            title={t('settings.themeTitle')}
             subtitle={
-              themeMode === 'light' ? '☀️ Claro' :
-              themeMode === 'dark' ? '🌙 Oscuro' :
-              '🔄 Automático'
+              themeMode === 'light' ? t('settings.themeLight') :
+              themeMode === 'dark' ? t('settings.themeDark') :
+              t('settings.themeAuto')
             }
             onPress={handleThemeChange}
+          />
+          
+          <SettingItem styles={styles}
+            icon="🗣️"
+            title={t('settings.siriShortcuts')}
+            subtitle={t('settings.siriShortcutsSubtitle')}
+            onPress={() => {
+              const shortcuts = AVAILABLE_SHORTCUTS.map(s => 
+                `• "${s.suggestedPhrase}"\n  → ${s.title}`
+              ).join('\n\n');
+              
+              Alert.alert(
+                t('settings.siriShortcutsTitle'),
+                t('settings.siriShortcutsMessage') + '\n\n' + shortcuts + '\n\n' +
+                t('settings.siriInstructions') + '\n' +
+                t('settings.siriStep1') + '\n' +
+                t('settings.siriStep2') + '\n' +
+                t('settings.siriStep3') + '\n' +
+                t('settings.siriStep4') + '\n' +
+                t('settings.siriStep5') + '\n' +
+                t('settings.siriStep6'),
+                [{ text: t('settings.understood'), style: 'default' }]
+              );
+            }}
           />
         </Card>
 
         {/* Datos y privacidad */}
         <Card style={styles.section}>
-          <Text style={styles.sectionTitle}>Datos y privacidad</Text>
+          <Text style={styles.sectionTitle}>{t('settings.dataAndPrivacy')}</Text>
           
           <SettingItem styles={styles}
             icon="🔒"
-            title="Privacidad"
-            subtitle="Gestionar datos y privacidad"
+            title={t('settings.privacy')}
+            subtitle={t('settings.privacySubtitle')}
             onPress={() => Alert.alert(
-              'Configuración de Privacidad',
+              t('settings.privacyConfig'),
               'LessMo respeta tu privacidad:\n\n' +
               '• Tus datos se almacenan de forma segura en Firebase\n' +
               '• Solo tú tienes acceso a tus eventos y gastos\n' +
               '• Los participantes solo ven información del evento compartido\n' +
-              '• Puedes exportar o eliminar tus datos en cualquier momento',
-              [{ text: 'Entendido', style: 'default' }]
+              t('settings.privacyDetails'),
+              [{ text: t('settings.understood'), style: 'default' }]
             )}
           />
           
           <SettingItem styles={styles}
             icon="📥"
-            title="Exportar datos"
-            subtitle="Descargar todos tus eventos a Excel"
+            title={t('settings.exportData')}
+            subtitle={t('settings.exportDataSubtitle')}
             onPress={async () => {
               Alert.alert(
-                'Exportar datos',
-                'Se exportarán todos tus eventos con sus gastos y participantes a un archivo Excel.',
+                t('settings.exportTitle'),
+                t('settings.exportMessage'),
                 [
-                  { text: 'Cancelar', style: 'cancel' },
+                  { text: t('common.cancel'), style: 'cancel' },
                   {
-                    text: 'Exportar',
+                    text: t('settings.exportButton'),
                     onPress: async () => {
                       try {
                         if (!user?.uid) {
-                          Alert.alert('Error', 'No se pudo obtener el ID del usuario');
+                          Alert.alert(t('common.error'), t('settings.exportNoUserId'));
                           return;
                         }
 
@@ -344,7 +678,7 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
                         const events = await getUserEvents(user.uid);
 
                         if (events.length === 0) {
-                          Alert.alert('Info', 'No tienes eventos para exportar');
+                          Alert.alert(t('common.error'), t('home.noEvents'));
                           return;
                         }
 
@@ -362,10 +696,10 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
                         // Exportar a Excel
                         await exportAllEventsToExcel(events, allExpenses, allParticipants);
                         
-                        Alert.alert('Éxito', `Se exportaron ${events.length} evento(s) correctamente`);
+                        Alert.alert(t('common.success'), t('settings.exportSuccess'));
                       } catch (error: any) {
                         console.error('Error al exportar:', error);
-                        Alert.alert('Error', error.message || 'No se pudo exportar');
+                        Alert.alert(t('common.error'), error.message || t('settings.exportError'));
                       }
                     }
                   }
@@ -376,16 +710,16 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
           
           <SettingItem styles={styles}
             icon="🗑️"
-            title="Eliminar cuenta"
-            subtitle="Borrar permanentemente tu cuenta"
+            title={t('settings.deleteAccount')}
+            subtitle={t('settings.deleteAccountSubtitle')}
             onPress={async () => {
               Alert.alert(
-                'Eliminar cuenta',
-                'Esta acción no se puede deshacer. Todos tus datos serán eliminados permanentemente:\n\n• Eventos creados\n• Gastos registrados\n• Participaciones en eventos\n• Perfil de usuario\n\n¿Estás seguro?',
+                t('settings.deleteAccountTitle'),
+                t('settings.deleteAccountMessage'),
                 [
-                  { text: 'Cancelar', style: 'cancel' },
+                  { text: t('common.cancel'), style: 'cancel' },
                   {
-                    text: 'Eliminar',
+                    text: t('common.delete'),
                     style: 'destructive',
                     onPress: async () => {
                       try {
@@ -393,12 +727,12 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
                         
                         // Confirmation step
                         Alert.alert(
-                          'Última confirmación',
-                          'Escribe ELIMINAR para confirmar',
+                          t('common.deleteConfirmTitle'),
+                          t('common.cannotUndo'),
                           [
-                            { text: 'Cancelar', style: 'cancel' },
+                            { text: t('common.cancel'), style: 'cancel' },
                             {
-                              text: 'Confirmar',
+                              text: t('common.confirm'),
                               style: 'destructive',
                               onPress: async () => {
                                 // Import delete functions
@@ -415,9 +749,9 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
                                     await deleteUser(auth.currentUser);
                                   }
                                   
-                                  Alert.alert('Cuenta eliminada', 'Tu cuenta ha sido eliminada permanentemente.');
+                                  Alert.alert(t('common.success'), t('settings.deleteAccountTitle'));
                                 } catch (error: any) {
-                                  Alert.alert('Error', 'No se pudo eliminar la cuenta. Intenta cerrar sesión e iniciar de nuevo.');
+                                  Alert.alert(t('common.error'), t('settings.deleteAccountError'));
                                 }
                               }
                             }
@@ -436,73 +770,85 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
 
         {/* Acerca de */}
         <Card style={styles.section}>
-          <Text style={styles.sectionTitle}>Acerca de</Text>
+          <Text style={styles.sectionTitle}>{t('settings.about')}</Text>
+          
+          <SettingItem styles={styles}
+            icon="👋"
+            title="Tutorial de bienvenida"
+            subtitle="Ver el tutorial inicial de nuevo"
+            onPress={async () => {
+              Alert.alert(
+                'Tutorial',
+                '¿Quieres ver el tutorial de bienvenida otra vez?',
+                [
+                  { text: t('common.cancel'), style: 'cancel' },
+                  {
+                    text: 'Ver tutorial',
+                    onPress: async () => {
+                      try {
+                        const { resetOnboarding } = await import('./OnboardingScreen');
+                        await resetOnboarding();
+                        Alert.alert(
+                          'Tutorial activado',
+                          'Cierra sesión y vuelve a iniciar para ver el tutorial',
+                          [{ text: 'OK' }]
+                        );
+                      } catch (error) {
+                        Alert.alert('Error', 'No se pudo resetear el tutorial');
+                      }
+                    }
+                  }
+                ]
+              );
+            }}
+          />
           
           <SettingItem styles={styles}
             icon="ℹ️"
-            title="Versión de la app"
+            title={t('settings.version')}
             subtitle="1.0.0"
             showArrow={false}
           />
           
           <SettingItem styles={styles}
             icon="📄"
-            title="Términos y condiciones"
+            title={t('settings.termsOfService')}
             onPress={() => Alert.alert(
-              'Términos y Condiciones',
-              'Al usar LessMo aceptas:\n\n' +
-              '1. Usar la aplicación de manera responsable\n' +
-              '2. No compartir información sensible de otros usuarios\n' +
-              '3. Mantener la privacidad de los datos de los eventos\n' +
-              '4. No usar la app para actividades ilegales\n\n' +
-              'LessMo se reserva el derecho de suspender cuentas que violen estos términos.',
-              [{ text: 'Entendido', style: 'default' }]
+              t('settings.termsTitle'),
+              t('settings.termsContent'),
+              [{ text: t('settings.understood'), style: 'default' }]
             )}
           />
           
           <SettingItem styles={styles}
             icon="🛡️"
-            title="Política de privacidad"
+            title={t('settings.privacyPolicy')}
             onPress={() => Alert.alert(
-              'Política de Privacidad',
-              'LessMo protege tus datos:\n\n' +
-              '• Recopilamos: nombre, email, eventos y gastos creados\n' +
-              '• Usamos los datos solo para el funcionamiento de la app\n' +
-              '• No vendemos ni compartimos tu información con terceros\n' +
-              '• Puedes solicitar la eliminación de tus datos\n' +
-              '• Usamos Firebase de Google para almacenamiento seguro\n\n' +
-              'Para más información, contacta: lessmo@support.com',
-              [{ text: 'Entendido', style: 'default' }]
+              t('settings.privacyPolicyTitle'),
+              t('settings.privacyPolicyContent'),
+              [{ text: t('settings.understood'), style: 'default' }]
             )}
           />
           
           <SettingItem styles={styles}
             icon="💬"
-            title="Soporte y ayuda"
+            title={t('settings.help')}
             onPress={() => Alert.alert(
-              'Soporte y Ayuda',
-              '¿Necesitas ayuda?\n\n' +
-              '📧 Email: lessmo@support.com\n' +
-              '💬 Twitter: @LessMoApp\n' +
-              '📱 Telegram: @LessMoSupport\n\n' +
-              'Preguntas frecuentes:\n\n' +
-              '• ¿Cómo agregar participantes? Desde el evento, toca "Agregar participante"\n' +
-              '• ¿Cómo dividir gastos? Al crear un gasto, elige "División personalizada"\n' +
-              '• ¿Cómo exportar? Ve a Settings > Exportar datos\n\n' +
-              'Responderemos en menos de 24 horas.',
-              [{ text: 'Cerrar', style: 'default' }]
+              t('settings.supportTitle'),
+              t('settings.supportContent'),
+              [{ text: t('settings.close'), style: 'default' }]
             )}
           />
         </Card>
 
         {/* Cerrar sesión */}
         <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-          <Text style={styles.signOutText}>Cerrar sesión</Text>
+          <Text style={styles.signOutText}>{t('settings.signOut')}</Text>
         </TouchableOpacity>
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>LessMo v1.0.0</Text>
-          <Text style={styles.footerSubtext}>Hecho con ❤️</Text>
+          <Text style={styles.footerSubtext}>{t('settings.madeWith')}</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -530,7 +876,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 100, // Espacio para la barra de tabs
+    paddingBottom: 20,
   },
   section: {
     marginBottom: 16,
@@ -562,6 +908,12 @@ const getStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
   },
   avatarText: {
     fontSize: 24,
@@ -637,7 +989,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   footer: {
     alignItems: 'center',
-    marginTop: 32,
+    marginTop: 24,
     paddingBottom: 16,
   },
   footerText: {

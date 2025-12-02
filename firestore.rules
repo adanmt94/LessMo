@@ -66,5 +66,100 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && 
                        request.auth.uid == resource.data.createdBy;
     }
+
+    // ====================================
+    // MESSAGES (Chat de eventos y grupos)
+    // ====================================
+    // Mensajes a nivel superior (con eventId o groupId)
+    match /messages/{messageId} {
+      // Permitir lectura a cualquier usuario autenticado
+      allow read: if isAuthenticated();
+      
+      // Permitir creación a cualquier usuario autenticado
+      allow create: if isAuthenticated() && 
+                       request.resource.data.userId == request.auth.uid;
+      
+      // Permitir actualización solo al remitente
+      allow update: if isAuthenticated() && 
+                       request.auth.uid == resource.data.userId;
+      
+      // Permitir eliminación solo al remitente
+      allow delete: if isAuthenticated() && 
+                       request.auth.uid == resource.data.userId;
+    }
+    
+    // Mensajes como subcolección de eventos
+    match /events/{eventId}/messages/{messageId} {
+      // Permitir lectura a cualquier usuario autenticado
+      allow read: if isAuthenticated();
+      
+      // Permitir creación a cualquier usuario autenticado
+      allow create: if isAuthenticated() && 
+                       request.resource.data.userId == request.auth.uid;
+      
+      // Permitir actualización solo al remitente
+      allow update: if isAuthenticated() && 
+                       request.auth.uid == resource.data.userId;
+      
+      // Permitir eliminación solo al remitente
+      allow delete: if isAuthenticated() && 
+                       request.auth.uid == resource.data.userId;
+    }
+
+    // Mensajes como subcolección de grupos
+    match /groups/{groupId}/messages/{messageId} {
+      // Permitir lectura a cualquier usuario autenticado
+      allow read: if isAuthenticated();
+      
+      // Permitir creación a cualquier usuario autenticado
+      allow create: if isAuthenticated() && 
+                       request.resource.data.userId == request.auth.uid;
+      
+      // Permitir actualización solo al remitente
+      allow update: if isAuthenticated() && 
+                       request.auth.uid == resource.data.userId;
+      
+      // Permitir eliminación solo al remitente
+      allow delete: if isAuthenticated() && 
+                       request.auth.uid == resource.data.userId;
+    }
+
+    // Comentarios en gastos
+    match /expense_comments/{commentId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && 
+                       request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && 
+                       request.auth.uid == resource.data.userId;
+      allow delete: if isAuthenticated() && 
+                       request.auth.uid == resource.data.userId;
+    }
+
+    // Pagos y confirmaciones
+    match /event_payments/{paymentId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated();
+    }
+
+    // Pagos (colección principal usada por paymentConfirmationService)
+    match /payments/{paymentId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated();
+    }
+
+    // Templates de usuario
+    match /user_templates/{templateId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && 
+                       request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && 
+                       request.auth.uid == resource.data.userId;
+      allow delete: if isAuthenticated() && 
+                       request.auth.uid == resource.data.userId;
+    }
   }
 }

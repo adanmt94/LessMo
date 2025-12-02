@@ -1,31 +1,36 @@
 /**
  * Componente ExpenseItem - Item de lista de gastos
  * Generado con estilo Lovable.dev
+ * Optimizado con React.memo
  */
 
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import React, { memo } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Image } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { Expense, CategoryLabels, CategoryColors, CurrencySymbols, Currency } from '../../types';
 import { Card } from './Card';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface ExpenseItemProps {
   expense: Expense;
   participantName: string;
+  participantPhoto?: string;
   currency: Currency;
   onPress?: () => void;
   onDelete?: () => void;
 }
 
-export const ExpenseItem: React.FC<ExpenseItemProps> = ({
+const ExpenseItemComponent: React.FC<ExpenseItemProps> = ({
   expense,
   participantName,
+  participantPhoto,
   currency,
   onPress,
   onDelete,
 }) => {
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const categoryColor = CategoryColors[expense.category];
   const categoryLabel = CategoryLabels[expense.category];
   const currencySymbol = CurrencySymbols[currency];
@@ -79,7 +84,7 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({
           ]}
         >
           <Text style={styles.deleteButtonText}>🗑️</Text>
-          <Text style={styles.deleteButtonLabel}>Eliminar</Text>
+          <Text style={styles.deleteButtonLabel}>{t('common.delete')}</Text>
         </Animated.View>
       </TouchableOpacity>
     );
@@ -90,18 +95,46 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({
       <Card style={styles.card}>
         <View style={styles.header}>
           <View style={styles.categoryContainer}>
-            <View style={[styles.categoryDot, { backgroundColor: categoryColor }]} />
-            <Text style={styles.categoryText}>{categoryLabel}</Text>
+            <View style={[styles.categoryBadge, { backgroundColor: categoryColor + '20', borderColor: categoryColor }]}>
+              <View style={[styles.categoryDot, { backgroundColor: categoryColor }]} />
+              <Text style={[styles.categoryText, { color: categoryColor }]}>{categoryLabel}</Text>
+            </View>
           </View>
-          <Text style={styles.amount}>
-            {currencySymbol}{expense.amount.toFixed(2)}
-          </Text>
+          <View style={styles.amountContainer}>
+            <Text style={styles.amount}>
+              {currencySymbol}{expense.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </Text>
+          </View>
         </View>
 
-        <Text style={styles.description}>{expense.description}</Text>
+        <Text style={styles.description} numberOfLines={2}>{expense.description}</Text>
+
+        {expense.receiptPhoto && (
+          <TouchableOpacity 
+            style={styles.receiptPhotoContainer}
+            onPress={() => {
+              // Modal o navegación para ver foto completa
+            }}
+          >
+            <Image 
+              source={{ uri: expense.receiptPhoto }} 
+              style={styles.receiptThumbnail}
+              resizeMode="cover"
+            />
+            <Text style={styles.receiptLabel}>📷 Ver recibo</Text>
+          </TouchableOpacity>
+        )}
 
         <View style={styles.footer}>
-          <Text style={styles.participant}>Pagado por {participantName}</Text>
+          <View style={styles.participantInfo}>
+            {participantPhoto && (
+              <Image 
+                source={{ uri: participantPhoto }} 
+                style={styles.participantAvatar}
+              />
+            )}
+            <Text style={styles.participant}>Pagado por {participantName}</Text>
+          </View>
           <Text style={styles.date}>{formatDate(expense.date)}</Text>
         </View>
       </Card>
@@ -125,52 +158,84 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({
 
 const getStyles = (theme: any) => StyleSheet.create({
   card: {
-    marginBottom: 12,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   categoryContainer: {
+    flex: 1,
+  },
+  categoryBadge: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+    borderWidth: 1.5,
   },
   categoryDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     marginRight: 8,
   },
   categoryText: {
     fontSize: 14,
-    color: theme.colors.textSecondary,
-    fontWeight: '500',
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  amountContainer: {
+    alignItems: 'flex-end',
   },
   amount: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 26,
+    fontWeight: '900',
     color: theme.colors.text,
+    letterSpacing: -0.8,
   },
   description: {
-    fontSize: 16,
+    fontSize: 18,
     color: theme.colors.text,
-    marginBottom: 8,
-    fontWeight: '500',
+    marginBottom: 10,
+    fontWeight: '600',
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  participantInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  participantAvatar: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    marginRight: 6,
+    backgroundColor: theme.colors.border,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
   participant: {
-    fontSize: 12,
+    fontSize: 13,
     color: theme.colors.textSecondary,
+    fontWeight: '600',
   },
   date: {
-    fontSize: 12,
+    fontSize: 13,
     color: theme.colors.textTertiary,
+    fontWeight: '500',
   },
   deleteButton: {
     backgroundColor: theme.colors.error,
@@ -194,4 +259,38 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
+  receiptPhotoContainer: {
+    marginVertical: 8,
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: theme.colors.inputBackground,
+  },
+  receiptThumbnail: {
+    width: '100%',
+    height: 120,
+    backgroundColor: theme.colors.border,
+  },
+  receiptLabel: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    padding: 6,
+    textAlign: 'center',
+    backgroundColor: theme.colors.inputBackground,
+  },
 });
+
+// Función de comparación para React.memo
+const areEqual = (prevProps: ExpenseItemProps, nextProps: ExpenseItemProps) => {
+  return (
+    prevProps.expense.id === nextProps.expense.id &&
+    prevProps.expense.description === nextProps.expense.description &&
+    prevProps.expense.amount === nextProps.expense.amount &&
+    prevProps.expense.category === nextProps.expense.category &&
+    prevProps.participantName === nextProps.participantName &&
+    prevProps.participantPhoto === nextProps.participantPhoto &&
+    prevProps.currency === nextProps.currency
+  );
+};
+
+// Exportar componente memoizado
+export const ExpenseItem = memo(ExpenseItemComponent, areEqual);

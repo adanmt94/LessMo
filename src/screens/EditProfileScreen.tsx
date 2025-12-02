@@ -25,6 +25,7 @@ import { RootStackParamList } from '../types';
 import { Button, Input, Card } from '../components/lovable';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 type EditProfileScreenNavigationProp = StackNavigationProp<RootStackParamList, 'EditProfile'>;
 
@@ -35,6 +36,7 @@ interface Props {
 export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
   const { user } = useAuth();
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const styles = getStyles(theme);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -68,7 +70,7 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
       }
     } catch (error) {
       console.error('Error loading profile:', error);
-      Alert.alert('Error', 'No se pudo cargar el perfil');
+      Alert.alert(t('common.error'), t('editProfile.errorLoadingProfile'));
     } finally {
       setLoading(false);
     }
@@ -84,8 +86,8 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
       
       if (status !== 'granted') {
         Alert.alert(
-          'Permisos necesarios',
-          'Necesitamos permisos para acceder a tus fotos'
+          t('editProfile.permissionsNeeded'),
+          t('editProfile.galleryPermission')
         );
         return;
       }
@@ -109,7 +111,7 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
       }
     } catch (error: any) {
       console.error('❌ Error picking image:', error);
-      Alert.alert('Error', error.message || 'No se pudo seleccionar la imagen');
+      Alert.alert(t('common.error'), error.message || t('editProfile.errorPickingPhoto'));
     }
   };
 
@@ -120,8 +122,8 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
       
       if (status !== 'granted') {
         Alert.alert(
-          'Permisos necesarios',
-          'Necesitamos permisos para usar la cámara'
+          t('editProfile.permissionsNeeded'),
+          t('editProfile.cameraPermission')
         );
         return;
       }
@@ -138,7 +140,7 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
       }
     } catch (error) {
       console.error('Error taking photo:', error);
-      Alert.alert('Error', 'No se pudo tomar la foto');
+      Alert.alert(t('common.error'), t('editProfile.errorTakingPhoto'));
     }
   };
 
@@ -166,10 +168,10 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
       setPhotoURL(uri);
       
       console.log('✅ Foto guardada exitosamente');
-      Alert.alert('¡Éxito!', 'Foto actualizada correctamente');
+      Alert.alert(t('editProfile.photoSuccess'), t('editProfile.photoSuccessMessage'));
     } catch (error: any) {
       console.error('❌ Error uploading image:', error);
-      Alert.alert('Error', error.message || 'No se pudo subir la imagen');
+      Alert.alert(t('common.error'), error.message || t('editProfile.errorUploadingPhoto'));
     } finally {
       setUploading(false);
     }
@@ -179,12 +181,12 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
     if (!user) return;
 
     if (!name.trim()) {
-      Alert.alert('Error', 'El nombre no puede estar vacío');
+      Alert.alert(t('common.error'), t('editProfile.nameRequired'));
       return;
     }
 
     if (name.length > 50) {
-      Alert.alert('Error', 'El nombre no puede tener más de 50 caracteres');
+      Alert.alert(t('common.error'), t('editProfile.nameTooLong'));
       return;
     }
 
@@ -193,16 +195,18 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
 
       const userDocRef = doc(db, 'users', user.uid);
       
-      // Actualizar documento de usuario en Firestore
-      await updateDoc(userDocRef, {
+      // Usar setDoc con merge para crear el documento si no existe
+      await setDoc(userDocRef, {
+        uid: user.uid,
+        email: user.email,
         name: name.trim(),
         photoURL: photoURL || '',
         updatedAt: new Date(),
-      });
+      }, { merge: true });
 
       Alert.alert(
-        '¡Perfil actualizado!',
-        'Los cambios se han guardado correctamente',
+        t('editProfile.profileUpdated'),
+        t('editProfile.profileUpdatedMessage'),
         [
           {
             text: 'OK',
@@ -212,31 +216,7 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
       );
     } catch (error: any) {
       console.error('Error saving profile:', error);
-      
-      // Si el documento no existe, crearlo
-      if (error.code === 'not-found') {
-        try {
-          const userDocRef = doc(db, 'users', user.uid);
-          await updateDoc(userDocRef, {
-            uid: user.uid,
-            email: user.email,
-            name: name.trim(),
-            photoURL: photoURL || '',
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          });
-
-          Alert.alert(
-            '¡Perfil creado!',
-            'Tu perfil se ha creado correctamente',
-            [{ text: 'OK', onPress: () => navigation.goBack() }]
-          );
-        } catch (createError) {
-          Alert.alert('Error', 'No se pudo guardar el perfil');
-        }
-      } else {
-        Alert.alert('Error', 'No se pudo guardar el perfil');
-      }
+      Alert.alert(t('common.error'), t('editProfile.errorSavingProfile'));
     } finally {
       setSaving(false);
     }
@@ -244,19 +224,19 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
 
   const showPhotoOptions = () => {
     Alert.alert(
-      'Foto de perfil',
-      'Selecciona una opción',
+      t('editProfile.photoOptions'),
+      t('editProfile.photoOptionsMessage'),
       [
         {
-          text: 'Tomar foto',
+          text: t('editProfile.takePhoto'),
           onPress: takePhoto,
         },
         {
-          text: 'Elegir de galería',
+          text: t('editProfile.chooseFromGallery'),
           onPress: pickImage,
         },
         {
-          text: 'Cancelar',
+          text: t('common.cancel'),
           style: 'cancel',
         },
       ]
@@ -268,7 +248,7 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#6366F1" />
-          <Text style={styles.loadingText}>Cargando perfil...</Text>
+          <Text style={styles.loadingText}>{t('editProfile.loadingProfile')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -313,38 +293,38 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
               )}
             </TouchableOpacity>
 
-            <Text style={styles.photoHint}>Toca para cambiar foto</Text>
+            <Text style={styles.photoHint}>{t('editProfile.photoHint')}</Text>
           </Card>
 
           {/* Información del perfil */}
           <Card style={styles.infoSection}>
-            <Text style={styles.sectionTitle}>Información Personal</Text>
+            <Text style={styles.sectionTitle}>{t('editProfile.personalInfo')}</Text>
 
             <Input
-              label="Nombre *"
+              label={t('editProfile.nameLabel')}
               value={name}
               onChangeText={setName}
-              placeholder="Tu nombre completo"
+              placeholder={t('editProfile.namePlaceholder')}
               maxLength={50}
               editable={!saving}
             />
 
             <Input
-              label="Email"
+              label={t('editProfile.emailLabel')}
               value={email}
               editable={false}
-              placeholder="tu@email.com"
+              placeholder={t('editProfile.emailPlaceholder')}
               style={styles.emailInput}
             />
 
             <Text style={styles.emailHint}>
-              El email no se puede cambiar
+              {t('editProfile.emailHint')}
             </Text>
           </Card>
 
           {/* Botón guardar */}
           <Button
-            title={saving ? 'Guardando...' : 'Guardar cambios'}
+            title={saving ? t('editProfile.saving') : t('editProfile.saveButton')}
             onPress={handleSave}
             disabled={saving || uploading}
             fullWidth

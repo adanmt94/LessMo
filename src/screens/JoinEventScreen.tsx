@@ -22,6 +22,7 @@ import { Button, Input, Card } from '../components/lovable';
 import { getEventByInviteCode, addParticipant } from '../services/firebase';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 type JoinEventScreenNavigationProp = StackNavigationProp<RootStackParamList, 'JoinEvent'>;
 type JoinEventScreenRouteProp = RouteProp<RootStackParamList, 'JoinEvent'>;
@@ -30,10 +31,10 @@ interface Props {
   navigation: JoinEventScreenNavigationProp;
   route: JoinEventScreenRouteProp;
 }
-
 export const JoinEventScreen: React.FC<Props> = ({ navigation, route }) => {
   const { user } = useAuth();
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const styles = getStyles(theme);
   const { inviteCode: routeInviteCode } = route.params || {};
   
@@ -42,6 +43,9 @@ export const JoinEventScreen: React.FC<Props> = ({ navigation, route }) => {
   const [loading, setLoading] = useState(false);
   const [eventFound, setEventFound] = useState<any>(null);
   const [searching, setSearching] = useState(false);
+  const [existingParticipants, setExistingParticipants] = useState<any[]>([]);
+  const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
+  const [showCreateNew, setShowCreateNew] = useState(false);
 
   useEffect(() => {
     if (routeInviteCode) {
@@ -58,13 +62,20 @@ export const JoinEventScreen: React.FC<Props> = ({ navigation, route }) => {
       
       if (event) {
         setEventFound(event);
+        
+        // Cargar participantes existentes del evento
+        const { getEventParticipants } = await import('../services/firebase');
+        const participants = await getEventParticipants(event.id);
+        setExistingParticipants(participants);
       } else {
-        Alert.alert('Error', 'No se encontró ningún evento con este código');
+        Alert.alert(t('common.error'), t('joinEvent.notFoundMessage'));
         setEventFound(null);
+        setExistingParticipants([]);
       }
     } catch (error: any) {
-      Alert.alert('Error', 'No se pudo buscar el evento');
+      Alert.alert(t('common.error'), t('joinEvent.errorJoining'));
       setEventFound(null);
+      setExistingParticipants([]);
     } finally {
       setSearching(false);
     }
@@ -72,24 +83,80 @@ export const JoinEventScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const handleJoinEvent = async () => {
     if (!eventFound) {
-      Alert.alert('Error', 'Primero busca un evento válido');
+      Alert.alert(t('common.error'), t('joinEvent.codeRequired'));
       return;
     }
 
+    // Si seleccionó un participante existente
+    if (selectedParticipantId && !showCreateNew) {
+      const selectedParticipant = existingParticipants.find(p => p.id === selectedParticipantId);
+      if (!selectedParticipant) return;
+
+      setLoading(true);
+      try {
+        // Vincular el userId actual al participante seleccionado
+        const { updateDoc, doc } = await import('firebase/firestore');
+        const { db } = await import('../services/firebase');
+        
+        await updateDoc(doc(db, 'events', eventFound.id, 'participants', selectedParticipantId), {
+          userId: user?.uid,
+          email: user?.email || null
+        });
+
+        Alert.alert(
+          t('common.success'),
+          `Te has unido como "${selectedParticipant.name}"`,
+          [
+            {
+              text: 'OK',
+              onPress: () => navigation.replace('EventDetail', { eventId: eventFound.id }),
+            },
+          ]
+        );
+      } catch (error: any) {
+        console.error('❌ Error al vincular participante:', error);
+        Alert.alert(t('common.error'), t('joinEvent.errorJoining'));
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // Si va a crear un nuevo participante
     if (!participantName.trim()) {
-      Alert.alert('Error', 'Ingresa tu nombre para unirte');
+      Alert.alert(t('common.error'), 'Por favor ingresa tu nombre');
       return;
     }
 
     if (participantName.length > 50) {
-      Alert.alert('Error', 'El nombre debe tener máximo 50 caracteres');
+      Alert.alert(t('common.error'), t('createGroup.nameTooLong'));
       return;
     }
 
     setLoading(true);
 
     try {
-      // Agregar participante al evento
+      // VERIFICAR SI YA ES PARTICIPANTE (evitar duplicados)
+      if (user?.uid) {
+        const alreadyParticipant = existingParticipants.find(p => p.userId === user.uid);
+        
+        if (alreadyParticipant) {
+          Alert.alert(
+            t('joinEvent.alreadyJoined'),
+            `Ya estás unido a "${eventFound.name}" como "${alreadyParticipant.name}"`,
+            [
+              {
+                text: t('common.confirm'),
+                onPress: () => navigation.replace('EventDetail', { eventId: eventFound.id }),
+              },
+            ]
+          );
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Agregar nuevo participante al evento
       const participantId = await addParticipant(
         eventFound.id,
         participantName,
@@ -99,17 +166,21 @@ export const JoinEventScreen: React.FC<Props> = ({ navigation, route }) => {
       );
 
       Alert.alert(
-        '¡Te has unido!',
-        `Ahora eres parte del evento "${eventFound.name}"`,
+        t('common.success'),
+        t('joinEvent.joined'),
         [
           {
-            text: 'Ver Evento',
+            text: 'OK',
             onPress: () => navigation.replace('EventDetail', { eventId: eventFound.id }),
           },
         ]
       );
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'No se pudo unir al evento');
+      console.error('❌ Error al unirse al evento:', error);
+      Alert.alert(
+        'Error', 
+        error.message || 'No se pudo unir al evento. Verifica que tengas permisos.'
+      );
     } finally {
       setLoading(false);
     }
@@ -151,7 +222,7 @@ export const JoinEventScreen: React.FC<Props> = ({ navigation, route }) => {
             {searching && (
               <View style={styles.searchingContainer}>
                 <ActivityIndicator color="#6366F1" />
-                <Text style={styles.searchingText}>Buscando evento...</Text>
+                <Text style={styles.searchingText}>{t('joinEvent.searching')}</Text>
               </View>
             )}
           </Card>
@@ -161,7 +232,7 @@ export const JoinEventScreen: React.FC<Props> = ({ navigation, route }) => {
             <Card style={styles.eventFoundCard}>
               <View style={styles.eventFoundHeader}>
                 <Text style={styles.eventFoundIcon}>✓</Text>
-                <Text style={styles.eventFoundTitle}>Evento Encontrado</Text>
+                <Text style={styles.eventFoundTitle}>{t('joinEvent.found')}</Text>
               </View>
               
               <View style={styles.eventInfo}>
@@ -171,32 +242,91 @@ export const JoinEventScreen: React.FC<Props> = ({ navigation, route }) => {
                 )}
                 <View style={styles.eventStats}>
                   <View style={styles.eventStat}>
-                    <Text style={styles.eventStatLabel}>Presupuesto</Text>
+                    <Text style={styles.eventStatLabel}>{t('joinEvent.budget')}</Text>
                     <Text style={styles.eventStatValue}>
                       {eventFound.currency === 'EUR' ? '€' : '$'}{eventFound.initialBudget}
                     </Text>
                   </View>
                   <View style={styles.eventStat}>
-                    <Text style={styles.eventStatLabel}>Participantes</Text>
+                    <Text style={styles.eventStatLabel}>{t('joinEvent.participants')}</Text>
                     <Text style={styles.eventStatValue}>{eventFound.participantIds?.length || 0}</Text>
                   </View>
                 </View>
               </View>
 
-              {/* Nombre del participante */}
-              <Input
-                label="Tu Nombre"
-                value={participantName}
-                onChangeText={setParticipantName}
-                placeholder="¿Cómo te llamas?"
-                maxLength={50}
-              />
+              {/* Selección de participante existente */}
+              {existingParticipants.length > 0 && !showCreateNew && (
+                <View style={styles.participantSelection}>
+                  <Text style={styles.selectionTitle}>{t('joinEvent.selectParticipant')}</Text>
+                  {existingParticipants.map((participant) => (
+                    <TouchableOpacity
+                      key={participant.id}
+                      style={[
+                        styles.participantOption,
+                        selectedParticipantId === participant.id && styles.participantOptionSelected,
+                        participant.userId && styles.participantOptionDisabled
+                      ]}
+                      onPress={() => !participant.userId && setSelectedParticipantId(participant.id)}
+                      disabled={!!participant.userId}
+                    >
+                      <View style={styles.participantOptionContent}>
+                        <Text style={[
+                          styles.participantOptionName,
+                          selectedParticipantId === participant.id && styles.participantOptionNameSelected,
+                          participant.userId && styles.participantOptionNameDisabled
+                        ]}>
+                          {participant.name}
+                        </Text>
+                        {participant.userId && (
+                          <Text style={styles.participantLinked}>{t('joinEvent.alreadyLinked')}</Text>
+                        )}
+                      </View>
+                      {selectedParticipantId === participant.id && !participant.userId && (
+                        <Text style={styles.participantCheckmark}>✓</Text>
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                  <TouchableOpacity
+                    style={styles.createNewButton}
+                    onPress={() => {
+                      setShowCreateNew(true);
+                      setSelectedParticipantId(null);
+                    }}
+                  >
+                    <Text style={styles.createNewButtonText}>{t('joinEvent.createNew')}</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* Formulario para crear nuevo participante */}
+              {(showCreateNew || existingParticipants.length === 0) && (
+                <View style={styles.newParticipantForm}>
+                  {showCreateNew && (
+                    <TouchableOpacity
+                      style={styles.backToListButton}
+                      onPress={() => {
+                        setShowCreateNew(false);
+                        setParticipantName('');
+                      }}
+                    >
+                      <Text style={styles.backToListButtonText}>{t('joinEvent.backToList')}</Text>
+                    </TouchableOpacity>
+                  )}
+                  <Input
+                    label="Tu Nombre"
+                    value={participantName}
+                    onChangeText={setParticipantName}
+                    placeholder="¿Cómo te llamas?"
+                    maxLength={50}
+                  />
+                </View>
+              )}
 
               <Button
-                title="Unirse al Evento"
+                title={selectedParticipantId && !showCreateNew ? t('joinEvent.confirmIdentity') : t('joinEvent.joinButton')}
                 onPress={handleJoinEvent}
                 loading={loading}
-                disabled={loading || !participantName.trim()}
+                disabled={loading || (!selectedParticipantId && !participantName.trim())}
               />
             </Card>
           )}
@@ -205,9 +335,9 @@ export const JoinEventScreen: React.FC<Props> = ({ navigation, route }) => {
           {inviteCode.length === 6 && !eventFound && !searching && (
             <Card style={styles.notFoundCard}>
               <Text style={styles.notFoundIcon}>❌</Text>
-              <Text style={styles.notFoundTitle}>Evento no encontrado</Text>
+              <Text style={styles.notFoundTitle}>{t('joinEvent.notFound')}</Text>
               <Text style={styles.notFoundText}>
-                Verifica que el código sea correcto
+                {t('joinEvent.notFoundMessage')}
               </Text>
             </Card>
           )}
@@ -265,7 +395,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontSize: 16,
     color: theme.colors.textSecondary,
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
     lineHeight: 24,
   },
   section: {
@@ -357,5 +487,84 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontSize: 14,
     color: theme.colors.textSecondary,
     textAlign: 'center',
+  },
+  participantSelection: {
+    marginBottom: 16,
+  },
+  selectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.text,
+    marginBottom: 12,
+  },
+  participantOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    backgroundColor: theme.isDark ? theme.colors.surface : '#F9FAFB',
+    borderRadius: 12,
+    marginBottom: 8,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  participantOptionSelected: {
+    backgroundColor: theme.isDark ? theme.colors.primary + '20' : theme.colors.primary + '10',
+    borderColor: theme.colors.primary,
+  },
+  participantOptionDisabled: {
+    opacity: 0.5,
+    backgroundColor: theme.isDark ? theme.colors.surface : '#E5E7EB',
+  },
+  participantOptionContent: {
+    flex: 1,
+  },
+  participantOptionName: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: theme.colors.text,
+  },
+  participantOptionNameSelected: {
+    color: theme.colors.primary,
+    fontWeight: '700',
+  },
+  participantOptionNameDisabled: {
+    color: theme.colors.textSecondary,
+  },
+  participantLinked: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    marginTop: 4,
+  },
+  participantCheckmark: {
+    fontSize: 20,
+    color: theme.colors.primary,
+    fontWeight: '700',
+  },
+  createNewButton: {
+    padding: 16,
+    backgroundColor: 'transparent',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: theme.colors.border,
+    borderStyle: 'dashed',
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  createNewButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: theme.colors.primary,
+  },
+  newParticipantForm: {
+    marginBottom: 16,
+  },
+  backToListButton: {
+    marginBottom: 12,
+  },
+  backToListButtonText: {
+    fontSize: 14,
+    color: theme.colors.primary,
+    fontWeight: '500',
   },
 });

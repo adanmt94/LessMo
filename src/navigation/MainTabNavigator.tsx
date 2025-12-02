@@ -11,11 +11,13 @@ import { ActivityScreen } from '../screens/ActivityScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { EventsIcon, GroupsIcon, ActivityIcon, SettingsIcon } from '../components/TabIcons';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const Tab = createBottomTabNavigator<TabParamList>();
 
 export const MainTabNavigator: React.FC = () => {
   const { theme } = useTheme();
+  const { t } = useLanguage();
   
   return (
     <Tab.Navigator>
@@ -24,7 +26,7 @@ export const MainTabNavigator: React.FC = () => {
         component={EventsScreen}
         options={{
           headerShown: false,
-          tabBarLabel: 'Eventos',
+          tabBarLabel: t('tabs.events'),
           tabBarIcon: ({ color, focused }) => (
             <EventsIcon color={color} focused={focused} />
           ),
@@ -35,7 +37,7 @@ export const MainTabNavigator: React.FC = () => {
         component={GroupsScreen}
         options={{
           headerShown: false,
-          tabBarLabel: 'Grupos',
+          tabBarLabel: t('tabs.groups'),
           tabBarIcon: ({ color, focused }) => (
             <GroupsIcon color={color} focused={focused} />
           ),
@@ -46,7 +48,7 @@ export const MainTabNavigator: React.FC = () => {
         component={ActivityScreen}
         options={{
           headerShown: false,
-          tabBarLabel: 'Actividad',
+          tabBarLabel: t('tabs.activity'),
           tabBarIcon: ({ color, focused }) => (
             <ActivityIcon color={color} focused={focused} />
           ),
@@ -57,7 +59,7 @@ export const MainTabNavigator: React.FC = () => {
         component={SettingsScreen}
         options={{
           headerShown: false,
-          tabBarLabel: 'Ajustes',
+          tabBarLabel: t('tabs.settings'),
           tabBarIcon: ({ color, focused }) => (
             <SettingsIcon color={color} focused={focused} />
           ),

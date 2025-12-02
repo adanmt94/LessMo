@@ -22,6 +22,7 @@ import { Button, Input, Card } from '../components/lovable';
 import { createEvent, addParticipant, getEvent, getEventParticipants } from '../services/firebase';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 type CreateEventScreenNavigationProp = StackNavigationProp<RootStackParamList, 'CreateEvent'>;
 type CreateEventScreenRouteProp = RouteProp<RootStackParamList, 'CreateEvent'>;
@@ -52,6 +53,7 @@ const CURRENCIES: { value: Currency; label: string }[] = [
 export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
   const { user } = useAuth();
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const styles = getStyles(theme);
   const { eventId, mode, groupId } = route.params || {};
   const isEditMode = mode === 'edit' && eventId;
@@ -101,7 +103,7 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
         }
       }
     } catch (error: any) {
-      Alert.alert('Error', 'No se pudieron cargar los datos del evento');
+      Alert.alert(t('common.error'), t('createEvent.errorLoadingEvent'));
       navigation.goBack();
     } finally {
       setInitialLoading(false);
@@ -110,22 +112,52 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const addParticipantField = () => {
     if (participants.length >= VALIDATION.MAX_PARTICIPANTS) {
-      Alert.alert('Límite alcanzado', `Máximo ${VALIDATION.MAX_PARTICIPANTS} participantes`);
+      Alert.alert(t('createEvent.maxParticipantsReached'), t('createEvent.maxParticipantsMessage', { max: VALIDATION.MAX_PARTICIPANTS }));
       return;
     }
     
     setParticipants([
       ...participants,
-      { id: Date.now().toString(), name: '', budget: '' },
+      { id: `temp-${Date.now()}`, name: '', budget: '' },
     ]);
   };
 
-  const removeParticipantField = (id: string) => {
+  const removeParticipantField = async (id: string) => {
     if (participants.length === 1) {
-      Alert.alert('Error', 'Debe haber al menos un participante');
+      Alert.alert(t('common.error'), t('createEvent.minParticipantError'));
       return;
     }
-    setParticipants(participants.filter((p) => p.id !== id));
+    
+    // Si estamos en modo edición y el ID no es temporal (Date.now()), eliminar de Firebase
+    if (isEditMode && !id.startsWith('temp-')) {
+      Alert.alert(
+        t('common.deleteConfirmTitle'),
+        t('createEvent.deleteParticipantConfirm'),
+        [
+          {
+            text: t('common.cancel'),
+            style: 'cancel'
+          },
+          {
+            text: t('common.delete'),
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                const { deleteParticipant } = await import('../services/firebase');
+                await deleteParticipant(id);
+                setParticipants(participants.filter((p) => p.id !== id));
+                Alert.alert(t('common.success'), t('createEvent.participantDeleted'));
+              } catch (error: any) {
+                Alert.alert(t('common.error'), error.message);
+              }
+            }
+          }
+        ]
+      );
+    } else {
+      // Si es un participante nuevo (aún no guardado), solo quitarlo del estado
+      setParticipants(participants.filter((p) => p.id !== id));
+    }
   };
 
   const updateParticipant = (id: string, field: keyof ParticipantInput, value: string) => {
@@ -139,12 +171,12 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
     
     // Validaciones
     if (!eventName.trim()) {
-      Alert.alert('Error', 'El nombre del evento es obligatorio');
+      Alert.alert(t('common.error'), t('createEvent.nameRequired'));
       return;
     }
 
     if (eventName.length > VALIDATION.MAX_EVENT_NAME_LENGTH) {
-      Alert.alert('Error', `El nombre debe tener máximo ${VALIDATION.MAX_EVENT_NAME_LENGTH} caracteres`);
+      Alert.alert(t('common.error'), t('createEvent.nameTooLong', { max: VALIDATION.MAX_EVENT_NAME_LENGTH }));
       return;
     }
 
@@ -154,7 +186,7 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
     );
 
     if (validParticipants.length === 0) {
-      Alert.alert('Error', 'Debes agregar al menos un participante');
+      Alert.alert(t('common.error'), t('createEvent.noParticipants'));
       return;
     }
 
@@ -164,8 +196,8 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
         const budget = parseFloat(p.budget);
         if (isNaN(budget) || budget < VALIDATION.MIN_AMOUNT || budget > VALIDATION.MAX_AMOUNT) {
           Alert.alert(
-            'Error',
-            `El presupuesto debe estar entre ${VALIDATION.MIN_AMOUNT} y ${VALIDATION.MAX_AMOUNT}`
+            t('common.error'),
+            t('createEvent.budgetRange', { min: VALIDATION.MIN_AMOUNT, max: VALIDATION.MAX_AMOUNT })
           );
           return;
         }
@@ -227,7 +259,7 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
         console.log('✅ Participante agregado con ID:', participantId);
       }
 
-      Alert.alert('¡Evento creado!', 'El evento se ha creado correctamente', [
+      Alert.alert(t('common.success'), t('createEvent.eventCreated'), [
         {
           text: 'OK',
           onPress: () => {
@@ -237,7 +269,7 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
         },
       ]);
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'No se pudo crear el evento');
+      Alert.alert(t('common.error'), error.message || t('createEvent.errorCreating'));
     } finally {
       setLoading(false);
     }
@@ -247,7 +279,7 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.surface }]}>
         <View style={styles.loadingContainer}>
-          <Text style={{ color: theme.colors.text }}>Cargando datos del evento...</Text>
+          <Text style={{ color: theme.colors.text }}>{t('createEvent.loading')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -267,15 +299,15 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
           nestedScrollEnabled={true}
         >
           <Text style={[styles.title, { color: theme.colors.text }]}>
-            {isEditMode ? 'Editar Evento' : 'Crear Nuevo Evento'}
+            {isEditMode ? t('createEvent.editTitle') : t('createEvent.title')}
           </Text>
 
           <Card style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Información del evento</Text>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('createEvent.eventInfo')}</Text>
 
             <Input
-              label="Nombre del evento *"
-              placeholder="Ej: Viaje a Barcelona"
+              label={t('createEvent.eventNameLabel')}
+              placeholder={t('createEvent.eventNamePlaceholder')}
               value={eventName}
               onChangeText={setEventName}
               maxLength={VALIDATION.MAX_EVENT_NAME_LENGTH}
@@ -285,8 +317,8 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
             />
 
             <Input
-              label="Descripción (opcional)"
-              placeholder="Describe el evento..."
+              label={t('createEvent.descriptionLabel')}
+              placeholder={t('createEvent.descriptionPlaceholder')}
               value={description}
               onChangeText={setDescription}
               multiline
@@ -298,15 +330,15 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
             />
 
             <Input
-              label="Presupuesto grupal total (opcional)"
-              placeholder="0.00"
+              label={t('createEvent.groupBudgetLabel')}
+              placeholder={t('createEvent.groupBudgetPlaceholder')}
               value={groupBudget}
               onChangeText={setGroupBudget}
               keyboardType="decimal-pad"
               editable={!isEditMode}
             />
 
-            <Text style={styles.label}>Moneda *</Text>
+            <Text style={styles.label}>{t('createEvent.currencyLabel')}</Text>
             <TouchableOpacity
               style={styles.currencySelector}
               onPress={() => !isEditMode && setShowCurrencyPicker(!showCurrencyPicker)}
@@ -345,9 +377,9 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
 
           <Card style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Participantes</Text>
+              <Text style={styles.sectionTitle}>{t('createEvent.participantsTitle')}</Text>
               <TouchableOpacity onPress={addParticipantField}>
-                <Text style={styles.addButton}>+ Agregar</Text>
+                <Text style={styles.addButton}>{t('createEvent.addParticipant')}</Text>
               </TouchableOpacity>
             </View>
 
@@ -355,7 +387,7 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
               <View key={participant.id} style={styles.participantItem}>
                 <View style={styles.participantHeader}>
                   <Text style={styles.participantNumber}>
-                    Participante {index + 1}
+                    {t('event.participantName')} {index + 1}
                   </Text>
                   {participants.length > 1 && (
                     <TouchableOpacity
@@ -367,8 +399,8 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
                 </View>
 
                 <Input
-                  label="Nombre *"
-                  placeholder="Nombre del participante"
+                  label={`${t('event.participantName')} *`}
+                  placeholder={t('createEvent.participantNamePlaceholder')}
                   value={participant.name}
                   onChangeText={(text) =>
                     updateParticipant(participant.id, 'name', text)
@@ -379,8 +411,8 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
                 />
 
                 <Input
-                  label="Presupuesto individual (opcional)"
-                  placeholder="0.00"
+                  label={t('createEvent.participantBudgetPlaceholder')}
+                  placeholder={t('createEvent.groupBudgetPlaceholder')}
                   value={participant.budget}
                   onChangeText={(text) =>
                     updateParticipant(participant.id, 'budget', text)
@@ -406,7 +438,7 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
           </Card>
 
           <Button
-            title={isEditMode ? "Guardar cambios" : "Crear evento"}
+            title={isEditMode ? t('createEvent.updateButton') : t('createEvent.createButton')}
             onPress={handleCreateEvent}
             loading={loading}
             fullWidth
@@ -454,18 +486,18 @@ const getStyles = (theme: any) => StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 24,
+    padding: 20,
     paddingTop: 8, // Reduce el espacio superior
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
     color: theme.colors.text,
-    marginBottom: 20,
+    marginBottom: 16,
     marginTop: 0, // Sin margen superior
   },
   section: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -533,8 +565,8 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontSize: 16,
   },
   participantItem: {
-    marginBottom: 24,
-    paddingBottom: 24,
+    marginBottom: 20,
+    paddingBottom: 20,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },

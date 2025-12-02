@@ -70,10 +70,12 @@ describe('useExpenses Hook', () => {
       
       const byCategory = result.current.getExpensesByCategory();
       
-      expect(byCategory).toHaveProperty('food');
-      expect(byCategory).toHaveProperty('transport');
-      expect(byCategory.food).toBe(50);
-      expect(byCategory.transport).toBe(20);
+      expect(byCategory).toBeInstanceOf(Array);
+      expect(byCategory.length).toBeGreaterThan(0);
+      const foodCategory = byCategory.find(c => c.category === 'food');
+      const transportCategory = byCategory.find(c => c.category === 'transport');
+      expect(foodCategory?.total).toBe(50);
+      expect(transportCategory?.total).toBe(20);
     });
 
     it('should handle empty expenses array', () => {
@@ -145,69 +147,79 @@ describe('useExpenses Hook', () => {
 
   describe('addExpense', () => {
     it('should add expense successfully', async () => {
-      const newExpense = {
-        description: 'Café',
-        amount: 10,
-        paidBy: 'user-1',
-        splitBetween: ['user-1', 'user-2'],
-        category: 'food' as const,
-        date: new Date(),
-      };
+      const paidBy = 'user-1';
+      const amount = 10;
+      const description = 'Café';
+      const category = 'food' as const;
+      const beneficiaries = ['user-1', 'user-2'];
 
-      (firebase.addExpense as jest.Mock).mockResolvedValue({
-        id: 'expense-3',
-        ...newExpense,
-      });
+      (firebase.createExpense as jest.Mock).mockResolvedValue('expense-3');
 
       const { result } = renderHook(() => useExpenses(mockEventId));
 
       await act(async () => {
-        await result.current.addExpense(newExpense);
+        await result.current.addExpense(paidBy, amount, description, category, beneficiaries);
       });
 
-      expect(firebase.addExpense).toHaveBeenCalledWith(
+      expect(firebase.createExpense).toHaveBeenCalledWith(
         mockEventId,
-        expect.objectContaining(newExpense)
+        paidBy,
+        amount,
+        description,
+        category,
+        beneficiaries,
+        'equal',
+        undefined,
+        undefined
       );
     });
 
-    it('should validate expense data', async () => {
-      const invalidExpense = {
-        description: '',
-        amount: -10,
-        paidBy: '',
-        splitBetween: [],
-        category: 'food' as const,
-        date: new Date(),
-      };
+    it('should handle firebase errors', async () => {
+      (firebase.createExpense as jest.Mock).mockRejectedValue(new Error('Firebase error'));
 
       const { result } = renderHook(() => useExpenses(mockEventId));
 
-      await expect(
-        result.current.addExpense(invalidExpense)
-      ).rejects.toThrow();
+      const success = await result.current.addExpense(
+        'user-1',
+        10,
+        'Test',
+        'food',
+        ['user-1']
+      );
+      
+      expect(success).toBe(false);
+      expect(result.current.error).toBeTruthy();
     });
   });
 
-  describe('updateExpense', () => {
+  describe('editExpense', () => {
     it('should update expense successfully', async () => {
-      const updates = {
-        description: 'Cena actualizada',
-        amount: 60,
-      };
+      const expenseId = 'expense-1';
+      const paidBy = 'user-1';
+      const amount = 60;
+      const description = 'Cena actualizada';
+      const category = 'food' as const;
+      const beneficiaries = ['user-1', 'user-2'];
 
       (firebase.updateExpense as jest.Mock).mockResolvedValue(undefined);
 
       const { result } = renderHook(() => useExpenses(mockEventId));
 
       await act(async () => {
-        await result.current.updateExpense('expense-1', updates);
+        await result.current.editExpense(expenseId, paidBy, amount, description, category, beneficiaries);
       });
 
       expect(firebase.updateExpense).toHaveBeenCalledWith(
+        expenseId,
         mockEventId,
-        'expense-1',
-        updates
+        paidBy,
+        amount,
+        description,
+        category,
+        beneficiaries,
+        'equal',
+        undefined,
+        undefined
       );
     });
   });

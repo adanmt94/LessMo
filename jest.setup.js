@@ -103,7 +103,7 @@ jest.mock('react-native-chart-kit', () => ({
 // Mock i18n
 jest.mock('./src/i18n/config', () => ({
   default: {
-    t: (key: string) => key,
+    t: (key) => key,
     changeLanguage: jest.fn(() => Promise.resolve()),
     language: 'es',
   },
@@ -142,7 +142,7 @@ global.fetch = jest.fn(() =>
     json: () => Promise.resolve({}),
     blob: () => Promise.resolve(new Blob()),
   })
-) as jest.Mock;
+);
 
 // Suppress console errors in tests
 global.console = {

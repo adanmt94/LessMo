@@ -6,14 +6,18 @@ import { useState, useEffect, useRef } from 'react';
 import * as Notifications from 'expo-notifications';
 import { Alert } from 'react-native';
 import {
-  requestNotificationPermissions,
-  areNotificationsEnabled,
-  setNotificationsEnabled,
-  scheduleExpenseReminder,
-  scheduleSettlementReminder,
-  scheduleDailyDebtReminder,
+  registerForPushNotificationsAsync,
+  notifyNewExpense as sendNewExpenseNotification,
+  notifyDebt,
+  notifyEventInvitation,
+  notifyNewMessage,
+  notifySettlementReminder,
+  notifyBudgetExceeded,
+  notifyEventEnding,
+  clearBadge,
   cancelAllNotifications,
-} from '../services/notificationService';
+} from '../services/notifications';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const useNotifications = () => {
   const [notificationsEnabled, setNotificationsEnabledState] = useState(false);
@@ -24,17 +28,23 @@ export const useNotifications = () => {
   useEffect(() => {
     // Cargar estado inicial
     loadNotificationsState();
+    
+    // Registrar para notificaciones push
+    registerForPushNotifications();
 
     // Listener para notificaciones recibidas
     notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
-      console.log('Notificación recibida:', notification);
+      console.log('📬 Notificación recibida:', notification);
     });
 
     // Listener para cuando el usuario interactúa con una notificación
     responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-      console.log('Usuario interactuó con notificación:', response);
+      console.log('👆 Usuario interactuó con notificación:', response);
       handleNotificationResponse(response);
     });
+
+    // Limpiar badge al abrir la app
+    clearBadge();
 
     return () => {
       if (notificationListener.current) {
@@ -48,22 +58,55 @@ export const useNotifications = () => {
 
   const loadNotificationsState = async () => {
     try {
-      const enabled = await areNotificationsEnabled();
-      setNotificationsEnabledState(enabled);
+      const enabled = await AsyncStorage.getItem('notifications_enabled');
+      setNotificationsEnabledState(enabled === 'true');
     } catch (error) {
-      console.error('Error cargando estado de notificaciones:', error);
+      console.error('❌ Error cargando estado de notificaciones:', error);
+    }
+  };
+
+  const registerForPushNotifications = async () => {
+    try {
+      const token = await registerForPushNotificationsAsync();
+      if (token) {
+        console.log('✅ Token de notificación registrado:', token);
+        // Aquí podrías guardar el token en Firestore asociado al usuario
+      }
+    } catch (error) {
+      console.error('❌ Error registrando notificaciones:', error);
     }
   };
 
   const handleNotificationResponse = (response: Notifications.NotificationResponse) => {
     const data = response.notification.request.content.data;
     
-    if (data.type === 'expense') {
-      // Navegar a la pantalla del evento
-      console.log('Navegar a evento:', data.eventName);
-    } else if (data.type === 'settlement') {
-      // Navegar a la pantalla de liquidación
-      console.log('Navegar a liquidación:', data.eventName);
+    switch (data.type) {
+      case 'new_expense':
+        console.log('📱 Navegar a evento:', data.eventName);
+        // TODO: Implementar navegación
+        break;
+      case 'debt':
+        console.log('💳 Navegar a liquidaciones:', data.eventName);
+        // TODO: Implementar navegación
+        break;
+      case 'event_invitation':
+        console.log('🎉 Navegar a evento:', data.eventName);
+        // TODO: Implementar navegación
+        break;
+      case 'new_message':
+        console.log('💬 Navegar a chat:', data.chatName);
+        // TODO: Implementar navegación
+        break;
+      case 'settlement_reminder':
+        console.log('⏰ Navegar a liquidación:', data.eventName);
+        // TODO: Implementar navegación
+        break;
+      case 'budget_exceeded':
+        console.log('⚠️ Navegar a resumen:', data.eventName);
+        // TODO: Implementar navegación
+        break;
+      default:
+        console.log('ℹ️ Tipo de notificación desconocido:', data.type);
     }
   };
 
@@ -72,9 +115,9 @@ export const useNotifications = () => {
       setIsLoading(true);
 
       if (enabled) {
-        const permissionGranted = await requestNotificationPermissions();
+        const token = await registerForPushNotificationsAsync();
         
-        if (!permissionGranted) {
+        if (!token) {
           Alert.alert(
             'Permisos requeridos',
             'Para recibir notificaciones, debes habilitar los permisos en la configuración de tu dispositivo.',
@@ -87,11 +130,11 @@ export const useNotifications = () => {
         await cancelAllNotifications();
       }
 
-      await setNotificationsEnabled(enabled);
+      await AsyncStorage.setItem('notifications_enabled', enabled.toString());
       setNotificationsEnabledState(enabled);
       return true;
     } catch (error) {
-      console.error('Error cambiando notificaciones:', error);
+      console.error('❌ Error cambiando notificaciones:', error);
       Alert.alert('Error', 'No se pudo cambiar la configuración de notificaciones');
       return false;
     } finally {
@@ -104,36 +147,97 @@ export const useNotifications = () => {
     amount: number,
     currency: string
   ): Promise<void> => {
+    if (!notificationsEnabled) return;
+    
     try {
-      await scheduleExpenseReminder(eventName, amount, currency);
+      await sendNewExpenseNotification(eventName, amount, currency);
     } catch (error) {
-      console.error('Error enviando notificación de gasto:', error);
+      console.error('❌ Error enviando notificación de gasto:', error);
+    }
+  };
+
+  const notifyDebtToUser = async (
+    debtorName: string,
+    amount: number,
+    currency: string,
+    eventName: string
+  ): Promise<void> => {
+    if (!notificationsEnabled) return;
+    
+    try {
+      await notifyDebt(debtorName, amount, currency, eventName);
+    } catch (error) {
+      console.error('❌ Error enviando notificación de deuda:', error);
+    }
+  };
+
+  const notifyInvitation = async (
+    eventName: string,
+    inviterName: string
+  ): Promise<void> => {
+    if (!notificationsEnabled) return;
+    
+    try {
+      await notifyEventInvitation(eventName, inviterName);
+    } catch (error) {
+      console.error('❌ Error enviando notificación de invitación:', error);
+    }
+  };
+
+  const notifyMessage = async (
+    senderName: string,
+    message: string,
+    chatType: 'event' | 'group',
+    chatName: string
+  ): Promise<void> => {
+    if (!notificationsEnabled) return;
+    
+    try {
+      await notifyNewMessage(senderName, message, chatType, chatName);
+    } catch (error) {
+      console.error('❌ Error enviando notificación de mensaje:', error);
     }
   };
 
   const notifySettlement = async (
     eventName: string,
-    owedBy: string,
-    owedTo: string,
     amount: number,
     currency: string
   ): Promise<void> => {
+    if (!notificationsEnabled) return;
+    
     try {
-      await scheduleSettlementReminder(eventName, owedBy, owedTo, amount, currency);
+      await notifySettlementReminder(eventName, amount, currency);
     } catch (error) {
-      console.error('Error enviando notificación de liquidación:', error);
+      console.error('❌ Error enviando notificación de liquidación:', error);
     }
   };
 
-  const notifyDailyDebts = async (
-    totalDebt: number,
-    currency: string,
-    eventsWithDebt: number
+  const notifyBudget = async (
+    eventName: string,
+    budget: number,
+    spent: number,
+    currency: string
   ): Promise<void> => {
+    if (!notificationsEnabled) return;
+    
     try {
-      await scheduleDailyDebtReminder(totalDebt, currency, eventsWithDebt);
+      await notifyBudgetExceeded(eventName, budget, spent, currency);
     } catch (error) {
-      console.error('Error programando recordatorio diario:', error);
+      console.error('❌ Error enviando notificación de presupuesto:', error);
+    }
+  };
+
+  const notifyEventEnd = async (
+    eventName: string,
+    daysLeft: number
+  ): Promise<void> => {
+    if (!notificationsEnabled) return;
+    
+    try {
+      await notifyEventEnding(eventName, daysLeft);
+    } catch (error) {
+      console.error('❌ Error enviando notificación de evento:', error);
     }
   };
 
@@ -142,7 +246,11 @@ export const useNotifications = () => {
     isLoading,
     toggleNotifications,
     notifyNewExpense,
+    notifyDebtToUser,
+    notifyInvitation,
+    notifyMessage,
     notifySettlement,
-    notifyDailyDebts,
+    notifyBudget,
+    notifyEventEnd,
   };
 };

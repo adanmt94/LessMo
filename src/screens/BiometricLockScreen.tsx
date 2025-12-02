@@ -7,6 +7,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 import { Button } from '../components/lovable';
 import { useBiometricAuth } from '../hooks/useBiometricAuth';
 
@@ -16,6 +17,7 @@ interface Props {
 
 export const BiometricLockScreen: React.FC<Props> = ({ onUnlock }) => {
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const { authenticateWithBiometric, biometricType } = useBiometricAuth();
   const [attempts, setAttempts] = useState(0);
   const styles = getStyles(theme);
@@ -36,11 +38,11 @@ export const BiometricLockScreen: React.FC<Props> = ({ onUnlock }) => {
         
         if (attempts >= 2) {
           Alert.alert(
-            'Demasiados intentos',
-            'Por favor, intenta más tarde o inicia sesión nuevamente',
+            t('biometricLock.tooManyAttempts'),
+            t('biometricLock.tooManyAttemptsMessage'),
             [
-              { text: 'Reintentar', onPress: handleAuthenticate },
-              { text: 'Cerrar app', style: 'cancel' }
+              { text: t('biometricLock.retry'), onPress: handleAuthenticate },
+              { text: t('biometricLock.closeApp'), style: 'cancel' }
             ]
           );
         }
@@ -51,21 +53,21 @@ export const BiometricLockScreen: React.FC<Props> = ({ onUnlock }) => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={styles.content}>
         <Text style={[styles.icon, { fontSize: 80 }]}>🔐</Text>
         
         <Text style={[styles.title, { color: theme.colors.text }]}>
-          App Bloqueada
+          {t('biometricLock.title')}
         </Text>
         
         <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
-          Usa {biometricType} para desbloquear
+          {t('biometricLock.subtitle', { biometricType })}
         </Text>
 
         <View style={styles.buttonContainer}>
           <Button
-            title={`Desbloquear con ${biometricType}`}
+            title={t('biometricLock.unlockButton', { biometricType })}
             onPress={handleAuthenticate}
             variant="primary"
             size="large"
@@ -74,7 +76,7 @@ export const BiometricLockScreen: React.FC<Props> = ({ onUnlock }) => {
 
         {attempts > 0 && (
           <Text style={[styles.attemptsText, { color: theme.colors.error }]}>
-            Intentos fallidos: {attempts}
+            {t('biometricLock.failedAttempts', { count: attempts })}
           </Text>
         )}
       </View>
@@ -103,7 +105,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    marginBottom: 48,
+    marginBottom: 24,
     textAlign: 'center',
   },
   buttonContainer: {

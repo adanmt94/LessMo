@@ -65,19 +65,19 @@ export const Button: React.FC<ButtonProps> = ({
     };
 
     const sizes = {
-      small: { paddingHorizontal: 16, paddingVertical: 8 },
-      medium: { paddingHorizontal: 24, paddingVertical: 12 },
-      large: { paddingHorizontal: 32, paddingVertical: 16 },
+      small: { paddingHorizontal: 18, paddingVertical: 10 },
+      medium: { paddingHorizontal: 28, paddingVertical: 14 },
+      large: { paddingHorizontal: 36, paddingVertical: 18 },
     };
 
     const variants = {
       primary: {
         backgroundColor: theme.colors.primary,
         shadowColor: theme.colors.primary,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 4,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.4,
+        shadowRadius: 12,
+        elevation: 8,
       },
       secondary: {
         backgroundColor: theme.colors.success,
@@ -132,7 +132,7 @@ export const Button: React.FC<ButtonProps> = ({
       ) : (
         <Text
           style={[
-            { fontWeight: '600', color: getTextColor() },
+            { fontWeight: '700', fontSize: 17, letterSpacing: 0.3, color: getTextColor() },
             textStyle,
           ]}
         >

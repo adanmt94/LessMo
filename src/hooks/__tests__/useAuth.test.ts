@@ -65,7 +65,7 @@ describe('useAuth Hook', () => {
       const { result } = renderHook(() => useAuth());
 
       await act(async () => {
-        const user = await result.current.signUp(
+        const user = await result.current.register(
           'newuser@example.com',
           'password123',
           'New User'
@@ -87,7 +87,7 @@ describe('useAuth Hook', () => {
       const { result } = renderHook(() => useAuth());
 
       await expect(
-        result.current.signUp('test@example.com', 'password123', 'Test User')
+        result.current.register('test@example.com', 'password123', 'Test User')
       ).rejects.toThrow('Email already in use');
     });
 
@@ -95,7 +95,7 @@ describe('useAuth Hook', () => {
       const { result } = renderHook(() => useAuth());
 
       await expect(
-        result.current.signUp('test@example.com', '123', 'Test User')
+        result.current.register('test@example.com', '123', 'Test User')
       ).rejects.toThrow();
     });
   });

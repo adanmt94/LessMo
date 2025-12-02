@@ -20,6 +20,7 @@ import { Button, Input } from '../components/lovable';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 type RegisterScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Register'>;
 
@@ -35,22 +36,23 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
   const { register, loading, error } = useAuth();
   const { signInWithGoogle, loading: googleLoading, error: googleError } = useGoogleAuth();
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const styles = getStyles(theme);
 
   const handleRegister = async () => {
     // Validaciones
     if (!name || !email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Por favor completa todos los campos');
+      Alert.alert(t('common.error'), t('auth.allFieldsRequired'));
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Las contraseñas no coinciden');
+      Alert.alert(t('common.error'), t('auth.passwordMismatch'));
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres');
+      Alert.alert(t('common.error'), t('auth.weakPassword'));
       return;
     }
 
@@ -58,29 +60,29 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
     if (success) {
       // El usuario ya está autenticado automáticamente, no necesita navegar
       Alert.alert(
-        '¡Registro exitoso!',
-        'Tu cuenta ha sido creada correctamente'
+        t('common.success'),
+        t('auth.registerSuccess')
       );
     } else {
-      Alert.alert('Error', error || 'No se pudo crear la cuenta');
+      Alert.alert(t('common.error'), error || t('auth.registerError'));
     }
   };
 
   const handleGoogleSignUp = async () => {
     await signInWithGoogle();
     if (googleError) {
-      Alert.alert('Error', googleError);
+      Alert.alert(t('common.error'), googleError);
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['top']} style={styles.container}>
       <View style={styles.headerBar}>
         <TouchableOpacity 
           onPress={() => navigation.goBack()}
           style={styles.backButton}
         >
-          <Text style={styles.backButtonText}>← Atrás</Text>
+          <Text style={styles.backButtonText}>← {t('common.back')}</Text>
         </TouchableOpacity>
       </View>
       
@@ -106,8 +108,8 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
 
           <View style={styles.form}>
             <Input
-              label="Nombre completo"
-              placeholder="Juan Pérez"
+              label={t('auth.nameLabel')}
+              placeholder={t('auth.namePlaceholder')}
               value={name}
               onChangeText={setName}
               autoCapitalize="words"
@@ -116,8 +118,8 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
             />
 
             <Input
-              label="Email"
-              placeholder="tu@email.com"
+              label={t('auth.emailLabel')}
+              placeholder={t('auth.emailPlaceholder')}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -127,8 +129,8 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
             />
 
             <Input
-              label="Contraseña"
-              placeholder="Mínimo 6 caracteres"
+              label={t('auth.passwordLabel')}
+              placeholder={t('auth.weakPassword')}
               value={password}
               onChangeText={setPassword}
               secureTextEntry
@@ -138,8 +140,8 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
             />
 
             <Input
-              label="Confirmar contraseña"
-              placeholder="Repite tu contraseña"
+              label={t('auth.confirmPassword')}
+              placeholder={t('auth.confirmPassword')}
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               secureTextEntry
@@ -149,7 +151,7 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
             />
 
             <Button
-              title="Crear cuenta"
+              title={t('auth.register')}
               onPress={handleRegister}
               loading={loading}
               fullWidth
@@ -158,7 +160,7 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
 
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>o continúa con</Text>
+              <Text style={styles.dividerText}>{t('auth.orContinueWith')}</Text>
               <View style={styles.dividerLine} />
             </View>
 
@@ -168,7 +170,7 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
               disabled={googleLoading}
             >
               <Text style={styles.googleIcon}>G</Text>
-              <Text style={styles.socialButtonText}>Registrarse con Google</Text>
+              <Text style={styles.socialButtonText}>{t('auth.signUpWithGoogle')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -176,8 +178,8 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
               onPress={() => navigation.navigate('Login')}
             >
               <Text style={styles.loginText}>
-                ¿Ya tienes cuenta?{' '}
-                <Text style={styles.loginTextBold}>Inicia sesión</Text>
+                {t('auth.alreadyHaveAccount')}{' '}
+                <Text style={styles.loginTextBold}>{t('auth.loginButton')}</Text>
               </Text>
             </TouchableOpacity>
           </View>
@@ -216,7 +218,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 48,
+    marginBottom: 24,
   },
   logoContainer: {
     width: 100,
@@ -246,7 +248,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontSize: 15,
     color: theme.colors.textSecondary,
     textAlign: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: 16,
     fontWeight: '500',
   },
   form: {

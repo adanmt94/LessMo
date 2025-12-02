@@ -13,7 +13,8 @@ import {
   User as FirebaseUser,
   GoogleAuthProvider,
   OAuthProvider,
-  signInWithCredential
+  signInWithCredential,
+  signInAnonymously as firebaseSignInAnonymously
 } from 'firebase/auth';
 import { 
   getFirestore, 
@@ -27,13 +28,19 @@ import {
   query,
   where,
   orderBy,
+  limit,
   Timestamp,
   addDoc,
   writeBatch,
-  serverTimestamp
+  serverTimestamp,
+  onSnapshot,
+  arrayUnion
 } from 'firebase/firestore';
 import { 
-  getStorage 
+  getStorage,
+  ref,
+  uploadBytes,
+  getDownloadURL 
 } from 'firebase/storage';
 
 import { 
@@ -56,7 +63,10 @@ const firebaseConfig = {
 
 // Inicializar Firebase
 const app = initializeApp(firebaseConfig);
+
+// Usar getAuth directamente - Firebase Web SDK maneja persistencia automáticamente en React Native
 export const auth = getAuth(app);
+
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 
@@ -152,13 +162,22 @@ export const signInWithGoogleToken = async (idToken: string): Promise<User> => {
     const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
     
     if (userDoc.exists()) {
-      return userDoc.data() as User;
+      // Actualizar photoURL si ha cambiado
+      const existingUser = userDoc.data() as User;
+      if (userCredential.user.photoURL && existingUser.photoURL !== userCredential.user.photoURL) {
+        await updateDoc(doc(db, 'users', userCredential.user.uid), {
+          photoURL: userCredential.user.photoURL
+        });
+        return { ...existingUser, photoURL: userCredential.user.photoURL };
+      }
+      return existingUser;
     } else {
       // Crear nuevo usuario en Firestore
       const newUser: User = {
         uid: userCredential.user.uid,
         email: userCredential.user.email!,
         displayName: userCredential.user.displayName || userCredential.user.email!.split('@')[0],
+        photoURL: userCredential.user.photoURL || undefined,
         createdAt: new Date(),
       };
       await setDoc(doc(db, 'users', newUser.uid), newUser);
@@ -227,6 +246,21 @@ export const createEvent = async (
     console.log('💾 Guardando evento con data:', eventData);
     const docRef = await addDoc(collection(db, 'events'), eventData);
     console.log('✅ Evento guardado en Firestore con ID:', docRef.id);
+    
+    // Si el evento pertenece a un grupo, actualizar el array eventIds del grupo
+    if (groupId) {
+      try {
+        const groupRef = doc(db, 'groups', groupId);
+        await updateDoc(groupRef, {
+          eventIds: arrayUnion(docRef.id)
+        });
+        console.log('✅ Evento agregado al array eventIds del grupo:', groupId);
+      } catch (error) {
+        console.error('⚠️ Error actualizando eventIds del grupo:', error);
+        // No lanzar error aquí para no bloquear la creación del evento
+      }
+    }
+    
     return docRef.id;
   } catch (error: any) {
     console.error('❌ Error creating event:', error);
@@ -353,6 +387,21 @@ export const addParticipant = async (
     // Solo agregar userId y email si están definidos
     if (userId) {
       participantData.userId = userId;
+      
+      // Intentar obtener la foto del usuario
+      try {
+        const userRef = doc(db, 'users', userId);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+          if (userData.photoURL) {
+            participantData.photoURL = userData.photoURL;
+            console.log('👤 PhotoURL agregado al participante:', userData.photoURL);
+          }
+        }
+      } catch (error) {
+        console.error('⚠️ Error al obtener foto del usuario:', error);
+      }
     }
     if (email) {
       participantData.email = email;
@@ -367,6 +416,21 @@ export const addParticipant = async (
     if (event) {
       const updatedParticipantIds = [...event.participantIds, docRef.id];
       await updateEvent(eventId, { participantIds: updatedParticipantIds });
+      
+      // Si el evento pertenece a un grupo y el participante tiene userId, 
+      // agregar el userId al array memberIds del grupo
+      if (event.groupId && userId) {
+        try {
+          const groupRef = doc(db, 'groups', event.groupId);
+          await updateDoc(groupRef, {
+            memberIds: arrayUnion(userId)
+          });
+          console.log('✅ Usuario agregado al array memberIds del grupo:', event.groupId);
+        } catch (error) {
+          console.error('⚠️ Error actualizando memberIds del grupo:', error);
+          // No lanzar error aquí para no bloquear la adición del participante
+        }
+      }
     }
     
     return docRef.id;
@@ -387,10 +451,52 @@ export const getEventParticipants = async (eventId: string): Promise<Participant
     );
     
     const querySnapshot = await getDocs(q);
-    const participants = querySnapshot.docs.map(doc => ({ 
+    const participantsData = querySnapshot.docs.map(doc => ({ 
       id: doc.id, 
       ...doc.data() 
     } as Participant));
+    
+    // Fetch user photos for participants with userId - SIEMPRE verificar por actualizaciones
+    const participants = await Promise.all(participantsData.map(async (participant) => {
+      // Si tiene userId, intentar cargar la foto más reciente de users
+      if (participant.userId) {
+        try {
+          const userRef = doc(db, 'users', participant.userId);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            const userData = userSnap.data();
+            if (userData.photoURL) {
+              // Si la foto es diferente o no existe, actualizarla
+              if (userData.photoURL !== participant.photoURL) {
+                console.log('🔄 Actualizando foto para', participant.name, ':', userData.photoURL);
+                try {
+                  await updateDoc(doc(db, 'participants', participant.id), {
+                    photoURL: userData.photoURL
+                  });
+                } catch (updateError) {
+                  console.error('⚠️ No se pudo actualizar photoURL:', updateError);
+                }
+              } else {
+                console.log('✅ Foto ya actualizada para', participant.name);
+              }
+              return {
+                ...participant,
+                photoURL: userData.photoURL
+              };
+            } else {
+              console.log('⚠️ Usuario sin photoURL:', participant.name);
+            }
+          } else {
+            console.log('⚠️ Usuario no encontrado en Firestore:', participant.userId);
+          }
+        } catch (error) {
+          console.error('❌ Error fetching user photo for', participant.name, ':', error);
+        }
+      } else {
+        console.log('⚠️ Participante sin userId:', participant.name);
+      }
+      return participant;
+    }));
     
     console.log('📊 Participantes encontrados:', participants.length, participants);
     return participants;
@@ -416,6 +522,20 @@ export const updateParticipantBalance = async (
   }
 };
 
+/**
+ * Eliminar participante
+ */
+export const deleteParticipant = async (participantId: string): Promise<void> => {
+  try {
+    console.log('🗑️ Eliminando participante:', participantId);
+    await deleteDoc(doc(db, 'participants', participantId));
+    console.log('✅ Participante eliminado exitosamente');
+  } catch (error: any) {
+    console.error('❌ Error al eliminar participante:', error);
+    throw new Error(error.message);
+  }
+};
+
 // ==================== GASTOS ====================
 
 /**
@@ -428,8 +548,9 @@ export const createExpense = async (
   description: string,
   category: string,
   beneficiaries: string[],
-  splitType: 'equal' | 'custom' = 'equal',
-  customSplits?: { [participantId: string]: number }
+  splitType: 'equal' | 'custom' | 'items' = 'equal',
+  customSplits?: { [participantId: string]: number },
+  receiptPhoto?: string
 ): Promise<string> => {
   try {
     console.log('💾 createExpense - Iniciando creación de gasto:', {
@@ -439,7 +560,8 @@ export const createExpense = async (
       description,
       category,
       beneficiaries,
-      splitType
+      splitType,
+      hasPhoto: !!receiptPhoto
     });
 
     const expenseData: Omit<Expense, 'id'> = {
@@ -453,6 +575,7 @@ export const createExpense = async (
       splitType,
       customSplits,
       createdAt: new Date(),
+      receiptPhoto,
     };
     
     // Filtrar campos undefined antes de guardar
@@ -471,6 +594,11 @@ export const createExpense = async (
     // Solo agregar customSplits si existe
     if (customSplits && splitType === 'custom') {
       cleanExpenseData.customSplits = customSplits;
+    }
+    
+    // Solo agregar receiptPhoto si existe
+    if (receiptPhoto) {
+      cleanExpenseData.receiptPhoto = receiptPhoto;
     }
     
     console.log('📝 createExpense - Guardando en Firestore (limpio):', cleanExpenseData);
@@ -498,7 +626,7 @@ const updateBalancesAfterExpense = async (
   paidBy: string,
   amount: number,
   beneficiaries: string[],
-  splitType: 'equal' | 'custom',
+  splitType: 'equal' | 'custom' | 'items',
   customSplits?: { [participantId: string]: number }
 ): Promise<void> => {
   try {
@@ -550,6 +678,25 @@ const updateBalancesAfterExpense = async (
           console.warn('⚠️ Participante no encontrado:', beneficiaryId);
         }
       }
+    } else if (splitType === 'items' && customSplits) {
+      // Para 'items', usar el mismo comportamiento que 'custom' 
+      // ya que customSplits contendrá el desglose calculado por participante
+      console.log('🛒 División por items:', customSplits);
+      for (const [beneficiaryId, splitAmount] of Object.entries(customSplits)) {
+        console.log('📊 Actualizando balance de:', beneficiaryId, 'monto:', splitAmount);
+        const participantDoc = await getDoc(doc(db, 'participants', beneficiaryId));
+        
+        if (participantDoc.exists()) {
+          const participant = participantDoc.data() as Participant;
+          const newBalance = participant.currentBalance - splitAmount;
+          console.log(`💰 Balance anterior: ${participant.currentBalance}, nuevo: ${newBalance} (-${splitAmount})`);
+          batch.update(doc(db, 'participants', beneficiaryId), {
+            currentBalance: newBalance
+          });
+        } else {
+          console.warn('⚠️ Participante no encontrado:', beneficiaryId);
+        }
+      }
     }
     
     console.log('📦 Ejecutando batch commit...');
@@ -573,8 +720,9 @@ export const updateExpense = async (
   description: string,
   category: string,
   beneficiaries: string[],
-  splitType: 'equal' | 'custom' = 'equal',
-  customSplits?: { [participantId: string]: number }
+  splitType: 'equal' | 'custom' | 'items' = 'equal',
+  customSplits?: { [participantId: string]: number },
+  receiptPhoto?: string
 ): Promise<void> => {
   try {
     console.log('📝 updateExpense - Iniciando actualización de gasto:', expenseId);
@@ -612,6 +760,10 @@ export const updateExpense = async (
       cleanExpenseData.customSplits = customSplits;
     }
     
+    if (receiptPhoto) {
+      cleanExpenseData.receiptPhoto = receiptPhoto;
+    }
+    
     console.log('💾 Actualizando gasto en Firestore:', cleanExpenseData);
     await updateDoc(doc(db, 'expenses', expenseId), cleanExpenseData);
 
@@ -633,7 +785,7 @@ const revertBalanceChanges = async (
   paidBy: string,
   amount: number,
   beneficiaries: string[],
-  splitType: 'equal' | 'custom',
+  splitType: 'equal' | 'custom' | 'items',
   customSplits?: { [participantId: string]: number }
 ): Promise<void> => {
   try {
@@ -661,6 +813,20 @@ const revertBalanceChanges = async (
           const participant = participantDoc.data() as Participant;
           const newBalance = participant.currentBalance + splitAmount; // SUMAR para revertir
           console.log(`💰 Revirtiendo ${beneficiaryId}: ${participant.currentBalance} + ${splitAmount} = ${newBalance}`);
+          batch.update(doc(db, 'participants', beneficiaryId), {
+            currentBalance: newBalance
+          });
+        }
+      }
+    } else if (splitType === 'items' && customSplits) {
+      // Para 'items', usar el mismo comportamiento que 'custom' 
+      // ya que customSplits contendrá el desglose calculado por participante
+      for (const [beneficiaryId, splitAmount] of Object.entries(customSplits)) {
+        const participantDoc = await getDoc(doc(db, 'participants', beneficiaryId));
+        if (participantDoc.exists()) {
+          const participant = participantDoc.data() as Participant;
+          const newBalance = participant.currentBalance + splitAmount; // SUMAR para revertir
+          console.log(`💰 Revirtiendo ${beneficiaryId} (items): ${participant.currentBalance} + ${splitAmount} = ${newBalance}`);
           batch.update(doc(db, 'participants', beneficiaryId), {
             currentBalance: newBalance
           });
@@ -728,9 +894,49 @@ export const updateExpenseSimple = async (expenseId: string, updates: Partial<Ex
  */
 export const deleteExpense = async (expenseId: string): Promise<void> => {
   try {
-    // TODO: Revertir los cambios en los balances de participantes
+    // Obtener el gasto antes de eliminarlo para revertir balances
+    const expenseDoc = await getDoc(doc(db, 'expenses', expenseId));
+    
+    if (!expenseDoc.exists()) {
+      throw new Error('Gasto no encontrado');
+    }
+
+    const expense = expenseDoc.data();
+    const eventId = expense.eventId;
+    const paidBy = expense.paidBy;
+    const splits = expense.splits || [];
+
+    // Revertir balances de participantes
+    const participants = await getEventParticipants(eventId);
+    
+    for (const participant of participants) {
+      const split = splits.find((s: any) => s.participantId === participant.id);
+      
+      if (!split) continue;
+
+      let balanceChange = 0;
+      
+      // Si este participante pagó, revertir (restar lo que pagó)
+      if (participant.id === paidBy) {
+        balanceChange -= expense.amount;
+      }
+      
+      // Si este participante debe, revertir (sumar lo que debía)
+      balanceChange += split.amount;
+
+      // Actualizar balance
+      const newBalance = participant.currentBalance - balanceChange;
+      await updateDoc(doc(db, 'participants', participant.id), {
+        currentBalance: newBalance,
+      });
+    }
+
+    // Eliminar el gasto
     await deleteDoc(doc(db, 'expenses', expenseId));
+    
+    console.log('✅ Gasto eliminado y balances revertidos correctamente');
   } catch (error: any) {
+    console.error('❌ Error eliminando gasto:', error);
     throw new Error(error.message);
   }
 };
@@ -745,15 +951,20 @@ export const createGroup = async (
   createdBy: string,
   description?: string,
   color?: string,
-  icon?: string
+  icon?: string,
+  type?: 'project' | 'recurring'
 ): Promise<string> => {
   try {
+    const inviteCode = generateInviteCode();
+    
     const groupData: any = {
       name,
       createdBy,
+      inviteCode,
       createdAt: new Date(),
       memberIds: [createdBy],
       eventIds: [],
+      type: type || 'project', // Por defecto 'project' (compatible con grupos antiguos)
     };
     
     // Solo agregar campos opcionales si tienen valor
@@ -768,7 +979,33 @@ export const createGroup = async (
     }
     
     const docRef = await addDoc(collection(db, 'groups'), groupData);
-    console.log('✅ Grupo creado:', docRef.id);
+    console.log('✅ Grupo creado:', docRef.id, 'tipo:', type || 'project', 'código:', inviteCode);
+    
+    // Si es tipo 'recurring', crear evento "General" automáticamente
+    if (type === 'recurring') {
+      try {
+        const defaultEventId = await createEvent(
+          'General', // Nombre fijo
+          0, // Sin presupuesto inicial
+          'EUR', // Currency
+          createdBy, // userId
+          'Gastos generales del grupo', // Descripción
+          docRef.id // groupId
+        );
+        
+        // Actualizar grupo con defaultEventId
+        await updateDoc(doc(db, 'groups', docRef.id), {
+          defaultEventId,
+          eventIds: [defaultEventId]
+        });
+        
+        console.log('✅ Evento "General" creado automáticamente:', defaultEventId);
+      } catch (error) {
+        console.error('⚠️ Error creando evento General:', error);
+        // No fallar la creación del grupo por esto
+      }
+    }
+    
     return docRef.id;
   } catch (error: any) {
     console.error('❌ Error creating group:', error);
@@ -787,9 +1024,41 @@ export const getUserGroups = async (userId: string): Promise<any[]> => {
     );
     
     const querySnapshot = await getDocs(q);
-    const groups = querySnapshot.docs.map(doc => ({ 
-      id: doc.id, 
-      ...doc.data() 
+    const groups = await Promise.all(querySnapshot.docs.map(async (docSnap) => {
+      const groupData = docSnap.data();
+      const groupId = docSnap.id;
+      
+      // Calcular estadísticas en tiempo real
+      let eventIds = groupData.eventIds || [];
+      let memberIds = groupData.memberIds || [];
+      
+      // Si no hay eventIds guardados, buscar eventos que pertenezcan a este grupo
+      if (eventIds.length === 0) {
+        try {
+          const eventsQuery = query(
+            collection(db, 'events'),
+            where('groupId', '==', groupId)
+          );
+          const eventsSnapshot = await getDocs(eventsQuery);
+          eventIds = eventsSnapshot.docs.map(doc => doc.id);
+          
+          // Actualizar el grupo con los eventIds encontrados (migración automática)
+          if (eventIds.length > 0) {
+            await updateDoc(doc(db, 'groups', groupId), {
+              eventIds: eventIds
+            }).catch(err => console.error('⚠️ No se pudo actualizar eventIds:', err));
+          }
+        } catch (error) {
+          console.error('⚠️ Error buscando eventos del grupo:', error);
+        }
+      }
+      
+      return { 
+        id: groupId, 
+        ...groupData,
+        eventIds,
+        memberIds
+      };
     }));
     
     // Ordenar por fecha de creación
@@ -876,6 +1145,67 @@ export const deleteGroup = async (groupId: string): Promise<void> => {
 };
 
 /**
+ * Buscar grupo por código de invitación
+ */
+export const getGroupByInviteCode = async (inviteCode: string): Promise<any | null> => {
+  try {
+    const q = query(
+      collection(db, 'groups'),
+      where('inviteCode', '==', inviteCode.toUpperCase())
+    );
+    
+    const querySnapshot = await getDocs(q);
+    
+    if (querySnapshot.empty) {
+      return null;
+    }
+    
+    const groupDoc = querySnapshot.docs[0];
+    return {
+      id: groupDoc.id,
+      ...groupDoc.data()
+    };
+  } catch (error: any) {
+    console.error('❌ Error buscando grupo por código:', error);
+    throw new Error(error.message || 'No se pudo buscar el grupo');
+  }
+};
+
+/**
+ * Agregar miembro a un grupo
+ */
+export const addGroupMember = async (groupId: string, userId: string): Promise<void> => {
+  try {
+    const groupRef = doc(db, 'groups', groupId);
+    const groupDoc = await getDoc(groupRef);
+    
+    if (!groupDoc.exists()) {
+      throw new Error('Grupo no encontrado');
+    }
+    
+    const groupData = groupDoc.data();
+    const currentMembers = groupData.memberIds || [];
+    
+    // Verificar si ya es miembro
+    if (currentMembers.includes(userId)) {
+      console.log('⚠️ El usuario ya es miembro del grupo');
+      return;
+    }
+    
+    // Agregar userId al array de memberIds
+    await updateDoc(groupRef, {
+      memberIds: [...currentMembers, userId],
+      updatedAt: serverTimestamp()
+    });
+    
+    console.log('✅ Miembro agregado al grupo:', userId);
+  } catch (error: any) {
+    console.error('❌ Error agregando miembro:', error);
+    throw new Error(error.message || 'No se pudo agregar al grupo');
+  }
+};
+
+/**
  * Obtener eventos de un usuario con filtro de estado
  */
 export const getUserEventsByStatus = async (
@@ -883,8 +1213,10 @@ export const getUserEventsByStatus = async (
   status?: 'active' | 'completed' | 'archived'
 ): Promise<Event[]> => {
   try {
-    let q;
+    console.log('🔍 getUserEventsByStatus - userId:', userId, 'status:', status);
     
+    // 1. Obtener eventos creados por el usuario
+    let q;
     if (status) {
       q = query(
         collection(db, 'events'),
@@ -899,19 +1231,78 @@ export const getUserEventsByStatus = async (
     }
     
     const querySnapshot = await getDocs(q);
-    const events = querySnapshot.docs.map(doc => ({ 
+    const userEvents = querySnapshot.docs.map(doc => ({ 
       id: doc.id, 
       ...doc.data() 
     } as Event));
     
-    // Ordenar por fecha de creación
-    return events.sort((a, b) => {
+    console.log('📝 Eventos creados por usuario:', userEvents.length);
+    
+    // 2. Obtener grupos donde el usuario es miembro
+    const userGroups = await getUserGroups(userId);
+    const groupIds = userGroups.map(g => g.id);
+    console.log('👥 Grupos del usuario:', groupIds.length, groupIds);
+    
+    // 3. Obtener eventos de esos grupos
+    let groupEvents: Event[] = [];
+    if (groupIds.length > 0) {
+      // Firestore tiene límite de 10 elementos en 'in', así que hacemos consultas por lotes
+      const batchSize = 10;
+      for (let i = 0; i < groupIds.length; i += batchSize) {
+        const batch = groupIds.slice(i, i + batchSize);
+        
+        let groupQuery;
+        if (status) {
+          groupQuery = query(
+            collection(db, 'events'),
+            where('groupId', 'in', batch),
+            where('status', '==', status)
+          );
+        } else {
+          groupQuery = query(
+            collection(db, 'events'),
+            where('groupId', 'in', batch)
+          );
+        }
+        
+        const groupSnapshot = await getDocs(groupQuery);
+        const batchEvents = groupSnapshot.docs.map(doc => ({ 
+          id: doc.id, 
+          ...doc.data() 
+        } as Event));
+        
+        groupEvents = [...groupEvents, ...batchEvents];
+      }
+    }
+    
+    console.log('📁 Eventos de grupos:', groupEvents.length);
+    
+    // 4. Combinar y eliminar duplicados (por si un evento está en ambas listas)
+    const allEventsMap = new Map<string, Event>();
+    
+    // Primero agregar eventos del usuario
+    userEvents.forEach(event => {
+      allEventsMap.set(event.id, event);
+    });
+    
+    // Luego agregar eventos de grupos (no sobrescribir si ya existe)
+    groupEvents.forEach(event => {
+      if (!allEventsMap.has(event.id)) {
+        allEventsMap.set(event.id, event);
+      }
+    });
+    
+    const allEvents = Array.from(allEventsMap.values());
+    console.log('✅ Total eventos (sin duplicados):', allEvents.length);
+    
+    // 5. Ordenar por fecha de creación
+    return allEvents.sort((a, b) => {
       const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
       const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
       return dateB.getTime() - dateA.getTime();
     });
   } catch (error: any) {
-    console.error('Error loading events by status:', error);
+    console.error('❌ Error loading events by status:', error);
     throw new Error(error.message || 'No se pudieron cargar los eventos');
   }
 };
@@ -945,7 +1336,6 @@ export const getEventByInviteCode = async (inviteCode: string): Promise<Event | 
  */
 export const signInAnonymously = async (): Promise<User> => {
   try {
-    const { signInAnonymously: firebaseSignInAnonymously } = await import('firebase/auth');
     const userCredential = await firebaseSignInAnonymously(auth);
     
     // Crear usuario anónimo en Firestore
@@ -967,6 +1357,317 @@ export const signInAnonymously = async (): Promise<User> => {
   }
 };
 
+// ==================== CHAT ====================
+
+/**
+ * Subir imagen de chat a Firebase Storage
+ */
+export const uploadChatImage = async (
+  chatId: string,
+  imageUri: string
+): Promise<string> => {
+  try {
+    const response = await fetch(imageUri);
+    const blob = await response.blob();
+    const filename = `chat_${Date.now()}.jpg`;
+    const storageRef = ref(storage, `chats/${chatId}/${filename}`);
+    
+    await uploadBytes(storageRef, blob);
+    const downloadURL = await getDownloadURL(storageRef);
+    
+    console.log('✅ Imagen de chat subida:', downloadURL);
+    return downloadURL;
+  } catch (error: any) {
+    console.error('❌ Error subiendo imagen de chat:', error);
+    throw new Error('No se pudo subir la imagen');
+  }
+};
+
+/**
+ * Enviar mensaje en un evento
+ */
+export const sendEventMessage = async (
+  eventId: string,
+  userId: string,
+  userName: string,
+  message: string,
+  imageUrl?: string,
+  receiptData?: { amount: number; description: string; category: string }
+): Promise<string> => {
+  try {
+    const messageData: any = {
+      eventId,
+      userId,
+      userName,
+      message: message.trim(),
+      createdAt: serverTimestamp(),
+      read: false,
+    };
+    
+    if (imageUrl) {
+      messageData.imageUrl = imageUrl;
+    }
+    
+    if (receiptData) {
+      messageData.receiptData = receiptData;
+    }
+    
+    const docRef = await addDoc(collection(db, 'messages'), messageData);
+    console.log('✅ Mensaje enviado:', docRef.id);
+    return docRef.id;
+  } catch (error: any) {
+    console.error('❌ Error enviando mensaje:', error);
+    throw new Error(error.message || 'No se pudo enviar el mensaje');
+  }
+};
+
+/**
+ * Obtener mensajes de un evento
+ */
+export const getEventMessages = async (eventId: string): Promise<any[]> => {
+  try {
+    const q = query(
+      collection(db, 'messages'),
+      where('eventId', '==', eventId),
+      orderBy('createdAt', 'asc')
+    );
+    
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  } catch (error: any) {
+    console.error('❌ Error cargando mensajes:', error);
+    return [];
+  }
+};
+
+/**
+ * Suscribirse a mensajes de un evento en tiempo real
+ */
+export const subscribeToEventMessages = (
+  eventId: string,
+  callback: (messages: any[]) => void
+) => {
+  const q = query(
+    collection(db, 'messages'),
+    where('eventId', '==', eventId),
+    orderBy('createdAt', 'asc')
+  );
+  
+  return onSnapshot(q, (snapshot) => {
+    const messages = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    callback(messages);
+  });
+};
+
+/**
+ * Enviar mensaje en un grupo
+ */
+export const sendGroupMessage = async (
+  groupId: string,
+  userId: string,
+  userName: string,
+  message: string,
+  imageUrl?: string,
+  receiptData?: { amount: number; description: string; category: string }
+): Promise<string> => {
+  try {
+    const messageData: any = {
+      userId,
+      userName,
+      message: message.trim(),
+      createdAt: serverTimestamp(),
+      read: false,
+    };
+    
+    if (imageUrl) {
+      messageData.imageUrl = imageUrl;
+    }
+    
+    if (receiptData) {
+      messageData.receiptData = receiptData;
+    }
+    
+    // Usar subcolección groups/{groupId}/messages
+    const messagesRef = collection(db, 'groups', groupId, 'messages');
+    const docRef = await addDoc(messagesRef, messageData);
+    console.log('✅ Mensaje de grupo enviado:', docRef.id);
+    return docRef.id;
+  } catch (error: any) {
+    console.error('❌ Error enviando mensaje de grupo:', error);
+    throw new Error(error.message || 'No se pudo enviar el mensaje');
+  }
+};
+
+/**
+ * Obtener mensajes de un grupo
+ */
+export const getGroupMessages = async (groupId: string): Promise<any[]> => {
+  try {
+    // Usar subcolección groups/{groupId}/messages
+    const messagesRef = collection(db, 'groups', groupId, 'messages');
+    const q = query(messagesRef, orderBy('createdAt', 'asc'));
+    
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  } catch (error: any) {
+    console.error('❌ Error cargando mensajes de grupo:', error);
+    return [];
+  }
+};
+
+/**
+ * Suscribirse a mensajes de un grupo en tiempo real
+ */
+export const subscribeToGroupMessages = (
+  groupId: string,
+  callback: (messages: any[]) => void
+) => {
+  // Usar subcolección groups/{groupId}/messages
+  const messagesRef = collection(db, 'groups', groupId, 'messages');
+  const q = query(messagesRef, orderBy('createdAt', 'asc'));
+  
+  return onSnapshot(q, (snapshot) => {
+    const messages = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    callback(messages);
+  });
+};
+
+/**
+ * Sincronizar estadísticas de un grupo (migración/actualización manual)
+ */
+export const syncGroupStats = async (groupId: string): Promise<void> => {
+  try {
+    console.log('🔄 Sincronizando estadísticas del grupo:', groupId);
+    
+    // Buscar todos los eventos del grupo
+    const eventsQuery = query(
+      collection(db, 'events'),
+      where('groupId', '==', groupId)
+    );
+    const eventsSnapshot = await getDocs(eventsQuery);
+    const eventIds = eventsSnapshot.docs.map(doc => doc.id);
+    
+    // Buscar todos los miembros únicos del grupo
+    const memberIdsSet = new Set<string>();
+    for (const eventDoc of eventsSnapshot.docs) {
+      const eventData = eventDoc.data();
+      if (eventData.participantIds && Array.isArray(eventData.participantIds)) {
+        // Obtener userIds de los participantes
+        for (const participantId of eventData.participantIds) {
+          try {
+            const participantDoc = await getDoc(doc(db, 'participants', participantId));
+            if (participantDoc.exists()) {
+              const participantData = participantDoc.data();
+              if (participantData.userId) {
+                memberIdsSet.add(participantData.userId);
+              }
+            }
+          } catch (error) {
+            console.error('⚠️ Error obteniendo participante:', error);
+          }
+        }
+      }
+    }
+    
+    const memberIds = Array.from(memberIdsSet);
+    
+    // Actualizar el grupo con las estadísticas correctas
+    await updateDoc(doc(db, 'groups', groupId), {
+      eventIds: eventIds,
+      memberIds: memberIds
+    });
+    
+    console.log('✅ Estadísticas sincronizadas:', { 
+      groupId, 
+      eventos: eventIds.length, 
+      miembros: memberIds.length 
+    });
+  } catch (error: any) {
+    console.error('❌ Error sincronizando estadísticas del grupo:', error);
+    throw new Error('Error al sincronizar estadísticas del grupo');
+  }
+};
+
+/**
+ * Refrescar fotos de participantes desde users
+ * Útil cuando las fotos de perfil se actualizan
+ */
+export const refreshParticipantPhotos = async (eventId: string): Promise<number> => {
+  try {
+    console.log('🔄 Refrescando fotos de participantes para evento:', eventId);
+    
+    const participants = await getEventParticipants(eventId);
+    let updated = 0;
+    
+    for (const participant of participants) {
+      if (participant.userId) {
+        try {
+          const userRef = doc(db, 'users', participant.userId);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            const userData = userSnap.data();
+            if (userData.photoURL && userData.photoURL !== participant.photoURL) {
+              await updateDoc(doc(db, 'participants', participant.id), {
+                photoURL: userData.photoURL
+              });
+              updated++;
+              console.log('✅ Foto actualizada para', participant.name);
+            }
+          }
+        } catch (error) {
+          console.error('❌ Error actualizando foto de', participant.name, ':', error);
+        }
+      }
+    }
+    
+    console.log('✅ Fotos actualizadas:', updated, 'de', participants.length);
+    return updated;
+  } catch (error: any) {
+    console.error('❌ Error al refrescar fotos:', error);
+    throw new Error('Error al refrescar fotos de participantes');
+  }
+};
+
+/**
+ * Subir foto de recibo a Firebase Storage
+ */
+export const uploadReceiptPhoto = async (uri: string, expenseId: string): Promise<string> => {
+  try {
+    console.log('📸 uploadReceiptPhoto - Iniciando subida de foto');
+    const storage = getStorage();
+    const filename = `receipts/${expenseId}_${Date.now()}.jpg`;
+    const storageRef = ref(storage, filename);
+    
+    // Convertir URI a Blob
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    
+    console.log('☁️ Subiendo blob a Firebase Storage...');
+    await uploadBytes(storageRef, blob);
+    
+    // Obtener URL pública
+    const downloadURL = await getDownloadURL(storageRef);
+    console.log('✅ Foto subida exitosamente:', downloadURL);
+    
+    return downloadURL;
+  } catch (error: any) {
+    console.error('❌ Error subiendo foto:', error);
+    throw new Error('Error al subir la foto del recibo');
+  }
+};
+
 export default {
   auth,
   db,
@@ -982,6 +1683,7 @@ export default {
   deleteEvent,
   addParticipant,
   getEventParticipants,
+  deleteParticipant,
   updateParticipantBalance,
   createExpense,
   getEventExpenses,
@@ -992,7 +1694,19 @@ export default {
   updateGroup,
   deleteGroup,
   getUserGroups,
+  getGroupByInviteCode,
+  addGroupMember,
   generateInviteCode,
   getEventByInviteCode,
+  sendEventMessage,
+  getEventMessages,
+  subscribeToEventMessages,
+  sendGroupMessage,
+  getGroupMessages,
+  subscribeToGroupMessages,
   signInAnonymously,
+  syncGroupStats,
+  refreshParticipantPhotos,
+  uploadReceiptPhoto,
+  uploadChatImage,
 };

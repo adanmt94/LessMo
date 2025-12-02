@@ -22,6 +22,7 @@ import { Button, Input, Card } from '../components/lovable';
 import { createGroup } from '../services/firebase';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 type CreateGroupScreenNavigationProp = StackNavigationProp<RootStackParamList, 'CreateGroup'>;
 type CreateGroupScreenRouteProp = RouteProp<RootStackParamList, 'CreateGroup'>;
@@ -33,10 +34,10 @@ interface Props {
 
 const GROUP_ICONS = ['👥', '🎉', '✈️', '🏠', '💼', '🎓', '🏋️', '🍕', '🎮', '🎨', '🎵', '📚'];
 const GROUP_COLORS = ['#6366F1', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#3B82F6', '#EF4444', '#14B8A6'];
-
 export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
   const { user } = useAuth();
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const styles = getStyles(theme);
   const { groupId, mode } = route.params || {};
   const isEditMode = mode === 'edit' && groupId;
@@ -45,6 +46,7 @@ export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
   const [description, setDescription] = useState('');
   const [selectedIcon, setSelectedIcon] = useState('👥');
   const [selectedColor, setSelectedColor] = useState('#6366F1');
+  const [groupType, setGroupType] = useState<'project' | 'recurring'>('project');
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(!!isEditMode);
 
@@ -64,9 +66,8 @@ export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
       setGroupName(group.name || '');
       setDescription(group.description || '');
       setSelectedIcon(group.icon || '👥');
-      setSelectedColor(group.color || '#6366F1');
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'No se pudo cargar el grupo');
+      Alert.alert(t('common.error'), error.message || t('createGroup.errorLoading'));
       navigation.goBack();
     } finally {
       setLoadingData(false);
@@ -76,12 +77,12 @@ export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
   const handleCreateGroup = async () => {
     // Validaciones
     if (!groupName.trim()) {
-      Alert.alert('Error', 'El nombre del grupo es obligatorio');
+      Alert.alert(t('common.error'), t('createGroup.nameRequired'));
       return;
     }
 
     if (groupName.length > 50) {
-      Alert.alert('Error', 'El nombre debe tener máximo 50 caracteres');
+      Alert.alert(t('common.error'), t('createGroup.nameTooLong'));
       return;
     }
 
@@ -100,11 +101,11 @@ export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
         );
 
         Alert.alert(
-          '¡Grupo actualizado!',
-          'Los cambios se han guardado correctamente',
+          t('common.success'),
+          t('createGroup.groupUpdated'),
           [
             {
-              text: 'Aceptar',
+              text: 'OK',
               onPress: () => navigation.goBack(),
             },
           ]
@@ -116,22 +117,23 @@ export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
           user!.uid,
           description,
           selectedColor,
-          selectedIcon
+          selectedIcon,
+          groupType // Pasar el tipo seleccionado
         );
 
         Alert.alert(
-          '¡Grupo creado!',
-          'El grupo se ha creado correctamente',
+          t('common.success'),
+          t('createGroup.groupCreated'),
           [
             {
-              text: 'Aceptar',
+              text: 'OK',
               onPress: () => navigation.navigate('MainTabs', { screen: 'Groups' } as any),
             },
           ]
         );
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message || `No se pudo ${isEditMode ? 'actualizar' : 'crear'} el grupo`);
+      Alert.alert(t('common.error'), error.message || (isEditMode ? t('createGroup.errorUpdating') : t('createGroup.errorCreating')));
     } finally {
       setLoading(false);
     }
@@ -141,7 +143,7 @@ export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
-          <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Cargando grupo...</Text>
+          <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>{t('createGroup.loading')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -157,18 +159,18 @@ export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
         <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
           {/* Información básica */}
           <Card style={styles.section}>
-            <Text style={styles.sectionTitle}>Información del Grupo</Text>
+            <Text style={styles.sectionTitle}>{t('createGroup.groupInfo')}</Text>
             
             <Input
-              label="Nombre del grupo *"
+              label={t('createGroup.groupNameLabel')}
               value={groupName}
               onChangeText={setGroupName}
-              placeholder="Ej: Viaje a Madrid, Piso compartido..."
+              placeholder={t('createGroup.groupNamePlaceholder')}
               maxLength={50}
             />
 
             <Input
-              label="Descripción (opcional)"
+              label={t('createGroup.descriptionLabel')}
               value={description}
               onChangeText={setDescription}
               placeholder="Describe el grupo..."
@@ -178,9 +180,59 @@ export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
             />
           </Card>
 
+          {/* Tipo de grupo */}
+          {!isEditMode && (
+            <Card style={styles.section}>
+              <Text style={styles.sectionTitle}>Tipo de grupo</Text>
+              <Text style={styles.sectionSubtitle}>
+                Elige cómo organizar los gastos
+              </Text>
+              
+              <View style={styles.typeContainer}>
+                <TouchableOpacity
+                  style={[
+                    styles.typeButton,
+                    groupType === 'project' && styles.typeButtonSelected,
+                  ]}
+                  onPress={() => setGroupType('project')}
+                >
+                  <Text style={styles.typeIcon}>📅</Text>
+                  <Text style={[
+                    styles.typeTitle,
+                    groupType === 'project' && styles.typeTitleSelected
+                  ]}>
+                    Proyecto/Viaje
+                  </Text>
+                  <Text style={styles.typeDescription}>
+                    Crea eventos específicos dentro del grupo
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.typeButton,
+                    groupType === 'recurring' && styles.typeButtonSelected,
+                  ]}
+                  onPress={() => setGroupType('recurring')}
+                >
+                  <Text style={styles.typeIcon}>🏠</Text>
+                  <Text style={[
+                    styles.typeTitle,
+                    groupType === 'recurring' && styles.typeTitleSelected
+                  ]}>
+                    Gastos Recurrentes
+                  </Text>
+                  <Text style={styles.typeDescription}>
+                    Añade gastos directamente (piso, pareja...)
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </Card>
+          )}
+
           {/* Selección de icono */}
           <Card style={styles.section}>
-            <Text style={styles.sectionTitle}>Icono del Grupo</Text>
+            <Text style={styles.sectionTitle}>{t('createGroup.groupIcon')}</Text>
             <View style={styles.iconGrid}>
               {GROUP_ICONS.map((icon) => (
                 <TouchableOpacity
@@ -199,7 +251,7 @@ export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
 
           {/* Selección de color */}
           <Card style={styles.section}>
-            <Text style={styles.sectionTitle}>Color del Grupo</Text>
+            <Text style={styles.sectionTitle}>{t('createGroup.groupColor')}</Text>
             <View style={styles.colorGrid}>
               {GROUP_COLORS.map((color) => (
                 <TouchableOpacity
@@ -221,7 +273,7 @@ export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
 
           {/* Preview */}
           <Card style={styles.section}>
-            <Text style={styles.sectionTitle}>Vista Previa</Text>
+            <Text style={styles.sectionTitle}>{t('createGroup.preview')}</Text>
             <View style={styles.previewCard}>
               <View style={[styles.previewIcon, { backgroundColor: selectedColor }]}>
                 <Text style={styles.previewIconText}>{selectedIcon}</Text>
@@ -237,7 +289,7 @@ export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
 
           {/* Botón de crear */}
           <Button
-            title={isEditMode ? 'Guardar Cambios' : 'Crear Grupo'}
+            title={isEditMode ? t('createGroup.updateButton') : t('createGroup.createButton')}
             onPress={handleCreateGroup}
             loading={loading}
             disabled={loading || !groupName.trim()}
@@ -388,5 +440,49 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   spacing: {
     height: 32,
+  },
+  // Estilos para selector de tipo
+  sectionSubtitle: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    marginTop: 4,
+    marginBottom: 16,
+  },
+  typeContainer: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  typeButton: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    alignItems: 'center',
+  },
+  typeButtonSelected: {
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.isDark ? 'rgba(99, 102, 241, 0.1)' : 'rgba(99, 102, 241, 0.05)',
+  },
+  typeIcon: {
+    fontSize: 32,
+    marginBottom: 8,
+  },
+  typeTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.colors.text,
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  typeTitleSelected: {
+    color: theme.colors.primary,
+  },
+  typeDescription: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 16,
   },
 });

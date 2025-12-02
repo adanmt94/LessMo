@@ -22,6 +22,16 @@ import { Button, Card, ExpenseItem, ParticipantItem } from '../components/lovabl
 import { getEvent } from '../services/firebase';
 import { useExpenses } from '../hooks/useExpenses';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
+import { formatCurrency } from '../utils/numberUtils';
+import { BudgetPredictionCard } from '../components/BudgetPredictionCard';
+import { RecommendationsCard } from '../components/RecommendationsCard';
+import { 
+  predictBudgetExceedance, 
+  analyzeSpendingByCategory,
+  compareWithSimilarEvents,
+  calculateGroupEfficiency 
+} from '../services/budgetPredictionService';
 
 type EventDetailScreenNavigationProp = StackNavigationProp<RootStackParamList, 'EventDetail'>;
 type EventDetailScreenRouteProp = RouteProp<RootStackParamList, 'EventDetail'>;
@@ -36,6 +46,7 @@ type TabType = 'expenses' | 'participants' | 'summary';
 export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   const { eventId } = route.params;
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const styles = getStyles(theme);
   const [event, setEvent] = useState<Event | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('expenses');
@@ -53,27 +64,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
     getParticipantBalances,
   } = useExpenses(eventId);
 
-  // Configure header buttons
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <View style={{ flexDirection: 'row', marginRight: 8 }}>
-          <TouchableOpacity 
-            onPress={handleEditEvent}
-            style={{ padding: 8 }}
-          >
-            <Text style={{ fontSize: 20 }}>✏️</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            onPress={handleDeleteEvent}
-            style={{ padding: 8, marginLeft: 4 }}
-          >
-            <Text style={{ fontSize: 20 }}>🗑️</Text>
-          </TouchableOpacity>
-        </View>
-      ),
-    });
-  }, [navigation]);
+  // No header buttons - they will be in the screen content
 
   // Reload event data when screen gains focus
   useFocusEffect(
@@ -107,28 +98,28 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const handleDeleteEvent = () => {
     Alert.alert(
-      'Eliminar evento',
-      '¿Estás seguro? Se eliminarán todos los gastos y participantes.',
+      t('event.delete'),
+      t('eventDetail.deleteConfirm'),
       [
         {
-          text: 'Cancelar',
+          text: t('common.cancel'),
           style: 'cancel',
         },
         {
-          text: 'Eliminar',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
               const { deleteEvent } = await import('../services/firebase');
               await deleteEvent(eventId);
-              Alert.alert('Éxito', 'Evento eliminado correctamente', [
+              Alert.alert(t('common.success'), t('event.deleteEvent'), [
                 {
-                  text: 'Aceptar',
+                  text: t('common.ok'),
                   onPress: () => navigation.navigate('MainTabs', { screen: 'Events' } as any),
                 },
               ]);
             } catch (error: any) {
-              Alert.alert('Error', error.message || 'No se pudo eliminar el evento');
+              Alert.alert(t('common.error'), error.message || t('eventDetail.deleteEventError'));
             }
           },
         },
@@ -136,24 +127,47 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
     );
   };
 
+  const handleShareEvent = async () => {
+    if (!event) return;
+    
+    try {
+      const deepLink = event.inviteCode 
+        ? `lessmo://join/${event.inviteCode}`
+        : `lessmo://event/${event.id}`;
+      
+      const message = event.inviteCode 
+        ? `🎉 ¡Únete a "${event.name}"!\n\n💰 Presupuesto: ${event.initialBudget} ${CurrencySymbols[event.currency]}\n🔑 Código: ${event.inviteCode}\n\n� Enlace directo: ${deepLink}\n\n�📱 Descarga LessMo para gestionar gastos compartidos`
+        : `🎉 Te invito a "${event.name}"\n\n💰 Presupuesto: ${event.initialBudget} ${CurrencySymbols[event.currency]}\n\n🔗 Enlace: ${deepLink}\n\n📱 Descarga LessMo para gestionar gastos compartidos`;
+
+      await Share.share({
+        message: message,
+        title: `Invitación a ${event.name}`,
+      });
+    } catch (error: any) {
+      if (error.message !== 'User did not share') {
+        Alert.alert('Error', 'No se pudo compartir el evento');
+      }
+    }
+  };
+
   const handleDeleteExpense = async (expenseId: string) => {
     Alert.alert(
-      'Confirmar eliminación',
-      '¿Estás seguro de que quieres eliminar este gasto? Esta acción no se puede deshacer.',
+      t('common.deleteConfirmTitle'),
+      t('eventDetail.deleteExpenseConfirm'),
       [
         {
-          text: 'Cancelar',
+          text: t('common.cancel'),
           style: 'cancel'
         },
         {
-          text: 'Eliminar',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
               // TODO: Implementar función deleteExpense que revierta los balances
-              Alert.alert('Aviso', 'La eliminación de gastos aún no está implementada completamente. Se agregará pronto.');
+              Alert.alert(t('common.error'), t('eventDetail.deleteNotImplemented'));
             } catch (error: any) {
-              Alert.alert('Error', error.message || 'No se pudo eliminar el gasto');
+              Alert.alert(t('common.error'), error.message || t('eventDetail.deleteExpenseError'));
             }
           }
         }
@@ -188,9 +202,9 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
       {expenses.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyIcon}>💳</Text>
-          <Text style={styles.emptyText}>No hay gastos registrados</Text>
+          <Text style={styles.emptyText}>{t('eventDetail.noExpenses')}</Text>
           <Button
-            title="Agregar gasto"
+            title={t('expense.add')}
             onPress={() => navigation.navigate('AddExpense', { eventId })}
             style={styles.emptyButton}
           />
@@ -198,8 +212,8 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
       ) : filteredExpenses.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyIcon}>🔍</Text>
-          <Text style={styles.emptyText}>No se encontraron gastos</Text>
-          <Text style={styles.emptySubtext}>Intenta con otro término</Text>
+          <Text style={styles.emptyText}>{t('eventDetail.noExpensesFound')}</Text>
+          <Text style={styles.emptySubtext}>{t('groupEvents.tryAnotherTerm')}</Text>
         </View>
       ) : (
         <ScrollView
@@ -212,6 +226,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
                 key={expense.id}
                 expense={expense}
                 participantName={participant?.name || 'Desconocido'}
+                participantPhoto={participant?.photoURL}
                 currency={event.currency}
                 onPress={() => navigation.navigate('AddExpense', { 
                   eventId, 
@@ -243,7 +258,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
       <View style={styles.tabContent}>
         <View style={styles.editParticipantsContainer}>
           <Button
-            title="✏️ Editar participantes"
+            title={t('eventDetail.editParticipants')}
             onPress={handleEditParticipants}
             variant="outline"
             fullWidth
@@ -281,19 +296,19 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         <Card style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>Resumen general</Text>
+          <Text style={styles.summaryTitle}>{t('eventDetail.summaryTitle')}</Text>
           
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Presupuesto inicial</Text>
             <Text style={styles.summaryValue}>
-              {currencySymbol}{event.initialBudget.toFixed(2)}
+              {formatCurrency(event.initialBudget, event.currency as any)}
             </Text>
           </View>
 
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Total gastado</Text>
             <Text style={[styles.summaryValue, { color: '#EF4444' }]}>
-              {currencySymbol}{totalExpenses.toFixed(2)}
+              {formatCurrency(totalExpenses, event.currency as any)}
             </Text>
           </View>
 
@@ -302,7 +317,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabelBold}>Saldo restante</Text>
             <Text style={[styles.summaryValueBold, { color: remainingBalance >= 0 ? '#10B981' : '#EF4444' }]}>
-              {currencySymbol}{remainingBalance.toFixed(2)}
+              {formatCurrency(remainingBalance, event.currency as any)}
             </Text>
           </View>
 
@@ -321,6 +336,35 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
             {percentageSpent.toFixed(1)}% del presupuesto usado
           </Text>
         </Card>
+
+        {/* Recomendaciones Contextuales */}
+        {expenses.length >= 1 && event && (
+          <RecommendationsCard
+            event={event}
+            expenses={expenses}
+            participants={participants}
+          />
+        )}
+
+        {/* Predicción de Presupuesto con IA */}
+        {expenses.length >= 2 && event && (
+          <BudgetPredictionCard
+            prediction={predictBudgetExceedance(event, expenses, participants)}
+            insights={analyzeSpendingByCategory(expenses, event.initialBudget)}
+            onViewDetails={() => {
+              const comparison = compareWithSimilarEvents(event, totalExpenses);
+              const efficiency = calculateGroupEfficiency(event, expenses, participants);
+              
+              Alert.alert(
+                `${efficiency.badge} Análisis Completo`,
+                `📊 Eficiencia del grupo: ${efficiency.level} (${efficiency.score}/100)\n\n` +
+                `${comparison.message}\n\n` +
+                `💡 Consejos:\n${efficiency.tips.map(tip => `• ${tip}`).join('\n')}`,
+                [{ text: 'Entendido' }]
+              );
+            }}
+          />
+        )}
 
         <Button
           title="Ver gráficos y liquidaciones"
@@ -342,35 +386,38 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
     }
   };
 
-  const handleShareEvent = async () => {
-    if (!event) return;
-
-    try {
-      const inviteCode = event.inviteCode || event.id;
-      const shareUrl = `lessmo://join/${inviteCode}`;
-      const message = `¡Únete a "${event.name}" en LessMo!\n\n` +
-        `Usa este código: ${inviteCode}\n` +
-        `O abre este enlace: ${shareUrl}\n\n` +
-        `Gestiona gastos compartidos de forma fácil con LessMo.`;
-
-      await Share.share({
-        message,
-        title: `Únete a ${event.name}`,
-      });
-    } catch (error) {
-      console.error('Error sharing event:', error);
-    }
-  };
-
   return (
-    <View style={styles.container}>
+    <SafeAreaView edges={['top']} style={styles.container}>
+      {/* Header minimalista */}
+      <View style={[styles.header, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.border }]}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={[styles.headerButton, { backgroundColor: theme.colors.primary + '15' }]}
+        >
+          <Text style={[styles.headerButtonText, { color: theme.colors.primary }]}>←</Text>
+        </TouchableOpacity>
+        
+        <Text style={[styles.eventTitle, { color: theme.colors.text }]} numberOfLines={1}>
+          {event?.name}
+        </Text>
+        
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={[styles.headerButton, { backgroundColor: theme.colors.primary + '15' }]}
+            onPress={handleShareEvent}
+          >
+            <Text style={[styles.headerButtonText, { color: theme.colors.primary }]}>⤴</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
       <View style={[styles.tabs, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.border }]}>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'expenses' && { borderBottomColor: theme.colors.primary, borderBottomWidth: 2 }]}
           onPress={() => setActiveTab('expenses')}
         >
           <Text style={[styles.tabText, { color: activeTab === 'expenses' ? theme.colors.primary : theme.colors.textSecondary }]}>
-            Gastos
+            {t('eventDetail.expensesTab')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -378,7 +425,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
           onPress={() => setActiveTab('participants')}
         >
           <Text style={[styles.tabText, { color: activeTab === 'participants' ? theme.colors.primary : theme.colors.textSecondary }]}>
-            Participantes
+            {t('eventDetail.participantsTab')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -386,7 +433,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
           onPress={() => setActiveTab('summary')}
         >
           <Text style={[styles.tabText, { color: activeTab === 'summary' ? theme.colors.primary : theme.colors.textSecondary }]}>
-            Resumen
+            {t('eventDetail.summaryTab')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -396,7 +443,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
         <View style={[styles.searchContainer, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.border }]}>
           <TextInput
             style={[styles.searchInput, { backgroundColor: theme.colors.background, color: theme.colors.text, borderColor: theme.colors.border }]}
-            placeholder="Buscar gastos..."
+            placeholder={t('eventDetail.searchExpenses')}
             placeholderTextColor={theme.colors.textSecondary}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -427,7 +474,71 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
           </TouchableOpacity>
         </View>
       )}
-    </View>
+
+      {/* Action Buttons Footer */}
+      <View style={styles.actionButtonsContainer}>
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={() => navigation.navigate('Statistics', { 
+            eventId: eventId, 
+            eventName: event?.name || 'Estadísticas',
+            currency: event?.currency || 'EUR'
+          })}
+        >
+          <View style={[styles.iconCircle, { backgroundColor: theme.colors.primary + '15' }]}>
+            <Text style={styles.actionButtonIcon}>📊</Text>
+          </View>
+          <Text style={[styles.actionButtonText, { color: theme.colors.text }]}>{t('eventDetail.stats')}</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={() => navigation.navigate('Chat', { 
+            eventId: eventId, 
+            title: event?.name || 'Chat' 
+          })}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.iconCircle, { backgroundColor: theme.colors.primary + '15' }]}>
+            <Text style={styles.actionButtonIcon}>💬</Text>
+          </View>
+          <Text style={[styles.actionButtonText, { color: theme.colors.text }]}>{t('eventDetail.chat')}</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={handleShareEvent}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.iconCircle, { backgroundColor: theme.colors.primary + '15' }]}>
+            <Text style={styles.actionButtonIcon}>↗</Text>
+          </View>
+          <Text style={[styles.actionButtonText, { color: theme.colors.text }]}>{t('common.share')}</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={handleEditEvent}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.iconCircle, { backgroundColor: theme.colors.primary + '15' }]}>
+            <Text style={styles.actionButtonIcon}>✎</Text>
+          </View>
+          <Text style={[styles.actionButtonText, { color: theme.colors.text }]}>{t('common.edit')}</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={handleDeleteEvent}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.iconCircle, { backgroundColor: '#EF444415' }]}>
+            <Text style={styles.actionButtonIcon}>×</Text>
+          </View>
+          <Text style={[styles.actionButtonText, { color: '#EF4444' }]}>{t('common.delete')}</Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   );
 };
 
@@ -445,15 +556,31 @@ const getStyles = (theme: any) => StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: theme.colors.surface,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
   },
-  backButton: {
-    fontSize: 16,
-    color: theme.colors.primary,
-    fontWeight: '600',
+  eventTitle: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginHorizontal: 12,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerButtonText: {
+    fontSize: 18,
   },
   exportButton: {
     width: 40,
@@ -474,6 +601,45 @@ const getStyles = (theme: any) => StyleSheet.create({
     flex: 1,
     textAlign: 'center',
   },
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    backgroundColor: theme.colors.surface,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    justifyContent: 'space-around',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  actionButton: {
+    alignItems: 'center',
+    padding: 4,
+    minWidth: 60,
+  },
+  iconCircle: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  actionButtonIcon: {
+    fontSize: 20,
+  },
+  actionButtonText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
   tabs: {
     flexDirection: 'row',
     backgroundColor: theme.colors.surface,
@@ -482,25 +648,30 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   tab: {
     flex: 1,
-    paddingVertical: 16,
+    paddingVertical: 18,
     alignItems: 'center',
-    borderBottomWidth: 2,
+    borderBottomWidth: 3,
     borderBottomColor: 'transparent',
+    marginHorizontal: 4,
   },
   tabActive: {
     borderBottomColor: theme.colors.primary,
+    backgroundColor: theme.colors.primary + '12',
   },
   tabText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.textSecondary,
+    fontSize: 15,
+    fontWeight: '700',
+    color: theme.colors.text,
+    letterSpacing: 0.2,
   },
   tabTextActive: {
     color: theme.colors.primary,
+    fontWeight: '800',
   },
   tabContent: {
     flex: 1,
     padding: 16,
+    paddingBottom: 20,
   },
   emptyState: {
     flex: 1,
@@ -588,25 +759,26 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   fabContainer: {
     position: 'absolute',
-    bottom: 24,
-    right: 24,
+    bottom: 110,
+    right: 20,
+    zIndex: 10,
   },
   fab: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
     backgroundColor: theme.colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: theme.colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.5,
+    shadowRadius: 16,
+    elevation: 12,
   },
   fabIcon: {
     color: theme.colors.card,
-    fontSize: 32,
+    fontSize: 36,
     fontWeight: '300',
   },
   searchContainer: {

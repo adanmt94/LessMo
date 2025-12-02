@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from './Button';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 const { width } = Dimensions.get('window');
 
@@ -94,6 +95,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   onClose,
 }) => {
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const [currentStep, setCurrentStep] = useState(0);
   const step = STEPS[currentStep];
   const isLastStep = currentStep === STEPS.length - 1;
@@ -179,12 +181,12 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                 style={styles.backButton}
                 onPress={handleBack}
               >
-                <Text style={styles.backButtonText}>← Atrás</Text>
+                <Text style={styles.backButtonText}>{t('onboarding.back')}</Text>
               </TouchableOpacity>
             )}
             <View style={{ flex: 1 }} />
             <Button
-              title={isLastStep ? '¡Empezar!' : 'Siguiente'}
+              title={isLastStep ? t('onboarding.start') : t('onboarding.next')}
               onPress={handleNext}
               style={styles.nextButton}
             />

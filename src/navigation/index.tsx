@@ -9,6 +9,10 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { RootStackParamList } from '../types';
 import { useAuthContext } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
+import { useSiriShortcuts } from '../hooks/useSiriShortcuts';
+import { SyncStatusIndicator } from '../components/SyncStatusIndicator';
+import { initializeSyncService } from '../services/syncService';
 import {
   LoginScreen,
   RegisterScreen,
@@ -19,10 +23,23 @@ import {
   CreateGroupScreen,
   GroupEventsScreen,
   JoinEventScreen,
+  JoinGroupScreen,
+  ChatScreen,
+  PaymentMethodScreen,
+  StatisticsScreen,
   EditProfileScreen,
+  BankConnectionScreen,
+  BankTransactionsScreen,
+  QRCodePaymentScreen,
+  ReminderSettingsScreen,
+  ItineraryScreen,
   OnboardingScreen,
   shouldShowOnboarding,
+  markOnboardingComplete,
 } from '../screens';
+import { AchievementsScreen } from '../screens/AchievementsScreen';
+import { AnalyticsScreen } from '../screens/AnalyticsScreen';
+import { PaymentHistoryScreen } from '../screens/PaymentHistoryScreen';
 import { MainTabNavigator } from './MainTabNavigator';
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -42,7 +59,12 @@ const linking: LinkingOptions<RootStackParamList> = {
         },
       },
       JoinEvent: 'join/:inviteCode',
+      JoinGroup: 'join-group/:inviteCode',
       EventDetail: 'event/:eventId',
+      GroupEvents: 'group/:groupId',
+      Chat: 'chat',
+      PaymentMethod: 'payment',
+      Statistics: 'event/:eventId/statistics',
       CreateEvent: 'create-event',
       CreateGroup: 'create-group',
       AddExpense: 'event/:eventId/add-expense',
@@ -52,14 +74,22 @@ const linking: LinkingOptions<RootStackParamList> = {
   },
 };
 
+// Componente interno que maneja los deep links DENTRO del NavigationContainer
+const DeepLinkHandler: React.FC = () => {
+  useSiriShortcuts();
+  return null;
+};
+
 export const Navigation: React.FC = () => {
   const { isAuthenticated, loading } = useAuthContext();
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
 
   useEffect(() => {
     checkOnboarding();
+    initializeSyncService(); // Initialize offline sync
   }, [isAuthenticated]);
 
   const checkOnboarding = async () => {
@@ -98,10 +128,13 @@ export const Navigation: React.FC = () => {
 
   return (
     <NavigationContainer linking={linking} theme={navigationTheme}>
+      {/* Handler de Deep Links (Siri Shortcuts) - DEBE estar dentro de NavigationContainer */}
+      <DeepLinkHandler />
+      
       <Stack.Navigator
         screenOptions={{
           headerShown: false,
-          headerBackTitle: 'Atrás',
+          headerBackTitle: t('common.back'),
           headerStyle: {
             backgroundColor: theme.colors.surface,
           },
@@ -109,6 +142,7 @@ export const Navigation: React.FC = () => {
           headerTitleStyle: {
             color: theme.colors.text,
           },
+          headerRight: () => isAuthenticated ? <SyncStatusIndicator /> : null,
         }}
       >
         {!isAuthenticated ? (
@@ -138,8 +172,8 @@ export const Navigation: React.FC = () => {
               component={CreateEventScreen}
               options={({ route }) => ({ 
                 headerShown: true,
-                title: route.params?.mode === 'edit' ? 'Editar Evento' : 'Crear Evento',
-                headerBackTitle: 'Atrás'
+                title: route.params?.mode === 'edit' ? t('createEvent.editTitle') : t('createEvent.title'),
+                headerBackTitle: t('common.back')
               })}
             />
             <Stack.Screen 
@@ -147,8 +181,8 @@ export const Navigation: React.FC = () => {
               component={CreateGroupScreen}
               options={{ 
                 headerShown: true,
-                title: 'Crear Grupo',
-                headerBackTitle: 'Atrás'
+                title: t('createGroup.title'),
+                headerBackTitle: t('common.back')
               }}
             />
             <Stack.Screen 
@@ -163,17 +197,24 @@ export const Navigation: React.FC = () => {
               component={JoinEventScreen}
               options={{ 
                 headerShown: true,
-                title: 'Unirse a Evento',
-                headerBackTitle: 'Atrás'
+                title: t('joinEvent.title'),
+                headerBackTitle: t('common.back')
+              }}
+            />
+            <Stack.Screen 
+              name="JoinGroup" 
+              component={JoinGroupScreen}
+              options={{ 
+                headerShown: true,
+                title: 'Unirse a Grupo',
+                headerBackTitle: t('common.back')
               }}
             />
             <Stack.Screen 
               name="EventDetail" 
               component={EventDetailScreen}
               options={{ 
-                headerShown: true,
-                title: 'Detalles del Evento',
-                headerBackTitle: 'Atrás',
+                headerShown: false,
               }}
             />
             <Stack.Screen 
@@ -181,8 +222,8 @@ export const Navigation: React.FC = () => {
               component={AddExpenseScreen}
               options={{ 
                 headerShown: true,
-                title: 'Agregar Gasto',
-                headerBackTitle: 'Atrás'
+                title: t('addExpense.title'),
+                headerBackTitle: t('common.back')
               }}
             />
             <Stack.Screen 
@@ -190,8 +231,106 @@ export const Navigation: React.FC = () => {
               component={SummaryScreen}
               options={{ 
                 headerShown: true,
-                title: 'Resumen Completo',
-                headerBackTitle: 'Atrás'
+                title: t('summary.title'),
+                headerBackTitle: t('common.back')
+              }}
+            />
+            <Stack.Screen 
+              name="Chat" 
+              component={ChatScreen}
+              options={{ 
+                headerShown: true,
+                title: 'Chat',
+                headerBackTitle: t('common.back')
+              }}
+            />
+            <Stack.Screen 
+              name="PaymentMethod" 
+              component={PaymentMethodScreen}
+              options={{ 
+                headerShown: true,
+                title: 'Método de Pago',
+                headerBackTitle: t('common.back')
+              }}
+            />
+            <Stack.Screen 
+              name="Statistics" 
+              component={StatisticsScreen}
+              options={{ 
+                headerShown: true,
+                title: 'Estadísticas',
+                headerBackTitle: t('common.back')
+              }}
+            />
+            <Stack.Screen 
+              name="Achievements" 
+              component={AchievementsScreen}
+              options={{ 
+                headerShown: true,
+                title: '🏆 Logros y Badges',
+                headerBackTitle: t('common.back')
+              }}
+            />
+            <Stack.Screen 
+              name="BankConnection" 
+              component={BankConnectionScreen}
+              options={{ 
+                headerShown: true,
+                title: '🏦 Conectar Banco',
+                headerBackTitle: t('common.back')
+              }}
+            />
+            <Stack.Screen 
+              name="BankTransactions" 
+              component={BankTransactionsScreen}
+              options={{ 
+                headerShown: true,
+                title: '🔍 Transacciones',
+                headerBackTitle: t('common.back')
+              }}
+            />
+            <Stack.Screen 
+              name="QRCodePayment" 
+              component={QRCodePaymentScreen}
+              options={{ 
+                headerShown: true,
+                title: '📱 Código QR',
+                headerBackTitle: t('common.back'),
+                presentation: 'modal',
+              }}
+            />
+            <Stack.Screen 
+              name="ReminderSettings" 
+              component={ReminderSettingsScreen}
+              options={{ 
+                headerShown: true,
+                title: '🔔 Recordatorios',
+                headerBackTitle: t('common.back'),
+              }}
+            />
+            <Stack.Screen 
+              name="Itinerary" 
+              component={ItineraryScreen}
+              options={{ 
+                headerShown: true,
+                title: '🗺️ Itinerario',
+                headerBackTitle: t('common.back'),
+              }}
+            />
+            <Stack.Screen 
+              name="Analytics" 
+              component={AnalyticsScreen}
+              options={{ 
+                headerShown: false,
+              }}
+            />
+            <Stack.Screen 
+              name="PaymentHistory" 
+              component={PaymentHistoryScreen}
+              options={{ 
+                headerShown: true,
+                title: '💳 Historial de Pagos',
+                headerBackTitle: t('common.back'),
               }}
             />
             <Stack.Screen 
@@ -199,8 +338,8 @@ export const Navigation: React.FC = () => {
               component={EditProfileScreen}
               options={{ 
                 headerShown: true,
-                title: 'Editar Perfil',
-                headerBackTitle: 'Atrás'
+                title: t('editProfile.title'),
+                headerBackTitle: t('common.back')
               }}
             />
           </>

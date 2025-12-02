@@ -21,13 +21,13 @@ describe('useCurrency Hook', () => {
         await new Promise(resolve => setTimeout(resolve, 100));
       });
       
-      expect(result.current.currency).toBe('USD');
+      expect(result.current.currentCurrency.code).toBe('USD');
     });
 
     it('should default to EUR when no saved currency', () => {
       const { result } = renderHook(() => useCurrency());
       
-      expect(result.current.currency).toBe('EUR');
+      expect(result.current.currentCurrency.code).toBe('EUR');
     });
   });
 
@@ -39,7 +39,7 @@ describe('useCurrency Hook', () => {
         await result.current.changeCurrency('USD');
       });
       
-      expect(result.current.currency).toBe('USD');
+      expect(result.current.currentCurrency.code).toBe('USD');
       const saved = await AsyncStorage.getItem('@LessMo:currency');
       expect(saved).toBe('USD');
     });
@@ -50,10 +50,10 @@ describe('useCurrency Hook', () => {
       
       for (const currency of currencies) {
         await act(async () => {
-          await result.current.changeCurrency(currency);
+          await result.current.changeCurrency(currency as any);
         });
         
-        expect(result.current.currency).toBe(currency);
+        expect(result.current.currentCurrency.code).toBe(currency);
       }
     });
 
@@ -90,64 +90,23 @@ describe('useCurrency Hook', () => {
     });
   });
 
-  describe('formatAmount', () => {
-    it('should format amount with correct symbol', () => {
+  // Note: formatAmount and getCurrencySymbol are utility functions, not hook methods
+  // Use formatCurrency from utils/numberUtils.ts instead
+  describe('currency symbol access', () => {
+    it('should provide currency symbol through currentCurrency', () => {
       const { result } = renderHook(() => useCurrency());
       
-      const formatted = result.current.formatAmount(100);
-      
-      expect(formatted).toContain('€');
-      expect(formatted).toContain('100');
+      expect(result.current.currentCurrency.symbol).toBe('€');
     });
 
-    it('should format decimals correctly', () => {
-      const { result } = renderHook(() => useCurrency());
-      
-      const formatted = result.current.formatAmount(99.99);
-      
-      expect(formatted).toContain('99.99');
-    });
-
-    it('should handle negative amounts', () => {
-      const { result } = renderHook(() => useCurrency());
-      
-      const formatted = result.current.formatAmount(-50);
-      
-      expect(formatted).toContain('-50');
-    });
-
-    it('should adapt to currency changes', async () => {
-      const { result } = renderHook(() => useCurrency());
-      
-      await act(async () => {
-        await result.current.changeCurrency('USD');
-      });
-      
-      const formatted = result.current.formatAmount(100);
-      
-      expect(formatted).toContain('$');
-    });
-  });
-
-  describe('getCurrencySymbol', () => {
-    it('should return correct symbol for current currency', () => {
-      const { result } = renderHook(() => useCurrency());
-      
-      const symbol = result.current.getCurrencySymbol();
-      
-      expect(symbol).toBe('€');
-    });
-
-    it('should update when currency changes', async () => {
+    it('should update symbol when currency changes', async () => {
       const { result } = renderHook(() => useCurrency());
       
       await act(async () => {
         await result.current.changeCurrency('GBP');
       });
       
-      const symbol = result.current.getCurrencySymbol();
-      
-      expect(symbol).toBe('£');
+      expect(result.current.currentCurrency.symbol).toBe('£');
     });
   });
 
@@ -163,7 +122,7 @@ describe('useCurrency Hook', () => {
       });
       
       // Should not crash
-      expect(result.current.currency).toBeTruthy();
+      expect(result.current.currentCurrency).toBeTruthy();
     });
 
     it('should handle invalid currency codes', async () => {
@@ -175,7 +134,7 @@ describe('useCurrency Hook', () => {
       
       // Should keep valid currency
       const validCurrencies = result.current.availableCurrencies.map(c => c.code);
-      expect(validCurrencies).toContain(result.current.currency);
+      expect(validCurrencies).toContain(result.current.currentCurrency.code);
     });
   });
 });

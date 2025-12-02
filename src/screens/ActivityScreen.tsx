@@ -10,6 +10,7 @@ import {
   ScrollView,
   RefreshControl,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -17,6 +18,7 @@ import { RootStackParamList } from '../types';
 import { Card } from '../components/lovable';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../services/firebase';
 
@@ -37,11 +39,13 @@ interface ActivityItem {
   groupId?: string;
   userName?: string; // Nombre del usuario que realizó la acción
   userId?: string; // ID del usuario
+  userPhoto?: string; // URL de la foto del usuario
 }
 
 export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
   const { user } = useAuth();
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const styles = getStyles(theme);
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -59,23 +63,28 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
       const allActivities: ActivityItem[] = [];
       const userCache = new Map<string, string>(); // Cache de userId -> userName
 
-      // Helper para obtener nombre de usuario
-      const getUserName = async (userId: string): Promise<string> => {
-        if (userCache.has(userId)) {
-          return userCache.get(userId)!;
+      // Helper para obtener nombre y foto de usuario
+      const getUserInfo = async (userId: string): Promise<{ name: string, photo?: string }> => {
+        const cacheKey = userCache.get(userId);
+        if (cacheKey) {
+          return JSON.parse(cacheKey);
         }
         
         try {
           const userDoc = await getDocs(query(collection(db, 'users'), where('__name__', '==', userId), limit(1)));
           if (!userDoc.empty) {
-            const userName = userDoc.docs[0].data().displayName || 'Usuario';
-            userCache.set(userId, userName);
-            return userName;
+            const userData = userDoc.docs[0].data();
+            const userInfo = {
+              name: userData.displayName || 'Usuario',
+              photo: userData.photoURL
+            };
+            userCache.set(userId, JSON.stringify(userInfo));
+            return userInfo;
           }
         } catch (error) {
-          console.error('Error getting user name:', error);
+          console.error('Error getting user info:', error);
         }
-        return 'Usuario';
+        return { name: 'Usuario' };
       };
 
       // Cargar eventos recientes (sin índice compuesto)
@@ -88,7 +97,7 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
       
       for (const doc of eventsSnapshot.docs) {
         const data = doc.data();
-        const userName = await getUserName(data.createdBy || user.uid);
+        const userInfo = await getUserInfo(data.createdBy || user.uid);
         allActivities.push({
           id: `event_${doc.id}`,
           type: 'event_created',
@@ -97,7 +106,8 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
           date: data.createdAt?.toDate() || new Date(),
           icon: '📅',
           eventId: doc.id,
-          userName,
+          userName: userInfo.name,
+          userPhoto: userInfo.photo,
           userId: data.createdBy,
         });
       }
@@ -113,7 +123,7 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
         const data = doc.data();
         // Filtrar solo gastos donde el usuario está involucrado
         if (data.paidBy === user.uid || (data.beneficiaries && data.beneficiaries.includes(user.uid))) {
-          const userName = await getUserName(data.paidBy);
+          const userInfo = await getUserInfo(data.paidBy);
           allActivities.push({
             id: `expense_${doc.id}`,
             type: 'expense_added',
@@ -122,7 +132,8 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
             date: data.date?.toDate() || new Date(),
             icon: '💰',
             eventId: data.eventId,
-            userName,
+            userName: userInfo.name,
+            userPhoto: userInfo.photo,
             userId: data.paidBy,
           });
         }
@@ -138,16 +149,17 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
       
       for (const doc of groupsSnapshot.docs) {
         const data = doc.data();
-        const userName = await getUserName(data.createdBy || user.uid);
+        const userInfo = await getUserInfo(data.createdBy || user.uid);
         allActivities.push({
           id: `group_${doc.id}`,
           type: 'group_created',
-          title: 'Grupo creado',
+          title: t('activity.groupCreated'),
           description: data.name,
           date: data.createdAt?.toDate() || new Date(),
           icon: '👥',
           groupId: doc.id,
-          userName,
+          userName: userInfo.name,
+          userPhoto: userInfo.photo,
           userId: data.createdBy,
         });
       }
@@ -204,11 +216,19 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
           <View style={styles.activityContent}>
             <View style={styles.titleRow}>
               <Text style={[styles.activityTitle, { color: theme.colors.text }]}>{activity.title}</Text>
-              {activity.userName && (
-                <Text style={[styles.userName, { color: theme.colors.primary }]}>
-                  • {activity.userName}
-                </Text>
-              )}
+              <View style={styles.userInfo}>
+                {activity.userPhoto && (
+                  <Image 
+                    source={{ uri: activity.userPhoto }} 
+                    style={[styles.userAvatar, { borderColor: theme.colors.border }]}
+                  />
+                )}
+                {activity.userName && (
+                  <Text style={[styles.userName, { color: theme.colors.primary }]}>
+                    {activity.userPhoto ? '' : '• '}{activity.userName}
+                  </Text>
+                )}
+              </View>
             </View>
             <Text style={[styles.activityDescription, { color: theme.colors.textSecondary }]} numberOfLines={2}>
               {activity.description}
@@ -221,11 +241,11 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.surface }]}>
+    <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: theme.colors.surface }]}>
       <View style={[styles.header, { backgroundColor: theme.colors.background, borderBottomColor: theme.colors.border }]}>
-        <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Actividad Reciente</Text>
+        <Text style={[styles.headerTitle, { color: theme.colors.text }]}>{t('activity.title')}</Text>
         <Text style={[styles.headerSubtitle, { color: theme.colors.textSecondary }]}>
-          Historial de eventos, gastos y cambios
+          {t('activity.emptySubtitle')}
         </Text>
       </View>
 
@@ -237,14 +257,14 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
       >
         {loading ? (
           <View style={styles.loadingContainer}>
-            <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Cargando actividad...</Text>
+            <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>{t('activity.loading')}</Text>
           </View>
         ) : activities.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>📊</Text>
-            <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>Sin actividad reciente</Text>
+            <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>{t('activity.empty')}</Text>
             <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
-              Tus eventos y gastos aparecerán aquí
+              {t('activity.emptySubtitle')}
             </Text>
           </View>
         ) : (
@@ -348,10 +368,22 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontWeight: '600',
     color: theme.colors.text,
   },
+  userInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 6,
+  },
+  userAvatar: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    marginRight: 4,
+    backgroundColor: theme.colors.border,
+    borderWidth: 1,
+  },
   userName: {
     fontSize: 13,
     fontWeight: '500',
-    marginLeft: 6,
     color: theme.colors.primary,
   },
   activityDescription: {

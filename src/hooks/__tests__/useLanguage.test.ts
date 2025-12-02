@@ -21,13 +21,13 @@ describe('useLanguage Hook', () => {
         await new Promise(resolve => setTimeout(resolve, 100));
       });
       
-      expect(result.current.language).toBe('en');
+      expect(result.current.currentLanguage.code).toBe('en');
     });
 
     it('should default to Spanish when no saved language', async () => {
       const { result } = renderHook(() => useLanguage());
       
-      expect(result.current.language).toBe('es');
+      expect(result.current.currentLanguage.code).toBe('es');
     });
   });
 
@@ -39,7 +39,7 @@ describe('useLanguage Hook', () => {
         await result.current.changeLanguage('en');
       });
       
-      expect(result.current.language).toBe('en');
+      expect(result.current.currentLanguage.code).toBe('en');
       const saved = await AsyncStorage.getItem('@LessMo:language');
       expect(saved).toBe('en');
     });
@@ -53,7 +53,7 @@ describe('useLanguage Hook', () => {
           await result.current.changeLanguage(lang);
         });
         
-        expect(result.current.language).toBe(lang);
+        expect(result.current.currentLanguage.code).toBe(lang);
       }
     });
 
@@ -105,7 +105,7 @@ describe('useLanguage Hook', () => {
       });
       
       // Should not crash
-      expect(result.current.language).toBeTruthy();
+      expect(result.current.currentLanguage).toBeTruthy();
     });
 
     it('should handle invalid language codes', async () => {
@@ -116,7 +116,7 @@ describe('useLanguage Hook', () => {
       });
       
       // Should either reject or default to valid language
-      expect(['es', 'en', 'fr', 'de', 'pt']).toContain(result.current.language);
+      expect(['es', 'en', 'fr', 'de', 'pt']).toContain(result.current.currentLanguage.code);
     });
   });
 });

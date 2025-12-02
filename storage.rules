@@ -12,6 +12,21 @@ service firebase.storage {
       allow read, write: if true;
     }
     
+    // Receipt photos - Fotos de recibos de gastos
+    // Formato: receipts/expenseId_timestamp.jpg
+    match /receipts/{receiptId} {
+      // Permitir lectura a usuarios autenticados
+      allow read: if request.auth != null;
+      
+      // Permitir escritura solo si:
+      // 1. Usuario autenticado
+      // 2. Archivo es una imagen (JPEG, PNG, WebP)
+      // 3. Tamaño máximo 5MB
+      allow write: if request.auth != null 
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp)');
+    }
+    
     // Denegar todo lo demás
     match /{allPaths=**} {
       allow read, write: if false;

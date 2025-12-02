@@ -8,7 +8,7 @@ import {
   Text,
   StyleSheet,
   TextInput,
-  ScrollView,
+  FlatList,
   TouchableOpacity,
   RefreshControl,
   Alert,
@@ -19,10 +19,14 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RootStackParamList, Event, CurrencySymbols } from '../types';
-import { Button, Card, OnboardingModal } from '../components/lovable';
-import { getUserEventsByStatus } from '../services/firebase';
+import { Button, Card } from '../components/lovable';
+import { EventCard } from '../components';
+import { getUserEventsByStatus, getGroup, db } from '../services/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
+import { useDebounce } from '../hooks/useDebounce';
 
 type EventsScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -36,71 +40,144 @@ type EventTab = 'active' | 'past';
 export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
   const { user } = useAuth();
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const styles = getStyles(theme);
   const [events, setEvents] = useState<Event[]>([]);
   const [activeTab, setActiveTab] = useState<EventTab>('active');
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [filterGroupId, setFilterGroupId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isFromTab, setIsFromTab] = useState(true);
+  const [groupNames, setGroupNames] = useState<{[key: string]: string}>({});
+  const [userName, setUserName] = useState<string>('');
 
-  // Check if first time and show onboarding
+  // Cargar nombre del usuario desde Firestore
   useEffect(() => {
-    checkFirstTime();
-  }, []);
+    const loadUserName = async () => {
+      if (!user) return;
+      try {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          setUserName(userData.name || userData.displayName || user.displayName || user.email?.split('@')[0] || 'Usuario');
+        } else {
+          setUserName(user.displayName || user.email?.split('@')[0] || 'Usuario');
+        }
+      } catch (error) {
+        console.error('Error loading user name:', error);
+        setUserName(user.displayName || user.email?.split('@')[0] || 'Usuario');
+      }
+    };
+    loadUserName();
+  }, [user]);
 
-  // Check for filter from route params
-  useEffect(() => {
-    if (route?.params?.filterGroupId) {
-      setFilterGroupId(route.params.filterGroupId);
-    } else {
-      // Si no hay params, limpiar el filtro
-      setFilterGroupId(null);
-    }
-  }, [route?.params?.filterGroupId]);
+  // Manejar filtro de grupo cuando viene de navegación
+  useFocusEffect(
+    useCallback(() => {
+      const hasGroupFilter = route?.params?.filterGroupId;
+      
+      console.log('🔍 EventsScreen Focus - Route params:', route?.params);
+      console.log('🔍 EventsScreen Focus - Group filter:', hasGroupFilter);
+      
+      if (hasGroupFilter) {
+        console.log('✅ Filtrando eventos del grupo:', hasGroupFilter);
+        setFilterGroupId(route.params.filterGroupId);
+        setIsFromTab(false);
+      } else {
+        console.log('✅ Mostrando todos los eventos del usuario');
+        setFilterGroupId(null);
+        setIsFromTab(true);
+        
+        // Limpiar params de navegación para evitar que persistan
+        if (route?.params) {
+          navigation.setParams({ filterGroupId: undefined } as any);
+        }
+      }
+    }, [route?.params, navigation])
+  );
 
   // Reload events when screen gains focus
   useFocusEffect(
     useCallback(() => {
-      loadEvents();
+      let isMounted = true;
+      
+      const load = async () => {
+        if (isMounted) {
+          await loadEvents();
+        }
+      };
+      
+      load();
+      
+      return () => {
+        isMounted = false;
+      };
     }, [user])
   );
-
-  const checkFirstTime = async () => {
-    try {
-      const hasSeenOnboarding = await AsyncStorage.getItem('@LessMo:hasSeenOnboarding');
-      if (!hasSeenOnboarding) {
-        setShowOnboarding(true);
-      }
-    } catch (error) {
-      console.error('Error checking onboarding status:', error);
-    }
-  };
-
-  const handleCloseOnboarding = async () => {
-    try {
-      await AsyncStorage.setItem('@LessMo:hasSeenOnboarding', 'true');
-      setShowOnboarding(false);
-    } catch (error) {
-      console.error('Error saving onboarding status:', error);
-    }
-  };
 
   const loadEvents = async () => {
     if (!user) return;
     
     try {
       setLoading(true);
-      // Cargar eventos activos y pasados por separado
-      const activeEvents = await getUserEventsByStatus(user.uid, 'active');
-      const completedEvents = await getUserEventsByStatus(user.uid, 'completed');
-      const archivedEvents = await getUserEventsByStatus(user.uid, 'archived');
+      setError(null);
       
-      setEvents([...activeEvents, ...completedEvents, ...archivedEvents]);
-    } catch (error) {
-      console.error('Error loading events:', error);
-      Alert.alert('Error', 'No se pudieron cargar los eventos');
+      // Cargar eventos con timeout para evitar bloqueos
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout al cargar eventos')), 30000)
+      );
+      
+      const loadPromise = (async () => {
+        const [activeEvents, completedEvents, archivedEvents] = await Promise.all([
+          getUserEventsByStatus(user.uid, 'active'),
+          getUserEventsByStatus(user.uid, 'completed'),
+          getUserEventsByStatus(user.uid, 'archived')
+        ]);
+        
+        return [...activeEvents, ...completedEvents, ...archivedEvents];
+      })();
+      
+      const allEvents = await Promise.race([loadPromise, timeoutPromise]) as Event[];
+      setEvents(allEvents);
+      
+      // Cargar nombres de grupos para eventos que pertenecen a un grupo
+      const eventsWithGroup = allEvents.filter(e => e.groupId);
+      const groupIds = [...new Set(eventsWithGroup.map(e => e.groupId!))];
+      console.log('📁 Total eventos:', allEvents.length);
+      console.log('📁 Eventos con groupId:', eventsWithGroup.length);
+      console.log('📁 Eventos con groupId details:', eventsWithGroup.map(e => ({ id: e.id, name: e.name, groupId: e.groupId })));
+      console.log('📁 GroupIds únicos a cargar:', groupIds);
+      const names: {[key: string]: string} = {};
+      
+      await Promise.all(
+        groupIds.map(async (groupId) => {
+          try {
+            const group = await getGroup(groupId);
+            if (group) {
+              names[groupId] = group.name;
+              console.log('✅ Grupo cargado:', groupId, '→', group.name);
+            } else {
+              console.warn('⚠️ Grupo no encontrado:', groupId);
+            }
+          } catch (error) {
+            console.error(`❌ Error loading group ${groupId}:`, error);
+          }
+        })
+      );
+      
+      console.log('📁 Nombres de grupos cargados:', names);
+      setGroupNames(names);
+    } catch (error: any) {
+      console.error('❌ Error loading events:', error);
+      const errorMessage = error?.message || 'No se pudieron cargar los eventos';
+      setError(errorMessage);
+      
+      // Solo mostrar alerta si no es un timeout o error de red común
+      if (!error?.message?.includes('Timeout') && !error?.message?.includes('network')) {
+        Alert.alert('Error', errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -112,22 +189,25 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
     setRefreshing(false);
   };
 
-  // Filtrar eventos - SEPARAR eventos de grupos
+  // Filtrar eventos
   let filteredEvents = events;
+  
+  // Si hay un filtro de grupo específico, mostrar solo esos eventos
   if (filterGroupId) {
-    // Mostrar solo eventos de este grupo
     filteredEvents = events.filter(e => e.groupId === filterGroupId);
-  } else {
-    // Mostrar solo eventos SIN grupo (individuales)
-    filteredEvents = events.filter(e => !e.groupId);
   }
-
-  // Aplicar filtro de búsqueda
-  if (searchQuery.trim()) {
-    const query = searchQuery.toLowerCase().trim();
+  // Si NO hay filtro de grupo, mostrar TODOS los eventos (individuales + de grupos)
+  // La pestaña "Eventos" debe mostrar todos los eventos del usuario
+  
+  // Aplicar filtro de búsqueda con debounce
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+  
+  if (debouncedSearchQuery.trim()) {
+    const query = debouncedSearchQuery.toLowerCase().trim();
     filteredEvents = filteredEvents.filter(e => 
       e.name.toLowerCase().includes(query) ||
-      e.description?.toLowerCase().includes(query)
+      e.description?.toLowerCase().includes(query) ||
+      e.inviteCode?.toLowerCase().includes(query)
     );
   }
 
@@ -135,64 +215,193 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
   const pastEvents = filteredEvents.filter(e => e.status === 'completed' || e.status === 'archived');
   const displayEvents = activeTab === 'active' ? activeEvents : pastEvents;
 
-  return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.surface }]}>
-      <OnboardingModal
-        visible={showOnboarding}
-        onClose={handleCloseOnboarding}
-      />
-      
-      <View style={[styles.header, { backgroundColor: theme.colors.background, borderBottomColor: theme.colors.border }]}>
-        <Text style={[styles.title, { color: theme.colors.text }]}>
-          {filterGroupId ? 'Eventos del Grupo' : 'Mis Eventos'}
+  // DEBUG: Log del título que se va a mostrar
+  console.log('🎯 EventsScreen RENDER - filterGroupId:', filterGroupId);
+  console.log('🎯 EventsScreen RENDER - Título que se muestra:', filterGroupId ? 'EVENTOS DEL GRUPO' : 'EVENTOS');
+
+  // Render item memoizado para FlatList
+  const renderEventItem = useCallback(({ item: event }: { item: Event }) => (
+    <View key={event.id} style={styles.eventCardWrapper}>
+      <TouchableOpacity
+        onPress={() => navigation.navigate('EventDetail', { eventId: event.id, eventName: event.name })}
+        activeOpacity={0.7}
+        style={styles.eventCard}
+      >
+        {/* Header con emoji y nombre */}
+        <View style={styles.eventCardHeader}>
+          <View style={styles.eventIconContainer}>
+            <Text style={styles.eventIcon}>🎉</Text>
+          </View>
+          <View style={styles.eventInfoContainer}>
+            <Text style={styles.eventName} numberOfLines={1}>{event.name}</Text>
+            <View style={styles.eventMetaRow}>
+              {event.inviteCode && <Text style={styles.eventCode}>#{event.inviteCode}</Text>}
+              {/* Badge de grupo inline */}
+              {event.groupId && (
+                <View style={styles.groupBadgeInline}>
+                  <Text style={styles.groupBadgeIconInline}>📁</Text>
+                  <Text style={styles.groupBadgeTextInline}>
+                    {groupNames[event.groupId] || 'Grupo'}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+          <View style={[styles.statusDot, event.status === 'active' ? styles.statusDotActive : styles.statusDotPast]} />
+        </View>
+        
+        {/* Barra de presupuesto visual tipo Splitwise */}
+        <View style={styles.budgetSection}>
+          <View style={styles.budgetRow}>
+            <Text style={styles.budgetLabel}>💰 Presupuesto</Text>
+            <Text style={styles.budgetValue}>
+              {CurrencySymbols[event.currency]}{event.initialBudget.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </Text>
+          </View>
+          <View style={styles.progressBarContainer}>
+            <View style={[styles.progressBar, { 
+              width: '100%',
+              backgroundColor: event.status === 'active' ? theme.colors.primary : '#9CA3AF'
+            }]} />
+          </View>
+        </View>
+        
+        {/* Footer con info de participantes y fecha */}
+        <View style={styles.eventFooter}>
+          <View style={styles.participantsPreview}>
+            <Text style={styles.participantsCount}>
+              👥 {event.participantIds?.length || 0} {(event.participantIds?.length || 0) === 1 ? 'persona' : 'personas'}
+            </Text>
+          </View>
+          <Text style={styles.eventDate}>
+            {(() => {
+              try {
+                const date = (event.createdAt as any)?.toDate 
+                  ? (event.createdAt as any).toDate() 
+                  : new Date(event.createdAt);
+                return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+              } catch {
+                return 'Reciente';
+              }
+            })()}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    </View>
+  ), [navigation, groupNames, theme.colors.primary, styles]);
+
+  // Componente empty state memoizado
+  const renderEmptyComponent = useCallback(() => {
+    if (loading) {
+      return (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyIcon}>⏳</Text>
+          <Text style={styles.emptyText}>Cargando eventos...</Text>
+        </View>
+      );
+    }
+    
+    return (
+      <View style={styles.emptyState}>
+        <Text style={styles.emptyIcon}>
+          {activeTab === 'active' ? '📝' : '📋'}
         </Text>
+        <Text style={styles.emptyText}>
+          {activeTab === 'active' 
+            ? 'No tienes eventos activos'
+            : 'No tienes eventos pasados'}
+        </Text>
+        {activeTab === 'active' && (
+          <Button
+            title="Crear primer evento"
+            onPress={() => navigation.navigate('CreateEvent', { mode: 'create' })}
+            style={styles.emptyButton}
+          />
+        )}
+      </View>
+    );
+  }, [loading, activeTab, navigation, styles]);
+
+  return (
+    <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: theme.colors.surface }]}>
+      <View style={[styles.header, { backgroundColor: theme.colors.card }]}>
+        <View style={styles.headerTop}>
+          <View>
+            <Text style={[styles.greeting, { color: theme.colors.textSecondary }]}>
+              Hola {userName.split(' ')[0]} 👋
+            </Text>
+            <Text style={[styles.title, { color: theme.colors.text }]}>
+              {filterGroupId ? 'Eventos del Grupo' : 'Mis Eventos'}
+            </Text>
+          </View>
+        </View>
         <View style={styles.headerButtons}>
           {filterGroupId && (
             <TouchableOpacity
               style={[styles.backButton, { backgroundColor: theme.colors.primary }]}
               onPress={() => setFilterGroupId(null)}
+              activeOpacity={0.8}
             >
-              <Text style={styles.backButtonText}>← Atrás</Text>
+              <Text style={styles.backButtonText}>← Volver</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity
-            style={styles.iconButton}
-            onPress={() => setShowOnboarding(true)}
+            style={[styles.actionButton, { backgroundColor: theme.colors.primary + '15' }]}
+            onPress={() => navigation.navigate('JoinEvent', { inviteCode: '' })}
+            activeOpacity={0.7}
           >
-            <Text style={styles.iconButtonText}>❓</Text>
+            <Text style={styles.actionButtonIcon}>🎟️</Text>
+            <Text style={[styles.actionButtonLabel, { color: theme.colors.primary }]}>Unirse</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.iconButton}
-            onPress={() => navigation.navigate('JoinEvent', { inviteCode: '' })}
-          >
-            <Text style={styles.iconButtonText}>🎟️</Text>
-          </TouchableOpacity>
-          <Button
-            title="+ Crear"
+            style={[styles.createButton, { backgroundColor: theme.colors.primary }]}
             onPress={() => navigation.navigate('CreateEvent', { mode: 'create' })}
-            size="small"
-          />
+            activeOpacity={0.8}
+          >
+            <Text style={styles.createButtonIcon}>+</Text>
+            <Text style={styles.createButtonText}>Crear</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
-      {/* Tabs */}
-      <View style={[styles.tabContainer, { backgroundColor: theme.colors.background, borderBottomColor: theme.colors.border }]}>
+      {/* Tabs con diseño moderno */}
+      <View style={[styles.tabContainer, { backgroundColor: theme.colors.background }]}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'active' && { borderBottomColor: theme.colors.primary, borderBottomWidth: 2 }]}
+          style={[
+            styles.tab, 
+            activeTab === 'active' && [styles.tabActive, { backgroundColor: theme.colors.primary + '15' }]
+          ]}
           onPress={() => setActiveTab('active')}
+          activeOpacity={0.7}
         >
-          <Text style={[styles.tabText, { color: activeTab === 'active' ? theme.colors.primary : theme.colors.textSecondary }]}>
-            Activos ({activeEvents.length})
-          </Text>
+          <View style={styles.tabContent}>
+            <Text style={styles.tabEmoji}>🟢</Text>
+            <Text style={[
+              styles.tabText, 
+              activeTab === 'active' && [styles.tabTextActive, { color: theme.colors.primary }]
+            ]}>
+              Activos ({activeEvents.length})
+            </Text>
+          </View>
         </TouchableOpacity>
         
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'past' && { borderBottomColor: theme.colors.primary, borderBottomWidth: 2 }]}
+          style={[
+            styles.tab, 
+            activeTab === 'past' && [styles.tabActive, { backgroundColor: theme.colors.primary + '15' }]
+          ]}
           onPress={() => setActiveTab('past')}
+          activeOpacity={0.7}
         >
-          <Text style={[styles.tabText, { color: activeTab === 'past' ? theme.colors.primary : theme.colors.textSecondary }]}>
-            Pasados ({pastEvents.length})
-          </Text>
+          <View style={styles.tabContent}>
+            <Text style={styles.tabEmoji}>⏸️</Text>
+            <Text style={[
+              styles.tabText,
+              activeTab === 'past' && [styles.tabTextActive, { color: theme.colors.primary }]
+            ]}>
+              Pasados ({pastEvents.length})
+            </Text>
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -200,7 +409,7 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Buscar eventos..."
+          placeholder={t('groupEvents.searchPlaceholder')}
           placeholderTextColor={theme.colors.textSecondary}
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -215,102 +424,19 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
         )}
       </View>
 
-      <ScrollView
+      <FlatList
+        data={displayEvents}
+        renderItem={renderEventItem}
+        keyExtractor={(item) => item.id}
         style={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         contentContainerStyle={styles.scrollContent}
-      >
-        {loading ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>⏳</Text>
-            <Text style={styles.emptyText}>Cargando eventos...</Text>
-          </View>
-        ) : displayEvents.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>
-              {activeTab === 'active' ? '📝' : '📋'}
-            </Text>
-            <Text style={styles.emptyText}>
-              {activeTab === 'active' 
-                ? 'No tienes eventos activos'
-                : 'No tienes eventos pasados'}
-            </Text>
-            {activeTab === 'active' && (
-              <Button
-                title="Crear primer evento"
-                onPress={() => navigation.navigate('CreateEvent', { mode: 'create' })}
-                style={styles.emptyButton}
-              />
-            )}
-          </View>
-        ) : (
-          displayEvents.map((event) => (
-            <TouchableOpacity
-              key={event.id}
-              onPress={() => navigation.navigate('EventDetail', { eventId: event.id })}
-            >
-              <Card style={styles.eventCard}>
-                <View style={styles.eventHeader}>
-                  <Text style={styles.eventName}>{event.name}</Text>
-                  <View style={[styles.statusBadge, event.status === 'active' ? styles.statusActive : styles.statusPast]}>
-                    <Text style={styles.statusText}>
-                      {event.status === 'active' ? '🟢 Activo' : '⚪ Finalizado'}
-                    </Text>
-                  </View>
-                </View>
-                
-                {event.description && (
-                  <Text style={styles.eventDescription} numberOfLines={2}>
-                    {event.description}
-                  </Text>
-                )}
-                
-                <View style={styles.eventDetails}>
-                  <View style={styles.eventDetail}>
-                    <Text style={styles.detailLabel}>Presupuesto</Text>
-                    <Text style={styles.detailValue}>
-                      {CurrencySymbols[event.currency]}{event.initialBudget.toFixed(2)}
-                    </Text>
-                  </View>
-                  
-                  <View style={styles.eventDetail}>
-                    <Text style={styles.detailLabel}>Participantes</Text>
-                    <Text style={styles.detailValue}>
-                      👥 {event.participantIds.length}
-                    </Text>
-                  </View>
-                  
-                  <View style={styles.eventDetail}>
-                    <Text style={styles.detailLabel}>Creado</Text>
-                    <Text style={styles.detailValue}>
-                      {(() => {
-                        try {
-                          const date = (event.createdAt as any)?.toDate 
-                            ? (event.createdAt as any).toDate() 
-                            : new Date(event.createdAt);
-                          return date.toLocaleDateString('es-ES', { 
-                            day: 'numeric',
-                            month: 'short' 
-                          });
-                        } catch {
-                          return 'N/A';
-                        }
-                      })()}
-                    </Text>
-                  </View>
-                </View>
-
-                {event.inviteCode && (
-                  <View style={styles.inviteCodeContainer}>
-                    <Text style={styles.inviteCodeLabel}>Código:</Text>
-                    <Text style={styles.inviteCode}>{event.inviteCode}</Text>
-                  </View>
-                )}
-              </Card>
-            </TouchableOpacity>
-          ))
-        )}
-      </ScrollView>
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        ListEmptyComponent={renderEmptyComponent}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        removeClippedSubviews={true}
+      />
     </SafeAreaView>
   );
 };
@@ -321,83 +447,145 @@ const getStyles = (theme: any) => StyleSheet.create({
     backgroundColor: theme.colors.background,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 14,
+    backgroundColor: theme.colors.card,
+    borderBottomWidth: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  headerTop: {
+    marginBottom: 12,
+  },
+  greeting: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 4,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 32,
+    fontWeight: '900',
     color: theme.colors.text,
+    letterSpacing: -1,
   },
   headerButtons: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
   backButton: {
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 8,
-    marginRight: 8,
-    backgroundColor: theme.colors.surface,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   backButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: theme.colors.primary,
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
   },
-  iconButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: theme.colors.surface,
+  actionButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    gap: 6,
   },
-  iconButtonText: {
-    fontSize: 24,
+  actionButtonIcon: {
+    fontSize: 20,
+  },
+  actionButtonLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  createButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 14,
+    gap: 6,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  createButtonIcon: {
+    fontSize: 22,
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  createButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    backgroundColor: theme.colors.background,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
   },
   tab: {
     flex: 1,
-    paddingVertical: 16,
+    paddingVertical: 14,
+    borderRadius: 14,
     alignItems: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+    backgroundColor: theme.colors.card,
+    borderWidth: 1,
+    borderColor: theme.colors.border + '40',
   },
   tabActive: {
-    borderBottomColor: theme.colors.primary,
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  tabContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  tabEmoji: {
+    fontSize: 16,
   },
   tabText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '700',
     color: theme.colors.textSecondary,
   },
   tabTextActive: {
-    color: theme.colors.primary,
+    fontWeight: '800',
   },
   content: {
     flex: 1,
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 90, // Espacio para la barra de tabs
+    paddingBottom: 20,
   },
   emptyState: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 64,
+    paddingVertical: 24,
   },
   emptyIcon: {
     fontSize: 64,
@@ -412,20 +600,154 @@ const getStyles = (theme: any) => StyleSheet.create({
     marginTop: 16,
   },
   eventCard: {
+    backgroundColor: theme.colors.card,
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+    position: 'relative',
+    overflow: 'visible',
+  },
+  eventCardWrapper: {
+    marginBottom: 14,
+    marginHorizontal: 16,
+    position: 'relative',
+  },
+  eventMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+    flexWrap: 'wrap',
+  },
+  groupBadgeInline: {
+    backgroundColor: '#8B5CF6',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  groupBadgeIconInline: {
+    fontSize: 10,
+  },
+  groupBadgeTextInline: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+  },
+  eventCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 16,
   },
-  eventHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
+  eventIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: theme.colors.primary + '20',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
   },
-  eventName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: theme.colors.text,
+  eventIcon: {
+    fontSize: 32,
+  },
+  eventInfoContainer: {
     flex: 1,
     marginRight: 12,
+  },
+  eventName: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: theme.colors.text,
+    marginBottom: 4,
+    letterSpacing: -0.5,
+  },
+  eventCode: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+    letterSpacing: 1,
+  },
+  statusDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  statusDotActive: {
+    backgroundColor: '#10B981',
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 4,
+  },
+  statusDotPast: {
+    backgroundColor: '#9CA3AF',
+  },
+  budgetSection: {
+    marginBottom: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border + '40',
+  },
+  budgetRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  budgetLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: theme.colors.text,
+  },
+  budgetValue: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: theme.colors.primary,
+    letterSpacing: -0.5,
+  },
+  progressBarContainer: {
+    height: 8,
+    backgroundColor: theme.colors.border + '40',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressBar: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  eventFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border + '40',
+  },
+  participantsPreview: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  participantsCount: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: theme.colors.text,
+  },
+  eventDate: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
   },
   statusBadge: {
     paddingHorizontal: 12,

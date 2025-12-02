@@ -40,6 +40,23 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "LessMo necesita acceso a tus fotos para adjuntar recibos a los gastos.",
+          "cameraPermission": "LessMo necesita acceso a tu cámara para tomar fotos de recibos."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#6366F1",
+          "sounds": []
+        }
+      ]
+    ]
   }
 }

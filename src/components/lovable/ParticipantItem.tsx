@@ -1,10 +1,11 @@
 /**
  * Componente ParticipantItem - Item de lista de participantes
  * Generado con estilo Lovable.dev
+ * Optimizado con React.memo
  */
 
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { memo } from 'react';
+import { View, Text, StyleSheet, Image } from 'react-native';
 import { Participant, CurrencySymbols, Currency } from '../../types';
 import { Card } from './Card';
 import { useTheme } from '../../context/ThemeContext';
@@ -17,7 +18,7 @@ interface ParticipantItemProps {
   balance?: number;
 }
 
-export const ParticipantItem: React.FC<ParticipantItemProps> = ({
+const ParticipantItemComponent: React.FC<ParticipantItemProps> = ({
   participant,
   currency,
   totalPaid,
@@ -27,6 +28,21 @@ export const ParticipantItem: React.FC<ParticipantItemProps> = ({
   const { theme } = useTheme();
   const currencySymbol = CurrencySymbols[currency];
   const styles = getStyles(theme);
+  const [imageError, setImageError] = React.useState(false);
+  const [imageLoading, setImageLoading] = React.useState(true);
+  
+  // Debug: Log para ver si llega photoURL
+  React.useEffect(() => {
+    console.log('👤 ParticipantItem renderizado:', {
+      name: participant.name,
+      hasPhotoURL: !!participant.photoURL,
+      photoURL: participant.photoURL,
+      userId: participant.userId
+    });
+    // Reset error state cuando cambia el participante
+    setImageError(false);
+    setImageLoading(true);
+  }, [participant.photoURL, participant.id]);
   
   // Si tenemos balance calculado (desde el resumen de gastos), usarlo
   // Si no, usar el sistema de presupuesto individual
@@ -51,10 +67,33 @@ export const ParticipantItem: React.FC<ParticipantItemProps> = ({
     <Card style={styles.card}>
       <View style={styles.header}>
         <View style={styles.avatarContainer}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {participant.name.charAt(0).toUpperCase()}
-            </Text>
+          <View style={[styles.avatar, { backgroundColor: imageError || !participant.photoURL ? theme.colors.primary : 'transparent' }]}>
+            {participant.photoURL && !imageError ? (
+              <Image 
+                source={{ uri: participant.photoURL }} 
+                style={styles.avatarImage}
+                resizeMode="cover"
+                onError={(e) => {
+                  console.error('❌ Error al cargar imagen de', participant.name, ':', participant.photoURL);
+                  console.error('Error details:', e.nativeEvent?.error);
+                  setImageError(true);
+                  setImageLoading(false);
+                }}
+                onLoadStart={() => {
+                  console.log('🔄 Iniciando carga de imagen para', participant.name);
+                  setImageLoading(true);
+                }}
+                onLoad={() => {
+                  console.log('✅ Imagen cargada correctamente para', participant.name);
+                  setImageLoading(false);
+                  setImageError(false);
+                }}
+              />
+            ) : (
+              <Text style={styles.avatarText}>
+                {participant.name.charAt(0).toUpperCase()}
+              </Text>
+            )}
           </View>
           <View style={styles.nameContainer}>
             <Text style={styles.name}>{participant.name}</Text>
@@ -142,7 +181,12 @@ export const ParticipantItem: React.FC<ParticipantItemProps> = ({
 
 const getStyles = (theme: any) => StyleSheet.create({
   card: {
-    marginBottom: 12,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 5,
   },
   header: {
     marginBottom: 12,
@@ -152,18 +196,46 @@ const getStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
   },
   avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: theme.colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 14,
+    overflow: 'hidden',
+    borderWidth: 3,
+    borderColor: theme.colors.card,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+  },
+  avatarPlaceholder: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    backgroundColor: theme.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   avatarText: {
     color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 24,
+    fontWeight: '800',
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   nameContainer: {
     flex: 1,
@@ -233,3 +305,21 @@ const getStyles = (theme: any) => StyleSheet.create({
     textAlign: 'right',
   },
 });
+
+// Función de comparación para React.memo
+const areEqual = (prevProps: ParticipantItemProps, nextProps: ParticipantItemProps) => {
+  return (
+    prevProps.participant.id === nextProps.participant.id &&
+    prevProps.participant.name === nextProps.participant.name &&
+    prevProps.participant.photoURL === nextProps.participant.photoURL &&
+    prevProps.participant.currentBalance === nextProps.participant.currentBalance &&
+    prevProps.participant.individualBudget === nextProps.participant.individualBudget &&
+    prevProps.currency === nextProps.currency &&
+    prevProps.totalPaid === nextProps.totalPaid &&
+    prevProps.totalOwed === nextProps.totalOwed &&
+    prevProps.balance === nextProps.balance
+  );
+};
+
+// Exportar componente memoizado
+export const ParticipantItem = memo(ParticipantItemComponent, areEqual);

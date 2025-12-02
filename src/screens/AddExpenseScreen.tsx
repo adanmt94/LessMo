@@ -7,21 +7,34 @@ import {
   View,
   Text,
   StyleSheet,
-  
+  Image,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
   Alert,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
+import * as ImagePicker from 'expo-image-picker';
 import { RootStackParamList, ExpenseCategory, CategoryLabels, VALIDATION } from '../types';
 import { Button, Input, Card } from '../components/lovable';
 import { useExpenses } from '../hooks/useExpenses';
 import { useNotifications } from '../hooks/useNotifications';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
+import { analyzeReceipt, ReceiptData } from '../services/ocrService';
+import { ItemSplitScreen } from './ItemSplitScreen';
+import { ExpenseItem } from '../types';
+import { 
+  getAllTemplates, 
+  incrementTemplateUsage, 
+  createTemplateFromExpense,
+  ExpenseTemplate 
+} from '../services/expenseTemplateService';
+import { ExpenseTemplatesModal } from '../components/ExpenseTemplatesModal';
 
 type AddExpenseScreenNavigationProp = StackNavigationProp<RootStackParamList, 'AddExpense'>;
 type AddExpenseScreenRouteProp = RouteProp<RootStackParamList, 'AddExpense'>;
@@ -42,30 +55,62 @@ const CATEGORIES: ExpenseCategory[] = [
 ];
 
 export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
-  const { eventId, expenseId, mode } = route.params;
+  const { eventId, expenseId, mode, prefilledData } = route.params;
   const { theme } = useTheme();
+  const { t, currentLanguage } = useLanguage();
   const styles = getStyles(theme);
   const isEditMode = mode === 'edit' && expenseId;
-  const { participants, addExpense, editExpense, expenses } = useExpenses(eventId);
+  const { participants, addExpense, editExpense, expenses } = useExpenses(eventId!);
   const { notifyNewExpense } = useNotifications();
   const [eventData, setEventData] = useState<any>(null);
 
-  const [description, setDescription] = useState('');
-  const [amount, setAmount] = useState('');
-  const [paidBy, setPaidBy] = useState('');
-  const [category, setCategory] = useState<ExpenseCategory>('other');
+  const [description, setDescription] = useState(prefilledData?.description || '');
+  const [amount, setAmount] = useState(prefilledData?.amount ? prefilledData.amount.toString() : '');
+  const [paidBy, setPaidBy] = useState(prefilledData?.paidBy || '');
+  const [category, setCategory] = useState<ExpenseCategory>((prefilledData?.category as ExpenseCategory) || 'food');
   const [selectedBeneficiaries, setSelectedBeneficiaries] = useState<string[]>([]);
-  const [splitType, setSplitType] = useState<'equal' | 'custom'>('equal');
+  const [splitType, setSplitType] = useState<'equal' | 'custom' | 'items'>('equal');
   const [customSplits, setCustomSplits] = useState<{ [participantId: string]: string }>({});
   const [loading, setLoading] = useState(false);
+  const [receiptPhoto, setReceiptPhoto] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [analyzingReceipt, setAnalyzingReceipt] = useState(false);
+  const [ocrData, setOcrData] = useState<ReceiptData | null>(null);
+  const [showItemSplit, setShowItemSplit] = useState(false);
+  const [expenseItems, setExpenseItems] = useState<ExpenseItem[]>([]);
+  const [templates, setTemplates] = useState<ExpenseTemplate[]>([]);
+  const [showTemplates, setShowTemplates] = useState(false);
 
-  // Cargar datos del evento
+  // Helper function to translate category names
+  const translateCategory = (category: ExpenseCategory, language: 'es' | 'en'): string => {
+    const translations: Record<ExpenseCategory, { es: string; en: string }> = {
+      food: { es: 'Comida', en: 'Food' },
+      transport: { es: 'Transporte', en: 'Transport' },
+      accommodation: { es: 'Alojamiento', en: 'Accommodation' },
+      entertainment: { es: 'Entretenimiento', en: 'Entertainment' },
+      shopping: { es: 'Compras', en: 'Shopping' },
+      health: { es: 'Salud', en: 'Health' },
+      other: { es: 'Otros', en: 'Other' },
+    };
+    
+    const lang = typeof language === 'string' ? language : 'es';
+    return translations[category]?.[lang] || translations[category]?.es || category;
+  };
+
+  // Cargar datos del evento y plantillas
   useEffect(() => {
     const loadEventData = async () => {
+      if (!eventId) return;
       try {
-        const { getEvent } = await import('../services/firebase');
+        const { getEvent, auth } = await import('../services/firebase');
         const event = await getEvent(eventId);
         setEventData(event);
+        
+        // Cargar plantillas del usuario
+        if (auth.currentUser) {
+          const userTemplates = await getAllTemplates(auth.currentUser.uid);
+          setTemplates(userTemplates);
+        }
       } catch (error) {
         console.error('Error cargando datos del evento:', error);
       }
@@ -85,6 +130,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
         setCategory(expense.category);
         setSelectedBeneficiaries(expense.beneficiaries);
         setSplitType(expense.splitType || 'equal');
+        setReceiptPhoto(expense.receiptPhoto || null);
         
         if (expense.splitType === 'custom' && expense.customSplits) {
           const splitsString: { [key: string]: string } = {};
@@ -100,7 +146,10 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
   useEffect(() => {
     console.log('🔍 AddExpenseScreen - Participants:', participants.length, participants);
     if (participants.length > 0 && !isEditMode) {
-      setPaidBy(participants[0].id);
+      // Si hay datos prellenados de paidBy, usarlos; si no, el primer participante
+      if (!paidBy || !prefilledData?.paidBy) {
+        setPaidBy(participants[0].id);
+      }
       setSelectedBeneficiaries(participants.map((p) => p.id));
       
       // Inicializar custom splits con división equitativa
@@ -120,19 +169,280 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
     }
   };
 
+  // Manejar selección de plantilla
+  const handleSelectTemplate = async (template: ExpenseTemplate) => {
+    try {
+      // Aplicar datos de la plantilla
+      setDescription(template.name);
+      if (template.amount > 0) {
+        setAmount(template.amount.toString());
+      }
+      setCategory(template.category as ExpenseCategory);
+      setSplitType(template.splitType);
+      
+      if (template.customSplits && template.splitType === 'custom') {
+        setCustomSplits(
+          Object.entries(template.customSplits).reduce((acc, [id, val]) => {
+            acc[id] = val.toString();
+            return acc;
+          }, {} as { [key: string]: string })
+        );
+      }
+      
+      // Incrementar contador de uso
+      await incrementTemplateUsage(template.id);
+      
+      setShowTemplates(false);
+      Alert.alert('✅ Plantilla aplicada', `Datos de "${template.name}" cargados correctamente`);
+    } catch (error) {
+      console.error('Error al aplicar plantilla:', error);
+      Alert.alert('Error', 'No se pudo aplicar la plantilla');
+    }
+  };
+
+  // Guardar gasto actual como plantilla
+  const handleSaveAsTemplate = async () => {
+    try {
+      if (!description.trim()) {
+        Alert.alert('Error', 'Debes agregar una descripción primero');
+        return;
+      }
+
+      const amountNum = parseFloat(amount) || 0;
+      const { auth } = await import('../services/firebase');
+      
+      if (!auth.currentUser) {
+        Alert.alert('Error', 'Debes iniciar sesión');
+        return;
+      }
+
+      // Preguntar detalles de la plantilla
+      Alert.prompt(
+        'Guardar como plantilla',
+        '¿Nombre para la plantilla?',
+        [
+          {
+            text: 'Cancelar',
+            style: 'cancel',
+          },
+          {
+            text: 'Guardar',
+            onPress: async (templateName?: string) => {
+              if (!templateName) return;
+              if (!templateName?.trim()) return;
+              
+              try {
+                const customSplitsNum = splitType === 'custom' ? 
+                  Object.entries(customSplits).reduce((acc, [id, val]) => {
+                    acc[id] = parseFloat(val) || 0;
+                    return acc;
+                  }, {} as { [key: string]: number }) : undefined;
+
+                await createTemplateFromExpense(
+                  auth.currentUser!.uid,
+                  templateName,
+                  description,
+                  amountNum,
+                  category as any,
+                  splitType,
+                  customSplitsNum,
+                  undefined,
+                  false,
+                  undefined
+                );
+
+                // Recargar plantillas
+                const updatedTemplates = await getAllTemplates(auth.currentUser!.uid);
+                setTemplates(updatedTemplates);
+                
+                setShowTemplates(false);
+                Alert.alert('✅ Plantilla guardada', `"${templateName}" guardada correctamente`);
+              } catch (error) {
+                console.error('Error al guardar plantilla:', error);
+                Alert.alert('Error', 'No se pudo guardar la plantilla');
+              }
+            },
+          },
+        ],
+        'plain-text',
+        description
+      );
+    } catch (error) {
+      console.error('Error al guardar plantilla:', error);
+      Alert.alert('Error', 'No se pudo guardar la plantilla');
+    }
+  };
+
+  // Función para analizar la imagen con OCR
+  const processReceiptImage = async (imageUri: string) => {
+    setAnalyzingReceipt(true);
+    
+    try {
+      console.log('🔍 Analizando recibo con OCR...');
+      const data = await analyzeReceipt(imageUri);
+      
+      setOcrData(data);
+
+      // Si encontró datos con buena confianza, mostrar diálogo de confirmación
+      if (data.confidence > 0.6 && (data.total || data.merchantName)) {
+        const message = [
+          data.merchantName ? `📍 Lugar: ${data.merchantName}` : '',
+          data.total ? `💰 Total: ${data.total.toFixed(2)}€` : '',
+          data.date ? `📅 Fecha: ${data.date.toLocaleDateString()}` : '',
+          data.category ? `🏷️ Categoría sugerida: ${translateCategory(data.category as ExpenseCategory, currentLanguage.code as 'es' | 'en')}` : '',
+          data.items && data.items.length > 0 ? `\n📝 ${data.items.length} items detectados` : '',
+        ].filter(Boolean).join('\n');
+
+        // Si hay items detectados, preguntar si quiere dividirlos
+        if (data.items && data.items.length > 1) {
+          Alert.alert(
+            '🤖 Datos del recibo detectados',
+            message + '\n\n¿Quieres dividir los items entre participantes?',
+            [
+              {
+                text: 'No, usar total',
+                onPress: () => {
+                  // Aplicar solo datos generales
+                  if (data.total) setAmount(data.total.toString());
+                  if (data.merchantName && !description) setDescription(data.merchantName);
+                  if (data.category) setCategory(data.category as ExpenseCategory);
+                },
+              },
+              {
+                text: 'Sí, dividir items',
+                onPress: () => {
+                  // Aplicar datos y abrir división de items
+                  if (data.merchantName && !description) setDescription(data.merchantName);
+                  if (data.category) setCategory(data.category as ExpenseCategory);
+                  setShowItemSplit(true);
+                },
+              },
+            ]
+          );
+        } else {
+          // Sin items, mostrar diálogo normal
+          Alert.alert(
+            '🤖 Datos del recibo detectados',
+            message + '\n\n¿Quieres usar estos datos?',
+            [
+              {
+                text: 'No, gracias',
+                style: 'cancel',
+              },
+              {
+                text: 'Sí, usar datos',
+                onPress: () => {
+                  // Aplicar datos detectados
+                  if (data.total) {
+                    setAmount(data.total.toString());
+                  }
+                  if (data.merchantName && !description) {
+                    setDescription(data.merchantName);
+                  }
+                  if (data.category) {
+                    setCategory(data.category as ExpenseCategory);
+                  }
+                },
+              },
+            ]
+          );
+        }
+      } else if (data.total) {
+        // Si solo encontró el total, aplicarlo directamente
+        setAmount(data.total.toString());
+        Alert.alert(
+          '✅ Total detectado',
+          `Se detectó un total de ${data.total.toFixed(2)}€`
+        );
+      }
+    } catch (error) {
+      console.error('Error procesando OCR:', error);
+      // No mostrar error al usuario, simplemente no usa OCR
+    } finally {
+      setAnalyzingReceipt(false);
+    }
+  };
+
+  const pickImage = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert(
+          t('common.error'),
+          'Necesitamos acceso a tus fotos para adjuntar recibos'
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.7,
+      });
+
+      if (!result.canceled) {
+        const imageUri = result.assets[0].uri;
+        setReceiptPhoto(imageUri);
+        
+        // Analizar automáticamente con OCR
+        await processReceiptImage(imageUri);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert(t('common.error'), 'Error al seleccionar la imagen');
+    }
+  };
+
+  const takePhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert(
+          t('common.error'),
+          'Necesitamos acceso a tu cámara para tomar fotos de recibos'
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.7,
+      });
+
+      if (!result.canceled) {
+        const imageUri = result.assets[0].uri;
+        setReceiptPhoto(imageUri);
+        
+        // Analizar automáticamente con OCR
+        await processReceiptImage(imageUri);
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert(t('common.error'), 'Error al tomar la foto');
+    }
+  };
+
+  const removePhoto = () => {
+    setReceiptPhoto(null);
+  };
+
   const handleDeleteExpense = async () => {
     if (!expenseId) return;
 
     Alert.alert(
-      'Eliminar gasto',
-      '¿Estás seguro de que deseas eliminar este gasto?',
+      t('addExpense.deleteTitle'),
+      t('addExpense.deleteConfirm'),
       [
         {
-          text: 'Cancelar',
+          text: t('common.cancel'),
           style: 'cancel',
         },
         {
-          text: 'Eliminar',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -140,15 +450,15 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
               const { deleteExpense } = await import('../services/firebase');
               await deleteExpense(expenseId);
               
-              Alert.alert('Éxito', 'Gasto eliminado correctamente', [
+              Alert.alert(t('common.success'), t('addExpense.expenseDeleted'), [
                 {
-                  text: 'Aceptar',
+                  text: 'OK',
                   onPress: () => navigation.goBack(),
                 },
               ]);
             } catch (error: any) {
               console.error('❌ Error eliminando gasto:', error);
-              Alert.alert('Error', error.message || 'No se pudo eliminar el gasto');
+              Alert.alert(t('common.error'), error.message || t('addExpense.errorDeleting'));
             } finally {
               setLoading(false);
             }
@@ -172,7 +482,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
     // Validaciones
     if (!description.trim()) {
       console.log('❌ Error: Descripción vacía');
-      Alert.alert('Error', 'La descripción es obligatoria');
+      Alert.alert(t('common.error'), t('addExpense.descriptionRequired'));
       return;
     }
 
@@ -180,21 +490,21 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
     if (isNaN(amountNum) || amountNum < VALIDATION.MIN_AMOUNT || amountNum > VALIDATION.MAX_AMOUNT) {
       console.log('❌ Error: Monto inválido', amountNum);
       Alert.alert(
-        'Error',
-        `El monto debe estar entre ${VALIDATION.MIN_AMOUNT} y ${VALIDATION.MAX_AMOUNT}`
+        t('common.error'),
+        t('addExpense.amountInvalid', { min: VALIDATION.MIN_AMOUNT, max: VALIDATION.MAX_AMOUNT })
       );
       return;
     }
 
     if (!paidBy) {
       console.log('❌ Error: No hay pagador seleccionado');
-      Alert.alert('Error', 'Selecciona quién pagó');
+      Alert.alert(t('common.error'), t('addExpense.selectWhoPaid'));
       return;
     }
 
     if (selectedBeneficiaries.length === 0) {
       console.log('❌ Error: No hay beneficiarios seleccionados');
-      Alert.alert('Error', 'Selecciona al menos un beneficiario');
+      Alert.alert(t('common.error'), t('addExpense.selectBeneficiaries'));
       return;
     }
 
@@ -206,8 +516,9 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
 
       for (const beneficiaryId of selectedBeneficiaries) {
         const splitAmount = parseFloat(customSplits[beneficiaryId] || '0');
+        const participant = participants.find(p => p.id === beneficiaryId);
         if (isNaN(splitAmount) || splitAmount <= 0) {
-          Alert.alert('Error', 'Todos los beneficiarios deben tener un monto válido en división personalizada');
+          Alert.alert(t('common.error'), t('addExpense.customSplitInvalid', { name: participant?.name || 'participante' }));
           return;
         }
         customSplitsData[beneficiaryId] = splitAmount;
@@ -217,8 +528,8 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
       // Verificar que la suma sea igual al total (con margen de error de 0.01 por decimales)
       if (Math.abs(totalCustom - amountNum) > 0.01) {
         Alert.alert(
-          'Error de división',
-          `La suma de los montos personalizados (€${totalCustom.toFixed(2)}) debe ser igual al monto total (€${amountNum.toFixed(2)})`
+          t('common.error'),
+          t('addExpense.customSplitTotal', { total: totalCustom.toFixed(2), amount: amountNum.toFixed(2) })
         );
         return;
       }
@@ -229,6 +540,36 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
     setLoading(true);
 
     try {
+      let photoURL: string | undefined = undefined;
+
+      // Subir foto si existe
+      if (receiptPhoto && receiptPhoto.startsWith('file://')) {
+        console.log('📸 Subiendo foto de recibo...');
+        setUploadingPhoto(true);
+        try {
+          const { uploadReceiptPhoto } = await import('../services/firebase');
+          const tempId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          photoURL = await uploadReceiptPhoto(receiptPhoto, tempId);
+          console.log('✅ Foto subida exitosamente:', photoURL);
+        } catch (photoError) {
+          console.error('❌ Error subiendo foto:', photoError);
+          Alert.alert(
+            'Advertencia',
+            'No se pudo subir la foto del recibo, pero se guardará el gasto sin ella. ¿Deseas continuar?',
+            [
+              { text: 'Cancelar', style: 'cancel', onPress: () => { setLoading(false); setUploadingPhoto(false); return; } },
+              { text: 'Continuar', onPress: () => { photoURL = undefined; } }
+            ]
+          );
+          return;
+        } finally {
+          setUploadingPhoto(false);
+        }
+      } else if (receiptPhoto && receiptPhoto.startsWith('http')) {
+        // Ya es una URL (modo edición)
+        photoURL = receiptPhoto;
+      }
+
       let success: boolean;
       
       if (isEditMode) {
@@ -241,7 +582,8 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
           category,
           selectedBeneficiaries,
           splitType,
-          customSplitsData
+          customSplitsData,
+          photoURL
         );
       } else {
         console.log('➕ Modo creación - Creando gasto nuevo');
@@ -252,7 +594,8 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
           category,
           selectedBeneficiaries,
           splitType,
-          customSplitsData
+          customSplitsData,
+          photoURL
         );
       }
 
@@ -267,8 +610,8 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
         }
         
         Alert.alert(
-          isEditMode ? '¡Gasto actualizado!' : '¡Gasto agregado!',
-          isEditMode ? 'Los cambios se han guardado correctamente' : 'El gasto se ha registrado correctamente',
+          t('common.success'),
+          isEditMode ? t('addExpense.expenseUpdated') : t('addExpense.expenseAdded'),
           [
             {
               text: 'OK',
@@ -278,11 +621,11 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
         );
       } else {
         console.log(`❌ ${isEditMode ? 'editExpense' : 'addExpense'} retornó false`);
-        Alert.alert('Error', `No se pudo ${isEditMode ? 'actualizar' : 'registrar'} el gasto`);
+        Alert.alert(t('common.error'), isEditMode ? t('addExpense.errorUpdating') : t('addExpense.errorAdding'));
       }
     } catch (error: any) {
       console.error(`❌ Error al ${isEditMode ? 'actualizar' : 'agregar'} gasto:`, error);
-      Alert.alert('Error', error.message || `No se pudo ${isEditMode ? 'actualizar' : 'agregar'} el gasto`);
+      Alert.alert(t('common.error'), error.message || (isEditMode ? t('addExpense.errorUpdating') : t('addExpense.errorAdding')));
     } finally {
       setLoading(false);
     }
@@ -301,10 +644,23 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
           showsVerticalScrollIndicator={false}
           nestedScrollEnabled={true}
         >
+          {/* Botón para abrir plantillas */}
+          {!isEditMode && (
+            <TouchableOpacity
+              style={[styles.templatesButton, { backgroundColor: theme.colors.primary + '15' }]}
+              onPress={() => setShowTemplates(true)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.templatesButtonText, { color: theme.colors.primary }]}>
+                📝 Usar plantilla {templates.length > 0 && `(${templates.length})`}
+              </Text>
+            </TouchableOpacity>
+          )}
+
           <Card>
             <Input
-              label="Descripción *"
-              placeholder="Ej: Cena en restaurante"
+              label={t('addExpense.descriptionLabel')}
+              placeholder={t('addExpense.descriptionPlaceholder')}
               value={description}
               onChangeText={setDescription}
               maxLength={VALIDATION.MAX_DESCRIPTION_LENGTH}
@@ -313,15 +669,15 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
             />
 
             <Input
-              label="Monto *"
-              placeholder="0.00"
+              label={t('addExpense.amountLabel')}
+              placeholder={t('addExpense.amountPlaceholder')}
               value={amount}
               onChangeText={setAmount}
               autoCorrect={false}
               keyboardType="decimal-pad"
             />
 
-            <Text style={styles.label}>Categoría *</Text>
+            <Text style={styles.label}>{t('addExpense.categoryLabel')}</Text>
             <View style={styles.categoriesGrid}>
               {CATEGORIES.map((cat) => (
                 <TouchableOpacity
@@ -344,9 +700,89 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
               ))}
             </View>
 
-            <Text style={styles.label}>¿Quién pagó? *</Text>
+            {analyzingReceipt && (
+              <View style={styles.ocrAnalyzing}>
+                <ActivityIndicator size="small" color={theme.colors.primary} />
+                <Text style={styles.ocrAnalyzingText}>
+                  🔍 Analizando recibo con IA...
+                </Text>
+              </View>
+            )}
+            
+            {ocrData && ocrData.confidence > 0.6 && (
+              <View style={styles.ocrSuccess}>
+                <Text style={styles.ocrSuccessText}>
+                  ✨ Datos detectados automáticamente
+                </Text>
+                {ocrData.items && ocrData.items.length > 0 && (
+                  <Text style={styles.ocrItemsText}>
+                    📝 {ocrData.items.length} items encontrados
+                  </Text>
+                )}
+              </View>
+            )}
+            
+            {receiptPhoto ? (
+              <View style={styles.receiptPreview}>
+                <View style={styles.receiptImageContainer}>
+                  <Image 
+                    source={{ uri: receiptPhoto }} 
+                    style={styles.receiptImage}
+                    resizeMode="cover"
+                  />
+                  {analyzingReceipt && (
+                    <View style={styles.analyzingOverlay}>
+                      <ActivityIndicator size="large" color="#FFFFFF" />
+                      <Text style={styles.analyzingText}>🔍 Analizando recibo...</Text>
+                    </View>
+                  )}
+                </View>
+                <TouchableOpacity 
+                  style={styles.removePhotoButton}
+                  onPress={removePhoto}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.removePhotoIcon}>🗑️</Text>
+                  <Text style={styles.removePhotoText}>Quitar foto</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <Card style={styles.receiptCard}>
+                <View style={styles.receiptHeader}>
+                  <View style={styles.receiptIconContainer}>
+                    <Text style={styles.receiptIcon}>📸</Text>
+                  </View>
+                  <View style={styles.receiptTitleContainer}>
+                    <Text style={styles.receiptTitle}>Foto del Recibo</Text>
+                    <Text style={styles.receiptSubtitle}>Escanea automáticamente con OCR</Text>
+                  </View>
+                </View>
+                <View style={styles.receiptButtons}>
+                  <TouchableOpacity 
+                    style={[styles.photoButton, styles.photoButtonPrimary]}
+                    onPress={takePhoto}
+                    disabled={analyzingReceipt}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.photoButtonIcon}>📷</Text>
+                    <Text style={styles.photoButtonTextPrimary}>Tomar Foto</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.photoButton, styles.photoButtonSecondary]}
+                    onPress={pickImage}
+                    disabled={analyzingReceipt}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.photoButtonIcon}>🖼️</Text>
+                    <Text style={styles.photoButtonTextSecondary}>Desde Galería</Text>
+                  </TouchableOpacity>
+                </View>
+              </Card>
+            )}
+
+            <Text style={styles.label}>{t('addExpense.whoPaidLabel')}</Text>
             {participants.length === 0 ? (
-              <Text style={styles.emptyText}>No hay participantes. Agrega participantes al evento primero.</Text>
+              <Text style={styles.emptyText}>{t('addExpense.noParticipants')}</Text>
             ) : (
               <View style={styles.participantsList}>
                 {participants.map((participant) => (
@@ -371,7 +807,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
               </View>
             )}
 
-            <Text style={styles.label}>Tipo de división *</Text>
+            <Text style={styles.label}>{t('addExpense.splitTypeLabel')}</Text>
             <View style={styles.splitTypeContainer}>
               <TouchableOpacity
                 style={[
@@ -386,7 +822,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
                     splitType === 'equal' && styles.splitTypeTextActive,
                   ]}
                 >
-                  ⚖️ Equitativa
+                  ⚖️ {t('addExpense.splitEqual')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -402,13 +838,13 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
                     splitType === 'custom' && styles.splitTypeTextActive,
                   ]}
                 >
-                  🎯 Personalizada
+                  🎯 {t('addExpense.splitCustom')}
                 </Text>
               </TouchableOpacity>
             </View>
 
             <Text style={styles.label}>
-              Beneficiarios * {splitType === 'equal' ? '(división equitativa)' : '(especifica el monto para cada uno)'}
+              {t('addExpense.beneficiariesTitle')} * {splitType === 'equal' ? `(${t('addExpense.splitEqual')})` : `(${t('addExpense.customSplitsSubtitle')})`}
             </Text>
             
             {splitType === 'custom' && amount && (
@@ -427,7 +863,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
             )}
             
             {participants.length === 0 ? (
-              <Text style={styles.emptyText}>No hay participantes disponibles</Text>
+              <Text style={styles.emptyText}>{t('addExpense.noParticipantsAvailable')}</Text>
             ) : (
               <View style={styles.beneficiariesList}>
                 {splitType === 'equal' ? (
@@ -504,7 +940,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
           </Card>
 
           <Button
-            title={isEditMode ? "Guardar cambios" : "Registrar gasto"}
+            title={isEditMode ? t('addExpense.updateButton') : t('addExpense.addButton')}
             onPress={handleAddExpense}
             loading={loading}
             fullWidth
@@ -513,7 +949,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
 
           {isEditMode && expenseId && (
             <Button
-              title="Eliminar gasto"
+              title={t('addExpense.deleteButton')}
               onPress={handleDeleteExpense}
               variant="danger"
               fullWidth
@@ -523,6 +959,58 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Modal de división de items */}
+      {ocrData && ocrData.items && (
+        <ItemSplitScreen
+          visible={showItemSplit}
+          items={ocrData.items}
+          participants={participants}
+          onClose={() => setShowItemSplit(false)}
+          onConfirm={(items) => {
+            setExpenseItems(items);
+            setSplitType('custom'); // Cambiar a modo custom ya que los items definen la división
+            setShowItemSplit(false);
+            
+            // Calcular el total de todos los items
+            const total = items.reduce((sum, item) => sum + item.price, 0);
+            setAmount(total.toString());
+            
+            // Calcular splits personalizados basados en los items
+            const splits: { [participantId: string]: number } = {};
+            items.forEach(item => {
+              const pricePerPerson = item.price / item.assignedTo.length;
+              item.assignedTo.forEach(participantId => {
+                splits[participantId] = (splits[participantId] || 0) + pricePerPerson;
+              });
+            });
+            
+            // Convertir a strings para los inputs
+            const customSplitsStr: { [key: string]: string } = {};
+            Object.keys(splits).forEach(id => {
+              customSplitsStr[id] = splits[id].toFixed(2);
+            });
+            setCustomSplits(customSplitsStr);
+            
+            // Seleccionar beneficiarios que tienen algún item asignado
+            setSelectedBeneficiaries(Object.keys(splits));
+            
+            Alert.alert(
+              '✅ División completada',
+              `Items divididos entre ${Object.keys(splits).length} personas`
+            );
+          }}
+        />
+      )}
+
+      {/* Modal de plantillas */}
+      <ExpenseTemplatesModal
+        visible={showTemplates}
+        templates={templates}
+        onClose={() => setShowTemplates(false)}
+        onSelectTemplate={handleSelectTemplate}
+        onSaveAsTemplate={handleSaveAsTemplate}
+      />
     </SafeAreaView>
   );
 };
@@ -557,11 +1045,24 @@ const getStyles = (theme: any) => StyleSheet.create({
   scrollContent: {
     padding: 24,
   },
+  templatesButton: {
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  templatesButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
   label: {
     fontSize: 14,
     fontWeight: '600',
     color: theme.colors.text,
-    marginBottom: 12,
+    marginBottom: 10,
     marginTop: 0,
   },
   categoriesGrid: {
@@ -617,7 +1118,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontWeight: '600',
   },
   beneficiariesList: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   beneficiaryButton: {
     flexDirection: 'row',
@@ -657,6 +1158,185 @@ const getStyles = (theme: any) => StyleSheet.create({
     textAlign: 'center',
     padding: 16,
     fontStyle: 'italic',
+  },
+  receiptCard: {
+    marginBottom: 20,
+    backgroundColor: theme.isDark ? 'rgba(99, 102, 241, 0.08)' : 'rgba(99, 102, 241, 0.04)',
+    borderWidth: 2,
+    borderColor: theme.isDark ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.15)',
+    borderStyle: 'dashed',
+  },
+  receiptHeader: {
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  receiptIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.colors.primary + '20',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  receiptIcon: {
+    fontSize: 20,
+  },
+  receiptTitleContainer: {
+    flex: 1,
+  },
+  receiptTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.colors.text,
+    marginBottom: 2,
+  },
+  receiptSubtitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+  },
+  receiptButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  photoButton: {
+    flex: 1,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 14,
+    alignItems: 'center',
+    gap: 8,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  photoButtonPrimary: {
+    backgroundColor: theme.colors.primary,
+    shadowColor: theme.colors.primary,
+  },
+  photoButtonSecondary: {
+    backgroundColor: theme.colors.card,
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
+  },
+  photoButtonIcon: {
+    fontSize: 24,
+  },
+  photoButtonTextPrimary: {
+    fontSize: 13,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  photoButtonTextSecondary: {
+    fontSize: 13,
+    color: theme.colors.primary,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  receiptPreview: {
+    marginBottom: 20,
+  },
+  receiptImageContainer: {
+    position: 'relative',
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  receiptImage: {
+    width: '100%',
+    height: 240,
+    backgroundColor: theme.colors.inputBackground,
+  },
+  analyzingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  analyzingText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  removePhotoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    backgroundColor: '#EF4444',
+    borderRadius: 12,
+    gap: 8,
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  removePhotoIcon: {
+    fontSize: 20,
+  },
+  removePhotoText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
+  },
+  receiptSection: {
+    marginBottom: 8,
+  },
+  helperText: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    marginTop: 4,
+    lineHeight: 16,
+  },
+  ocrAnalyzing: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.inputBackground,
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 12,
+    gap: 12,
+  },
+  ocrAnalyzingText: {
+    fontSize: 14,
+    color: theme.colors.text,
+    fontWeight: '500',
+  },
+  ocrSuccess: {
+    backgroundColor: theme.isDark ? 'rgba(52, 211, 153, 0.15)' : 'rgba(16, 185, 129, 0.1)',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: theme.isDark ? 'rgba(52, 211, 153, 0.3)' : 'rgba(16, 185, 129, 0.2)',
+  },
+  ocrSuccessText: {
+    fontSize: 14,
+    color: theme.isDark ? '#34D399' : '#059669',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  ocrItemsText: {
+    fontSize: 12,
+    color: theme.isDark ? '#6EE7B7' : '#10B981',
+    fontWeight: '500',
   },
   splitTypeContainer: {
     flexDirection: 'row',

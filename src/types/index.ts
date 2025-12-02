@@ -32,6 +32,9 @@ export interface Event {
   createdBy: string;          // userId del creador
   createdAt: Date;
   initialBudget: number;      // Presupuesto inicial del evento
+  budget?: number;            // Presupuesto actual para predicciones (alias de initialBudget)
+  startDate?: Date;           // Fecha de inicio del evento (opcional)
+  endDate?: Date;             // Fecha de fin del evento (opcional)
   currency: Currency;
   participantIds: string[];   // Array de IDs de participantes
   isActive: boolean;          // Si el evento está activo
@@ -47,11 +50,15 @@ export interface Participant {
   userId?: string;            // Opcional, puede ser invitado sin cuenta
   name: string;
   email?: string;
+  photoURL?: string;          // URL de la foto del usuario
   individualBudget: number;   // Saldo inicial asignado a este participante
   currentBalance: number;     // Saldo actual después de gastos
   joinedAt: Date;
   isAnonymous?: boolean;      // Si se unió sin registrarse
 }
+
+// Tipo de grupo
+export type GroupType = 'project' | 'recurring';
 
 // Interface para grupo de eventos
 export interface Group {
@@ -64,6 +71,19 @@ export interface Group {
   eventIds: string[];         // IDs de eventos del grupo
   color?: string;             // Color para identificar el grupo
   icon?: string;              // Emoji o icono del grupo
+  type?: GroupType;           // 'project' (con eventos) o 'recurring' (gastos directos)
+  defaultEventId?: string;    // ID del evento "General" para grupos recurring
+  totalParticipants?: number; // Número total de participantes únicos (calculado)
+}
+
+// Interface para item individual de un gasto
+export interface ExpenseItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity?: number;
+  assignedTo: string[];       // participantIds que comparten este item
+  sharedEqually: boolean;     // true = división equitativa, false = custom
 }
 
 // Interface para gasto
@@ -76,9 +96,16 @@ export interface Expense {
   category: ExpenseCategory;
   date: Date;
   beneficiaries: string[];    // Array de participantIds que se benefician
-  splitType: 'equal' | 'custom'; // Tipo de división
+  splitType: 'equal' | 'custom' | 'items'; // Tipo de división
   customSplits?: {            // Solo si splitType es 'custom'
     [participantId: string]: number; // Monto específico por participante
+  };
+  items?: ExpenseItem[];      // Items individuales (solo si splitType es 'items')
+  receiptPhoto?: string;      // URL de la foto del recibo (opcional)
+  location?: {                // Ubicación geográfica del gasto (opcional, para itinerario)
+    latitude: number;
+    longitude: number;
+    address?: string;
   };
   createdAt: Date;
   updatedAt?: Date;
@@ -115,13 +142,57 @@ export type RootStackParamList = {
   MainTabs: undefined;
   CreateEvent: { eventId?: string; mode?: 'create' | 'edit'; groupId?: string } | undefined;
   CreateGroup: { groupId?: string; mode?: 'create' | 'edit' } | undefined;
-  EventDetail: { eventId: string };
+  EventDetail: { eventId: string; eventName?: string };
   GroupEvents: { groupId: string; groupName: string; groupIcon?: string; groupColor?: string };
-  AddExpense: { eventId: string; expenseId?: string; mode?: 'create' | 'edit' };
+  AddExpense: { 
+    eventId?: string; 
+    groupId?: string;
+    expenseId?: string; 
+    mode?: 'create' | 'edit';
+    prefilledData?: {
+      amount?: number;
+      description?: string;
+      category?: string;
+      paidBy?: string;
+    };
+  };
   ExpenseList: { eventId: string };
   Summary: { eventId: string };
   JoinEvent: { inviteCode: string };
+  JoinGroup: { inviteCode?: string };
+  Chat: { eventId?: string; groupId?: string; title: string };
   EditProfile: undefined;
+  Achievements: { eventId: string; participantId: string };
+  BankConnection: { connectedAccounts?: any[]; onAccountConnected?: (account: any) => void };
+  BankTransactions: { account: any; event: any; expenses: any[]; onExpenseCreated?: (expense: any) => void };
+  PaymentMethod: {
+    amount: number;
+    currency: Currency;
+    recipientName: string;
+    recipientEmail?: string;
+    recipientPhone?: string;
+    description?: string;
+    eventId: string;
+    eventName: string;
+  };
+  QRCodePayment: {
+    amount: number;
+    currency: string;
+    recipientName: string;
+    recipientPhone?: string;
+    recipientEmail?: string;
+    description?: string;
+    paymentType: 'bizum' | 'paypal' | 'venmo' | 'generic';
+  };
+  ReminderSettings: undefined;
+  Itinerary: { event: any; expenses: any[] };
+  Statistics: {
+    eventId: string;
+    eventName: string;
+    currency: Currency;
+  };
+  Analytics: { eventId: string };
+  PaymentHistory: { eventId: string; eventName: string };
 };
 
 export type TabParamList = {

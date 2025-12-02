@@ -20,6 +20,8 @@ import { Button, Card } from '../components/lovable';
 import { getUserEvents } from '../services/firebase';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
+import { formatCurrency } from '../utils/numberUtils';
 
 // DEPRECATED: Esta pantalla ha sido reemplazada por MainTabs (EventsScreen, GroupsScreen, SettingsScreen)
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'MainTabs'>;
@@ -34,6 +36,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const { user, signOut } = useAuth();
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const styles = getStyles(theme);
 
   const loadEvents = useCallback(async () => {
@@ -43,7 +46,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
       const userEvents = await getUserEvents(user.uid);
       setEvents(userEvents);
     } catch (error: any) {
-      Alert.alert('Error', 'No se pudieron cargar los eventos');
+      Alert.alert(t('common.error'), t('home.errorLoading'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -61,12 +64,12 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
 
   const handleSignOut = async () => {
     Alert.alert(
-      'Cerrar sesión',
-      '¿Estás seguro que deseas cerrar sesión?',
+      t('home.signOut'),
+      t('home.signOutConfirm'),
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         { 
-          text: 'Cerrar sesión', 
+          text: t('home.signOut'), 
           style: 'destructive',
           onPress: async () => {
             await signOut();
@@ -89,7 +92,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={[styles.eventName, { color: theme.colors.text }]}>{item.name}</Text>
             <View style={[styles.statusBadge, item.isActive && styles.statusActive]}>
               <Text style={styles.statusText}>
-                {item.isActive ? 'Activo' : 'Finalizado'}
+                {item.isActive ? t('home.activeStatus') : t('home.finished')}
               </Text>
             </View>
           </View>
@@ -102,13 +105,13 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
 
           <View style={styles.eventFooter}>
             <View style={styles.budgetContainer}>
-              <Text style={[styles.budgetLabel, { color: theme.colors.textSecondary }]}>Presupuesto</Text>
+              <Text style={[styles.budgetLabel, { color: theme.colors.textSecondary }]}>{t('home.budget')}</Text>
               <Text style={[styles.budgetValue, { color: theme.colors.primary }]}>
-                {currencySymbol}{item.initialBudget.toFixed(2)}
+                {formatCurrency(item.initialBudget, item.currency as any)}
               </Text>
             </View>
             <Text style={[styles.participantsCount, { color: theme.colors.textSecondary }]}>
-              👥 {item.participantIds.length} participantes
+              👥 {item.participantIds.length} {t('home.totalParticipants')}
             </Text>
           </View>
         </Card>
@@ -119,12 +122,12 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
       <Text style={styles.emptyIcon}>📝</Text>
-      <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No hay eventos</Text>
+      <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>{t('home.noEvents')}</Text>
       <Text style={[styles.emptyDescription, { color: theme.colors.textSecondary }]}>
-        Crea tu primer evento para comenzar a gestionar gastos compartidos
+        {t('home.noEventsMessage')}
       </Text>
       <Button
-        title="Crear evento"
+        title={t('home.createEvent')}
         onPress={() => navigation.navigate('CreateEvent')}
         style={styles.emptyButton}
       />
@@ -132,7 +135,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.surface }]}>
+    <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: theme.colors.surface }]}>
       <View style={[styles.header, { backgroundColor: theme.colors.background, borderBottomColor: theme.colors.border }]}>
         <View>
           <Text style={[styles.greeting, { color: theme.colors.textSecondary }]}>Hola 👋</Text>
@@ -266,7 +269,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 64,
+    paddingVertical: 32,
   },
   emptyIcon: {
     fontSize: 64,
@@ -282,8 +285,8 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontSize: 14,
     color: theme.colors.textSecondary,
     textAlign: 'center',
-    paddingHorizontal: 32,
-    marginBottom: 24,
+    paddingHorizontal: 16,
+    marginBottom: 20,
   },
   emptyButton: {
     marginTop: 8,
