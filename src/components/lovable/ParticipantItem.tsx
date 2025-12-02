@@ -31,15 +31,8 @@ const ParticipantItemComponent: React.FC<ParticipantItemProps> = ({
   const [imageError, setImageError] = React.useState(false);
   const [imageLoading, setImageLoading] = React.useState(true);
   
-  // Debug: Log para ver si llega photoURL
+  // Reset error state cuando cambia el participante
   React.useEffect(() => {
-    console.log('👤 ParticipantItem renderizado:', {
-      name: participant.name,
-      hasPhotoURL: !!participant.photoURL,
-      photoURL: participant.photoURL,
-      userId: participant.userId
-    });
-    // Reset error state cuando cambia el participante
     setImageError(false);
     setImageLoading(true);
   }, [participant.photoURL, participant.id]);
@@ -73,18 +66,14 @@ const ParticipantItemComponent: React.FC<ParticipantItemProps> = ({
                 source={{ uri: participant.photoURL }} 
                 style={styles.avatarImage}
                 resizeMode="cover"
-                onError={(e) => {
-                  console.error('❌ Error al cargar imagen de', participant.name, ':', participant.photoURL);
-                  console.error('Error details:', e.nativeEvent?.error);
+                onError={() => {
                   setImageError(true);
                   setImageLoading(false);
                 }}
                 onLoadStart={() => {
-                  console.log('🔄 Iniciando carga de imagen para', participant.name);
                   setImageLoading(true);
                 }}
                 onLoad={() => {
-                  console.log('✅ Imagen cargada correctamente para', participant.name);
                   setImageLoading(false);
                   setImageError(false);
                 }}

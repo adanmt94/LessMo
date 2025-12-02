@@ -44,7 +44,7 @@ export async function registerForPushNotificationsAsync(): Promise<string | unde
     }
     
     if (finalStatus !== 'granted') {
-      console.log('❌ Permiso de notificaciones denegado');
+      
       return;
     }
     
@@ -52,12 +52,12 @@ export async function registerForPushNotificationsAsync(): Promise<string | unde
       token = (await Notifications.getExpoPushTokenAsync({
         projectId: Constants.expoConfig?.extra?.eas?.projectId ?? 'your-project-id',
       })).data;
-      console.log('✅ Token de notificación obtenido:', token);
+      
     } catch (error) {
-      console.error('❌ Error obteniendo token:', error);
+      
     }
   } else {
-    console.log('⚠️ Debe usar un dispositivo físico para notificaciones push');
+    
   }
 
   return token;

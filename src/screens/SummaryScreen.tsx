@@ -84,7 +84,7 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
       const { scheduleRemindersForEvent } = await import('../services/debtReminderService');
       await scheduleRemindersForEvent(eventId, event?.name || 'Evento', settlements, participants);
     } catch (error) {
-      console.error('Error scheduling settlement reminders:', error);
+      
     }
   };
 
@@ -102,7 +102,7 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
       const eventPayments = await getEventPayments(eventId);
       setPayments(eventPayments);
     } catch (error) {
-      console.error('Error loading payments:', error);
+      
     }
   };
 
@@ -145,7 +145,7 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
         [{ text: 'OK' }]
       );
     } catch (error: any) {
-      console.error('Error exporting PDF:', error);
+      
       Alert.alert(
         t('common.error') || 'Error',
         error.message || (t('eventSummary.errorExporting') || 'Error al exportar PDF'),
@@ -213,7 +213,7 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
         Alert.alert(t('common.info'), t('eventSummary.sharingNotAvailable'));
       }
     } catch (error) {
-      console.error('Error exporting image:', error);
+      
       Alert.alert(t('common.error'), t('eventSummary.errorExporting'));
     } finally {
       setExporting(false);

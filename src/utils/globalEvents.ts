@@ -18,7 +18,7 @@ export const GlobalEvents = {
 
 // Función helper para emitir actualización global
 export const emitGlobalUpdate = (event: keyof typeof GlobalEvents) => {
-  console.log(`🔔 Emitiendo evento global: ${event}`);
+  
   globalEmitter.emit(GlobalEvents[event]);
   // También emitir un force_update general
   globalEmitter.emit(GlobalEvents.FORCE_UPDATE);
@@ -32,7 +32,7 @@ export const useForceUpdate = () => {
   
   useEffect(() => {
     const handleUpdate = () => {
-      console.log('🔄 Forzando re-render global');
+      
       forceUpdate();
     };
     

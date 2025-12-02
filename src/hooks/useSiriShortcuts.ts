@@ -66,41 +66,41 @@ export const useSiriShortcuts = () => {
   }, []);
 
   const handleDeepLink = ({ url }: { url: string }) => {
-    console.log('🔗 Deep link recibido:', url);
+    
 
     // Parsear la URL
     const { path } = Linking.parse(url);
 
     if (!path) {
-      console.log('⚠️ No se pudo parsear el path');
+      
       return;
     }
 
     // Navegar según el path
     switch (path) {
       case 'add-expense':
-        console.log('📝 Navegando a: Añadir Gasto');
+        
         // Necesitamos el eventId, por ahora vamos a Home
         navigation.navigate('Home');
         break;
 
       case 'summary':
-        console.log('📊 Navegando a: Resumen');
+        
         navigation.navigate('Home');
         break;
 
       case 'create-event':
-        console.log('🎉 Navegando a: Crear Evento');
+        
         navigation.navigate('CreateEvent');
         break;
 
       case 'settings':
-        console.log('⚙️ Navegando a: Configuración');
+        
         navigation.navigate('Settings');
         break;
 
       default:
-        console.log('❓ Path desconocido:', path);
+        
         navigation.navigate('Home');
     }
   };

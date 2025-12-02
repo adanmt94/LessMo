@@ -124,7 +124,7 @@ const getSyncQueue = async (): Promise<SyncOperation[]> => {
     const json = await AsyncStorage.getItem(SYNC_QUEUE_KEY);
     return json ? JSON.parse(json) : [];
   } catch (error) {
-    console.error('Error loading sync queue:', error);
+    
     return [];
   }
 };
@@ -136,7 +136,7 @@ const saveSyncQueue = async (queue: SyncOperation[]): Promise<void> => {
   try {
     await AsyncStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(queue));
   } catch (error) {
-    console.error('Error saving sync queue:', error);
+    
   }
 };
 
@@ -190,7 +190,7 @@ export const syncPendingOperations = async (): Promise<void> => {
         operation.status = 'completed';
         operation.retryCount++;
       } catch (error: any) {
-        console.error('Error syncing operation:', error);
+        
         operation.status = 'failed';
         operation.error = error.message;
         operation.retryCount++;
@@ -228,7 +228,7 @@ const executeOperation = async (operation: SyncOperation): Promise<void> => {
 
   // In production: Call actual Firebase API
   // For now, just simulate success
-  console.log('Executing operation:', operation);
+  
 
   // Import Firebase services dynamically to avoid circular dependencies
   const { createEvent, updateEvent, deleteEvent } = await import('../services/firebase');
@@ -247,12 +247,12 @@ const executeOperation = async (operation: SyncOperation): Promise<void> => {
 
     case 'expense':
       // Similar logic for expenses
-      console.log('Expense operation:', operation.type);
+      
       break;
 
     case 'participant':
       // Similar logic for participants
-      console.log('Participant operation:', operation.type);
+      
       break;
   }
 };
@@ -272,7 +272,7 @@ export const cacheOfflineData = async (data: Partial<OfflineData>): Promise<void
 
     await AsyncStorage.setItem(OFFLINE_DATA_KEY, JSON.stringify(updated));
   } catch (error) {
-    console.error('Error caching offline data:', error);
+    
   }
 };
 
@@ -286,7 +286,7 @@ export const getOfflineData = async (): Promise<OfflineData> => {
       return JSON.parse(json);
     }
   } catch (error) {
-    console.error('Error loading offline data:', error);
+    
   }
 
   return {

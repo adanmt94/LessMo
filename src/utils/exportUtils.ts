@@ -114,9 +114,9 @@ export const exportExpensesToExcel = async (
       throw new Error('La función de compartir no está disponible en este dispositivo');
     }
 
-    console.log('✅ Archivo exportado exitosamente:', fileName);
+    
   } catch (error: any) {
-    console.error('❌ Error exportando a Excel:', error);
+    
     throw new Error(error.message || 'No se pudo exportar el archivo');
   }
 };
@@ -212,9 +212,9 @@ export const exportAllEventsToExcel = async (
       throw new Error('La función de compartir no está disponible en este dispositivo');
     }
 
-    console.log('✅ Todos los eventos exportados exitosamente');
+    
   } catch (error: any) {
-    console.error('❌ Error exportando todos los eventos:', error);
+    
     throw new Error(error.message || 'No se pudo exportar el archivo');
   }
 };

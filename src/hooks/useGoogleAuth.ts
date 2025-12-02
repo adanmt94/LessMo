@@ -22,10 +22,10 @@ export const useGoogleAuth = () => {
   const webClientId = Constants.expoConfig?.extra?.googleWebClientId;
 
   // DEBUG: Ver qué Client IDs se están usando
-  console.log('🔍 Google Sign-In Config:');
-  console.log('  Android Client ID:', androidClientId ? '✅ Configurado' : '❌ No configurado');
-  console.log('  iOS Client ID:', iosClientId ? '✅ Configurado' : '❌ No configurado');
-  console.log('  Web Client ID:', webClientId ? '✅ Configurado' : '❌ No configurado');
+  
+  
+  
+  
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     androidClientId,

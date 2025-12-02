@@ -66,7 +66,7 @@ export function AchievementsScreen({ navigation, route }: Props) {
         setStats(participantStats);
       }
     } catch (error) {
-      console.error('Error loading achievement data:', error);
+      
     }
   };
 

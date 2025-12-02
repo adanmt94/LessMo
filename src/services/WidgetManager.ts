@@ -427,12 +427,12 @@ export class WidgetDataManager {
    */
   static async updateWidget(data: WidgetData): Promise<void> {
     if (Platform.OS !== 'ios') {
-      console.warn('Widgets solo están disponibles en iOS');
+      
       return;
     }
 
     if (!WidgetModule) {
-      console.warn('WidgetModule no está disponible. Requiere build nativa.');
+      
       return;
     }
 
@@ -448,9 +448,9 @@ export class WidgetDataManager {
       // Recargar el widget
       await WidgetModule.reloadAllTimelines();
 
-      console.log('✅ Widget actualizado');
+      
     } catch (error) {
-      console.error('❌ Error actualizando widget:', error);
+      
     }
   }
 
@@ -462,7 +462,7 @@ export class WidgetDataManager {
       const data = await AsyncStorage.getItem('@LessMo:widgetData');
       return data ? JSON.parse(data) : null;
     } catch (error) {
-      console.error('❌ Error obteniendo datos del widget:', error);
+      
       return null;
     }
   }
@@ -475,7 +475,7 @@ export class WidgetDataManager {
       await AsyncStorage.setItem('@LessMo:widgetData', JSON.stringify(data));
       await this.updateWidget(data);
     } catch (error) {
-      console.error('❌ Error guardando datos del widget:', error);
+      
     }
   }
 }

@@ -23,7 +23,7 @@ export function usePersistedState<T>(
           setState(JSON.parse(stored));
         }
       } catch (error) {
-        console.error(`Error loading persisted state for ${key}:`, error);
+        
       } finally {
         if (isMounted.current) {
           setLoading(false);
@@ -50,7 +50,7 @@ export function usePersistedState<T>(
         
         await AsyncStorage.setItem(key, JSON.stringify(newValue));
       } catch (error) {
-        console.error(`Error saving persisted state for ${key}:`, error);
+        
       }
     },
     [key, state]

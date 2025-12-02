@@ -41,7 +41,6 @@ export const useCurrency = () => {
     try {
       const savedCurrency = await AsyncStorage.getItem(CURRENCY_STORAGE_KEY);
       if (savedCurrency) {
-        console.log('💰 Moneda guardada encontrada:', savedCurrency);
         const currency = AVAILABLE_CURRENCIES.find(c => c.code === savedCurrency);
         if (currency) {
           setCurrentCurrency(currency);
@@ -69,30 +68,24 @@ export const useCurrency = () => {
         const currency = AVAILABLE_CURRENCIES.find(c => c.code === detectedCurrency);
         
         if (currency) {
-          console.log('🌍 Autodetectada moneda del dispositivo:', currency.code, 'para región:', deviceRegion);
           setCurrentCurrency(currency);
           await AsyncStorage.setItem(CURRENCY_STORAGE_KEY, currency.code);
-        } else {
-          console.log('💰 Moneda no soportada, usando EUR por defecto');
         }
       }
     } catch (error) {
-      console.error('Error loading currency preference:', error);
+      // Currency preference loading failed - using default
     }
   };
 
   const changeCurrency = async (currencyCode: Currency) => {
     try {
-      console.log('💰 useCurrency.changeCurrency - Iniciando cambio a:', currencyCode);
       await AsyncStorage.setItem(CURRENCY_STORAGE_KEY, currencyCode);
-      console.log('💾 useCurrency.changeCurrency - Guardado en AsyncStorage');
       const currency = AVAILABLE_CURRENCIES.find(c => c.code === currencyCode);
       if (currency) {
         setCurrentCurrency(currency);
-        console.log('✅ useCurrency.changeCurrency - Completado. Nueva moneda:', currency);
       }
     } catch (error) {
-      console.error('❌ Error changing currency:', error);
+      // Currency change failed
     }
   };
 

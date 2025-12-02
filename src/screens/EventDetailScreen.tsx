@@ -243,7 +243,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   );
 
   const handleEditParticipants = () => {
-    console.log('✏️ Editando participantes del evento:', eventId);
+    
     navigation.navigate('CreateEvent', { 
       eventId,
       mode: 'edit'

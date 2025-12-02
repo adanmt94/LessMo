@@ -139,12 +139,10 @@ export class LiveActivitiesManager {
    */
   static async startActivity(data: LiveActivityData): Promise<void> {
     if (Platform.OS !== 'ios') {
-      console.warn('Live Activities solo están disponibles en iOS');
       return;
     }
 
     if (!LiveActivityModule) {
-      console.warn('LiveActivityModule no está disponible. Requiere build nativa.');
       return;
     }
 
@@ -158,9 +156,8 @@ export class LiveActivitiesManager {
       });
 
       this.activityId = activityId;
-      console.log('✅ Live Activity iniciada:', activityId);
     } catch (error) {
-      console.error('❌ Error iniciando Live Activity:', error);
+      // Start failed
     }
   }
 
@@ -169,7 +166,6 @@ export class LiveActivitiesManager {
    */
   static async updateActivity(data: Partial<LiveActivityData>): Promise<void> {
     if (!this.activityId || !LiveActivityModule) {
-      console.warn('No hay Live Activity activa para actualizar');
       return;
     }
 
@@ -179,10 +175,8 @@ export class LiveActivitiesManager {
         expenseCount: data.expenseCount,
         lastUpdate: new Date().toISOString(),
       });
-
-      console.log('✅ Live Activity actualizada');
     } catch (error) {
-      console.error('❌ Error actualizando Live Activity:', error);
+      // Update failed
     }
   }
 
@@ -197,9 +191,9 @@ export class LiveActivitiesManager {
     try {
       await LiveActivityModule.endActivity(this.activityId);
       this.activityId = null;
-      console.log('✅ Live Activity finalizada');
+      
     } catch (error) {
-      console.error('❌ Error finalizando Live Activity:', error);
+      
     }
   }
 

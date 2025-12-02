@@ -101,7 +101,7 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
       setDebtRemindersEnabled(settings.enabled);
       setReminderFrequency(settings.frequency);
     } catch (error) {
-      console.error('Error loading debt reminder settings:', error);
+      
     }
   };
   
@@ -124,12 +124,11 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
         const userData = userDoc.data();
         setPhotoURL(userData.photoURL || user.photoURL || null);
         setUserName(userData.name || user.displayName || user.email?.split('@')[0] || 'Usuario');
-        console.log('📷 Perfil cargado desde Firestore:', { photoURL: userData.photoURL, name: userData.name });
       } else {
         setUserName(user.displayName || user.email?.split('@')[0] || 'Usuario');
       }
     } catch (error) {
-      console.error('❌ Error loading user profile:', error);
+      
       setUserName(user.displayName || user.email?.split('@')[0] || 'Usuario');
     }
   };
@@ -146,13 +145,13 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
           text: `${lang.nativeName} (${lang.name})`,
           onPress: async () => {
             try {
-              console.log('🌍 Iniciando cambio de idioma a:', lang.code);
+              
               await changeLanguage(lang.code);
-              console.log('✅ Idioma cambiado exitosamente');
+              
               // El evento global en LanguageContext ya forzó el remount
               Alert.alert(t('common.success'), `${t('settings.language')}: ${lang.nativeName}`);
             } catch (error: any) {
-              console.error('❌ Error cambiando idioma:', error);
+              
               Alert.alert(t('common.error'), t('common.error'));
             }
           },
@@ -172,13 +171,13 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
           text: `${curr.name} (${curr.symbol})`,
           onPress: async () => {
             try {
-              console.log('💰 Iniciando cambio de moneda a:', curr.code);
+              
               await changeCurrency(curr.code);
-              console.log('✅ Moneda cambiada exitosamente');
+              
               // El evento global en CurrencyContext ya forzó el remount
               Alert.alert(t('common.success'), `${curr.name} (${curr.symbol})`);
             } catch (error: any) {
-              console.error('❌ Error cambiando moneda:', error);
+              
               Alert.alert(t('common.error'), t('common.error'));
             }
           },
@@ -202,9 +201,9 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
       themeOptions.map(option => ({
         text: option.label,
         onPress: async () => {
-          console.log('🎨 Cambiando tema a:', option.mode);
+          
           await setThemeMode(option.mode);
-          console.log('✅ Tema cambiado correctamente a:', option.mode);
+          
           // El EventEmitter se encarga de forzar el re-render
           Alert.alert(t('settings.themeChanged'), option.description);
         },
@@ -280,7 +279,7 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
         enabled ? 'Los recordatorios están activados' : 'Los recordatorios están desactivados'
       );
     } catch (error) {
-      console.error('Error toggling debt reminders:', error);
+      
       Alert.alert('Error', 'No se pudo actualizar la configuración');
     }
   };
@@ -309,7 +308,7 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
             setDebtRemindersEnabled(freq.value !== 'none');
             Alert.alert('Frecuencia actualizada', `Recordatorios: ${freq.label}`);
           } catch (error) {
-            console.error('Error updating reminder frequency:', error);
+            
             Alert.alert('Error', 'No se pudo actualizar la frecuencia');
           }
         },
@@ -698,7 +697,7 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
                         
                         Alert.alert(t('common.success'), t('settings.exportSuccess'));
                       } catch (error: any) {
-                        console.error('Error al exportar:', error);
+                        
                         Alert.alert(t('common.error'), error.message || t('settings.exportError'));
                       }
                     }

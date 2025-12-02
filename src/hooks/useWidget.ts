@@ -24,7 +24,7 @@ export const useWidget = () => {
    */
   const updateWidget = async (data: WidgetState) => {
     if (!isSupported) {
-      console.warn('Widgets solo soportados en iOS');
+      
       return;
     }
 
@@ -45,9 +45,9 @@ export const useWidget = () => {
         recentExpenses,
       });
 
-      console.log('✅ Widget actualizado con nuevos datos');
+      
     } catch (error) {
-      console.error('❌ Error actualizando widget:', error);
+      
     }
   };
 
@@ -59,7 +59,7 @@ export const useWidget = () => {
       const currentData = await WidgetDataManager.getWidgetData();
       
       if (!currentData) {
-        console.warn('No hay datos previos del widget');
+        
         return;
       }
 
@@ -80,9 +80,9 @@ export const useWidget = () => {
       };
 
       await WidgetDataManager.saveWidgetData(updatedData);
-      console.log('✅ Widget actualizado después de añadir gasto');
+      
     } catch (error) {
-      console.error('❌ Error actualizando widget después de gasto:', error);
+      
     }
   };
 
@@ -103,9 +103,9 @@ export const useWidget = () => {
       };
 
       await WidgetDataManager.saveWidgetData(updatedData);
-      console.log('✅ Gastos del día reiniciados en widget');
+      
     } catch (error) {
-      console.error('❌ Error reiniciando gastos del día:', error);
+      
     }
   };
 

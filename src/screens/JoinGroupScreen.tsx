@@ -124,7 +124,7 @@ export const JoinGroupScreen: React.FC<Props> = ({ navigation, route }) => {
         ]
       );
     } catch (error: any) {
-      console.error('❌ Error al unirse al grupo:', error);
+      
       Alert.alert(
         'Error', 
         error.message || 'No se pudo unir al grupo. Verifica que tengas permisos.'

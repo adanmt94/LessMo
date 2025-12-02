@@ -84,7 +84,7 @@ export const GroupEventsScreen: React.FC<Props> = ({ navigation, route }) => {
         setDefaultEventId(groupData.defaultEventId); // Cargar evento default si existe
       }
     } catch (error) {
-      console.error('Error loading group data:', error);
+      
     }
   };
 
@@ -98,7 +98,7 @@ export const GroupEventsScreen: React.FC<Props> = ({ navigation, route }) => {
       const groupEvents = userEvents.filter(e => e.groupId === groupId);
       setEvents(groupEvents);
     } catch (error) {
-      console.error('Error loading group events:', error);
+      
       Alert.alert(t('common.error'), t('groupEvents.errorLoading'));
     } finally {
       setLoading(false);

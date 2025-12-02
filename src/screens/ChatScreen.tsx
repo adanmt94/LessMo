@@ -113,7 +113,7 @@ export const ChatScreen: React.FC<Props> = ({ navigation, route }) => {
         setSelectedImage(result.assets[0].uri);
       }
     } catch (error) {
-      console.error('Error picking image:', error);
+      
       Alert.alert('Error', 'No se pudo seleccionar la imagen');
     }
   };
@@ -135,7 +135,7 @@ export const ChatScreen: React.FC<Props> = ({ navigation, route }) => {
         setSelectedImage(result.assets[0].uri);
       }
     } catch (error) {
-      console.error('Error taking photo:', error);
+      
       Alert.alert('Error', 'No se pudo tomar la foto');
     }
   };
@@ -224,7 +224,7 @@ export const ChatScreen: React.FC<Props> = ({ navigation, route }) => {
               );
             }
           } catch (ocrError) {
-            console.log('No se pudo analizar como recibo:', ocrError);
+            
             // Continuar enviando la imagen sin análisis
           }        setAnalyzingReceipt(false);
       }

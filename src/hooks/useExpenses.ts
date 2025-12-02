@@ -193,7 +193,7 @@ export const useExpenses = (eventId: string) => {
       ? eventBudget 
       : participants.reduce((sum, p) => sum + p.individualBudget, 0);
     const totalSpent = getTotalExpenses();
-    console.log('💰 getRemainingBalance - Budget:', totalBudget, 'Gastado:', totalSpent, 'Restante:', totalBudget - totalSpent);
+    
     return totalBudget - totalSpent;
   };
 

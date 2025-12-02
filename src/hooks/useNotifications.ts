@@ -34,12 +34,11 @@ export const useNotifications = () => {
 
     // Listener para notificaciones recibidas
     notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
-      console.log('📬 Notificación recibida:', notification);
+      // Notification received
     });
 
     // Listener para cuando el usuario interactúa con una notificación
     responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-      console.log('👆 Usuario interactuó con notificación:', response);
       handleNotificationResponse(response);
     });
 
@@ -61,7 +60,7 @@ export const useNotifications = () => {
       const enabled = await AsyncStorage.getItem('notifications_enabled');
       setNotificationsEnabledState(enabled === 'true');
     } catch (error) {
-      console.error('❌ Error cargando estado de notificaciones:', error);
+      // Loading failed - using default
     }
   };
 
@@ -69,11 +68,11 @@ export const useNotifications = () => {
     try {
       const token = await registerForPushNotificationsAsync();
       if (token) {
-        console.log('✅ Token de notificación registrado:', token);
+        // Token registered successfully
         // Aquí podrías guardar el token en Firestore asociado al usuario
       }
     } catch (error) {
-      console.error('❌ Error registrando notificaciones:', error);
+      // Registration failed
     }
   };
 
@@ -82,31 +81,26 @@ export const useNotifications = () => {
     
     switch (data.type) {
       case 'new_expense':
-        console.log('📱 Navegar a evento:', data.eventName);
         // TODO: Implementar navegación
         break;
       case 'debt':
-        console.log('💳 Navegar a liquidaciones:', data.eventName);
         // TODO: Implementar navegación
         break;
       case 'event_invitation':
-        console.log('🎉 Navegar a evento:', data.eventName);
         // TODO: Implementar navegación
         break;
       case 'new_message':
-        console.log('💬 Navegar a chat:', data.chatName);
         // TODO: Implementar navegación
         break;
       case 'settlement_reminder':
-        console.log('⏰ Navegar a liquidación:', data.eventName);
         // TODO: Implementar navegación
         break;
       case 'budget_exceeded':
-        console.log('⚠️ Navegar a resumen:', data.eventName);
         // TODO: Implementar navegación
         break;
       default:
-        console.log('ℹ️ Tipo de notificación desconocido:', data.type);
+        // Unknown notification type
+        break;
     }
   };
 
@@ -134,7 +128,6 @@ export const useNotifications = () => {
       setNotificationsEnabledState(enabled);
       return true;
     } catch (error) {
-      console.error('❌ Error cambiando notificaciones:', error);
       Alert.alert('Error', 'No se pudo cambiar la configuración de notificaciones');
       return false;
     } finally {
@@ -152,7 +145,7 @@ export const useNotifications = () => {
     try {
       await sendNewExpenseNotification(eventName, amount, currency);
     } catch (error) {
-      console.error('❌ Error enviando notificación de gasto:', error);
+      // Send failed
     }
   };
 
@@ -167,7 +160,7 @@ export const useNotifications = () => {
     try {
       await notifyDebt(debtorName, amount, currency, eventName);
     } catch (error) {
-      console.error('❌ Error enviando notificación de deuda:', error);
+      // Send failed
     }
   };
 
@@ -180,7 +173,7 @@ export const useNotifications = () => {
     try {
       await notifyEventInvitation(eventName, inviterName);
     } catch (error) {
-      console.error('❌ Error enviando notificación de invitación:', error);
+      // Send failed
     }
   };
 
@@ -195,7 +188,7 @@ export const useNotifications = () => {
     try {
       await notifyNewMessage(senderName, message, chatType, chatName);
     } catch (error) {
-      console.error('❌ Error enviando notificación de mensaje:', error);
+      // Send failed
     }
   };
 
@@ -209,7 +202,7 @@ export const useNotifications = () => {
     try {
       await notifySettlementReminder(eventName, amount, currency);
     } catch (error) {
-      console.error('❌ Error enviando notificación de liquidación:', error);
+      // Send failed
     }
   };
 
@@ -224,7 +217,7 @@ export const useNotifications = () => {
     try {
       await notifyBudgetExceeded(eventName, budget, spent, currency);
     } catch (error) {
-      console.error('❌ Error enviando notificación de presupuesto:', error);
+      // Send failed
     }
   };
 
@@ -237,7 +230,7 @@ export const useNotifications = () => {
     try {
       await notifyEventEnding(eventName, daysLeft);
     } catch (error) {
-      console.error('❌ Error enviando notificación de evento:', error);
+      // Send failed
     }
   };
 

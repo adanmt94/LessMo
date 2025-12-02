@@ -55,7 +55,7 @@ export const CurrencyProvider: React.FC<CurrencyProviderProps> = ({ children }) 
       const saved = await AsyncStorage.getItem(CURRENCY_STORAGE_KEY);
       
       if (saved) {
-        console.log('💰 Moneda guardada encontrada:', saved);
+        
         const currency = AVAILABLE_CURRENCIES.find(c => c.code === saved);
         if (currency) {
           setCurrentCurrency(currency);
@@ -66,7 +66,7 @@ export const CurrencyProvider: React.FC<CurrencyProviderProps> = ({ children }) 
       // Auto-detectar moneda del dispositivo
       const deviceLocales = Localization.getLocales();
       const deviceRegion = deviceLocales[0]?.regionCode || 'US';
-      console.log('🌍 Región del dispositivo:', deviceRegion);
+      
       
       // Mapeo de región a moneda
       const regionToCurrency: Record<string, Currency> = {
@@ -86,18 +86,18 @@ export const CurrencyProvider: React.FC<CurrencyProviderProps> = ({ children }) 
       const currency = AVAILABLE_CURRENCIES.find(c => c.code === detectedCurrency);
       
       if (currency) {
-        console.log('💰 Auto-detectada moneda:', currency.code);
+        
         setCurrentCurrency(currency);
         await AsyncStorage.setItem(CURRENCY_STORAGE_KEY, currency.code);
       }
     } catch (error) {
-      console.error('❌ Error loading currency:', error);
+      
     }
   };
 
   const changeCurrency = async (currencyCode: Currency) => {
     try {
-      console.log('🔄 Cambiando moneda a:', currencyCode);
+      
       
       const currency = AVAILABLE_CURRENCIES.find(c => c.code === currencyCode);
       if (!currency) {
@@ -106,7 +106,7 @@ export const CurrencyProvider: React.FC<CurrencyProviderProps> = ({ children }) 
 
       // Guardar en AsyncStorage
       await AsyncStorage.setItem(CURRENCY_STORAGE_KEY, currencyCode);
-      console.log('💾 Moneda guardada en AsyncStorage');
+      
 
       // Actualizar estado (esto fuerza re-render de TODA la app)
       setCurrentCurrency(currency);
@@ -114,9 +114,9 @@ export const CurrencyProvider: React.FC<CurrencyProviderProps> = ({ children }) 
       // EMITIR EVENTO GLOBAL para forzar actualización en TODA la app
       emitGlobalUpdate('CURRENCY_CHANGED');
 
-      console.log('✅ Moneda cambiada exitosamente a:', currency.name);
+      
     } catch (error) {
-      console.error('❌ Error changing currency:', error);
+      
       throw error;
     }
   };

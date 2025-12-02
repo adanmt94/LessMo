@@ -183,7 +183,7 @@ export const QRCodePaymentScreen: React.FC<QRCodePaymentScreenProps> = ({
             : `Payment of ${amount.toFixed(2)}${currency} to ${recipientName} pending.\n\n${paymentData}`,
       });
     } catch (error) {
-      console.error('Error sharing:', error);
+      
     }
   };
 

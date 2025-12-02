@@ -126,7 +126,7 @@ export const MarkPaymentModal: React.FC<Props> = ({
       onPaymentMarked();
       onClose();
     } catch (error) {
-      console.error('Error marking payment:', error);
+      
       Alert.alert('Error', 'No se pudo marcar el pago');
     } finally {
       setLoading(false);
@@ -151,7 +151,7 @@ export const MarkPaymentModal: React.FC<Props> = ({
               onPaymentMarked();
               onClose();
             } catch (error) {
-              console.error('Error confirming payment:', error);
+              
               Alert.alert('Error', 'No se pudo confirmar el pago');
             } finally {
               setLoading(false);
@@ -184,7 +184,7 @@ export const MarkPaymentModal: React.FC<Props> = ({
               onPaymentMarked();
               onClose();
             } catch (error) {
-              console.error('Error rejecting payment:', error);
+              
               Alert.alert('Error', 'No se pudo rechazar el pago');
             } finally {
               setLoading(false);

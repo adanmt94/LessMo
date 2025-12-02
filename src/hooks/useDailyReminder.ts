@@ -57,7 +57,7 @@ export const useDailyReminder = () => {
     }
 
     if (finalStatus !== 'granted') {
-      console.log('⚠️ Permisos de notificación denegados');
+      
       return false;
     }
 
@@ -70,7 +70,7 @@ export const useDailyReminder = () => {
       const enabled = saved === 'true';
       setIsEnabled(enabled);
     } catch (error) {
-      console.error('Error loading reminder status:', error);
+      
     } finally {
       setIsLoading(false);
     }
@@ -98,9 +98,9 @@ export const useDailyReminder = () => {
         },
       });
 
-      console.log('✅ Notificación diaria programada para las 21:00');
+      
     } catch (error) {
-      console.error('Error scheduling daily reminder:', error);
+      
       throw error;
     }
   };
@@ -118,9 +118,9 @@ export const useDailyReminder = () => {
       await AsyncStorage.setItem(DAILY_REMINDER_KEY, 'true');
       setIsEnabled(true);
 
-      console.log('✅ Recordatorio diario activado');
+      
     } catch (error) {
-      console.error('Error enabling daily reminder:', error);
+      
       throw error;
     } finally {
       setIsLoading(false);
@@ -135,9 +135,9 @@ export const useDailyReminder = () => {
       await AsyncStorage.setItem(DAILY_REMINDER_KEY, 'false');
       setIsEnabled(false);
 
-      console.log('❌ Recordatorio diario desactivado');
+      
     } catch (error) {
-      console.error('Error disabling daily reminder:', error);
+      
       throw error;
     } finally {
       setIsLoading(false);

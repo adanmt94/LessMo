@@ -69,7 +69,7 @@ export const PaymentHistoryScreen: React.FC<Props> = ({ navigation, route }) => 
       setPayments(paymentsData);
       setStats(statsData);
     } catch (error) {
-      console.error('Error loading payments:', error);
+      
       Alert.alert('Error', 'No se pudieron cargar los pagos');
     } finally {
       setLoading(false);

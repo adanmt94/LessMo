@@ -74,7 +74,7 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
       const saved = await AsyncStorage.getItem(LANGUAGE_STORAGE_KEY);
       
       if (saved) {
-        console.log('🌍 Idioma guardado encontrado:', saved);
+        
         const lang = AVAILABLE_LANGUAGES.find(l => l.code === saved);
         if (lang) {
           setCurrentLanguage(lang);
@@ -87,7 +87,7 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
       // Auto-detectar idioma del dispositivo
       const deviceLocales = Localization.getLocales();
       const deviceLang = deviceLocales[0]?.languageCode || 'es';
-      console.log('🌍 Idioma del dispositivo:', deviceLang);
+      
       
       const supportedLang = AVAILABLE_LANGUAGES.find(l => l.code === deviceLang);
       if (supportedLang) {
@@ -97,13 +97,13 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
         await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, supportedLang.code);
       }
     } catch (error) {
-      console.error('❌ Error loading language:', error);
+      
     }
   };
 
   const changeLanguage = async (languageCode: string) => {
     try {
-      console.log('🔄 Cambiando idioma a:', languageCode);
+      
       
       const lang = AVAILABLE_LANGUAGES.find(l => l.code === languageCode);
       if (!lang) {
@@ -112,7 +112,7 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
 
       // Guardar en AsyncStorage
       await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, languageCode);
-      console.log('💾 Idioma guardado en AsyncStorage');
+      
 
       // Actualizar estado (esto fuerza re-render de TODA la app)
       setCurrentLanguage(lang);
@@ -122,9 +122,9 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
       // EMITIR EVENTO GLOBAL para forzar actualización en TODA la app
       emitGlobalUpdate('LANGUAGE_CHANGED');
 
-      console.log('✅ Idioma cambiado exitosamente a:', lang.nativeName);
+      
     } catch (error) {
-      console.error('❌ Error changing language:', error);
+      
       throw error;
     }
   };
@@ -133,7 +133,7 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
     try {
       return i18n.t(key, { ...options, locale });
     } catch (error) {
-      console.warn(`Translation missing for key: ${key}`);
+      
       return key;
     }
   };

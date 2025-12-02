@@ -69,7 +69,7 @@ export const CommentSection: React.FC<Props> = ({ expenseId, eventId }) => {
       const data = await getCommentThreads(expenseId);
       setThreads(data);
     } catch (error) {
-      console.error('Error loading comments:', error);
+      
     } finally {
       setLoading(false);
     }
@@ -161,7 +161,7 @@ export const CommentSection: React.FC<Props> = ({ expenseId, eventId }) => {
       
       await loadComments();
     } catch (error) {
-      console.error('Error handling reaction:', error);
+      
     }
   };
 

@@ -87,7 +87,7 @@ export const getReminderSettings = async (userId: string): Promise<ReminderSetti
       return settings;
     }
   } catch (error) {
-    console.error('Error loading reminder settings:', error);
+    // Loading failed - using defaults
   }
 
   // Default settings
@@ -110,7 +110,7 @@ export const saveReminderSettings = async (settings: ReminderSettings): Promise<
       JSON.stringify(settings)
     );
   } catch (error) {
-    console.error('Error saving reminder settings:', error);
+    // Save failed
   }
 };
 
@@ -225,7 +225,7 @@ export const dismissReminderForToday = async (userId: string, eventId: string): 
     dismissedUntil.setHours(23, 59, 59, 999); // End of today
     await AsyncStorage.setItem(key, (dismissedUntil instanceof Date ? dismissedUntil : new Date(dismissedUntil)).toISOString());
   } catch (error) {
-    console.error('Error dismissing reminder:', error);
+    
   }
 };
 
@@ -246,7 +246,7 @@ export const isReminderDismissed = async (userId: string, eventId: string): Prom
 
     return now < dismissedUntil;
   } catch (error) {
-    console.error('Error checking dismissed reminder:', error);
+    
     return false;
   }
 };

@@ -73,7 +73,7 @@ export const PaymentMethodScreen: React.FC<Props> = ({ navigation, route }) => {
         setSelectedProvider(providers[0]);
       }
     } catch (error) {
-      console.error('Error cargando proveedores:', error);
+      
       Alert.alert('Error', 'No se pudieron cargar los métodos de pago disponibles');
     } finally {
       setLoading(false);

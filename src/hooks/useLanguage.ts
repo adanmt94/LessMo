@@ -43,7 +43,6 @@ export const useLanguage = () => {
     try {
       const savedLanguage = await AsyncStorage.getItem(LANGUAGE_STORAGE_KEY);
       if (savedLanguage) {
-        console.log('📱 Idioma guardado encontrado:', savedLanguage);
         await i18n.changeLanguage(savedLanguage);
       } else {
         // Autodetectar idioma del dispositivo
@@ -52,32 +51,25 @@ export const useLanguage = () => {
         const supportedLanguage = AVAILABLE_LANGUAGES.find(lang => lang.code === languageCode);
         
         if (supportedLanguage) {
-          console.log('🌍 Autodetectado idioma del dispositivo:', supportedLanguage.code);
           await i18n.changeLanguage(supportedLanguage.code);
           await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, supportedLanguage.code);
-        } else {
-          console.log('📱 Idioma no soportado, usando español por defecto');
         }
       }
     } catch (error) {
-      console.error('Error loading language preference:', error);
+      // Language preference loading failed - using default
     }
   };
 
   const changeLanguage = async (languageCode: string) => {
     try {
-      console.log('🌍 useLanguage.changeLanguage - Iniciando cambio a:', languageCode);
       await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, languageCode);
-      console.log('💾 useLanguage.changeLanguage - Guardado en AsyncStorage');
       await i18n.changeLanguage(languageCode);
-      console.log('🔄 useLanguage.changeLanguage - i18n.changeLanguage ejecutado');
       const lang = AVAILABLE_LANGUAGES.find(lang => lang.code === languageCode);
       if (lang) {
         setCurrentLanguage(lang);
-        console.log('✅ useLanguage.changeLanguage - Completado. Nuevo idioma:', lang);
       }
     } catch (error) {
-      console.error('❌ Error changing language:', error);
+      // Language change failed
     }
   };
 

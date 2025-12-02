@@ -56,7 +56,7 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
           setUserName(user.displayName || user.email?.split('@')[0] || 'Usuario');
         }
       } catch (error) {
-        console.error('Error loading user name:', error);
+        
         setUserName(user.displayName || user.email?.split('@')[0] || 'Usuario');
       }
     };
@@ -114,7 +114,7 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
                     }
                   });
                 } catch (error) {
-                  console.error('⚠️ Error loading participants for event:', eventId, error);
+                  
                 }
               })
             );
@@ -142,7 +142,7 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
     } catch (error: any) {
       if (isCancelled) return;
       
-      console.error('❌ Error loading groups:', error);
+      
       
       // Si es error de permisos o timeout, no mostrar alert
       if (!error.message?.includes('permission') && 

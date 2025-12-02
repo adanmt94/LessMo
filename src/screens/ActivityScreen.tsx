@@ -82,7 +82,7 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
             return userInfo;
           }
         } catch (error) {
-          console.error('Error getting user info:', error);
+          
         }
         return { name: 'Usuario' };
       };
@@ -169,7 +169,7 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
       
       setActivities(allActivities.slice(0, 50)); // Limitar a 50 actividades
     } catch (error) {
-      console.error('Error loading activities:', error);
+      
     } finally {
       setLoading(false);
       setRefreshing(false);

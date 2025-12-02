@@ -48,7 +48,7 @@ export const BiometricLockScreen: React.FC<Props> = ({ onUnlock }) => {
         }
       }
     } catch (error) {
-      console.error('❌ Error en autenticación biométrica:', error);
+      
     }
   };
 

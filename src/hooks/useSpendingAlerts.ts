@@ -42,7 +42,7 @@ export const useSpendingAlerts = () => {
         setConfig(parsed);
       }
     } catch (error) {
-      console.error('❌ Error loading alerts config:', error);
+      
     } finally {
       setIsLoading(false);
     }
@@ -52,9 +52,9 @@ export const useSpendingAlerts = () => {
     try {
       await AsyncStorage.setItem(ALERTS_STORAGE_KEY, JSON.stringify(newConfig));
       setConfig(newConfig);
-      console.log('✅ Configuración de alertas guardada:', newConfig);
+      
     } catch (error) {
-      console.error('❌ Error saving alerts config:', error);
+      
       throw error;
     }
   };
@@ -129,7 +129,7 @@ export const useSpendingAlerts = () => {
       // Verificar permisos
       const { status } = await Notifications.getPermissionsAsync();
       if (status !== 'granted') {
-        console.log('⚠️ No hay permisos para notificaciones');
+        
         return;
       }
 
@@ -143,9 +143,9 @@ export const useSpendingAlerts = () => {
         trigger: null, // Inmediata
       });
 
-      console.log('📢 Notificación enviada:', title);
+      
     } catch (error) {
-      console.error('❌ Error enviando notificación:', error);
+      
     }
   };
 

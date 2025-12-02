@@ -53,7 +53,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
       const savedEmail = await SecureStore.getItemAsync(STORED_EMAIL_KEY);
       setHasSavedCredentials(!!savedEmail && isEnabled);
     } catch (error) {
-      console.error('Error checking saved credentials:', error);
+      
     }
   };
 
@@ -79,7 +79,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
         Alert.alert(t('common.error'), error || t('auth.loginError'));
       }
     } catch (error) {
-      console.error('Error en login biométrico:', error);
+      
       Alert.alert(t('common.error'), 'Error al iniciar sesión con biometría');
     }
   };
@@ -98,7 +98,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
           await SecureStore.setItemAsync(STORED_EMAIL_KEY, email);
           await SecureStore.setItemAsync(STORED_PASSWORD_KEY, password);
         } catch (error) {
-          console.error('Error guardando credenciales:', error);
+          
         }
       }
       // La navegación se maneja automáticamente en App.tsx

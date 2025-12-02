@@ -152,7 +152,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         setThemeModeState(savedMode as ThemeMode);
       }
     } catch (error) {
-      console.error('Error loading theme preference:', error);
+      
     }
   };
 
@@ -176,7 +176,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       // EMITIR EVENTO GLOBAL para forzar actualización en TODA la app
       emitGlobalUpdate('THEME_CHANGED');
     } catch (error) {
-      console.error('Error saving theme preference:', error);
+      
     }
   };
 
@@ -204,7 +204,7 @@ export const useTheme = (): ThemeContextType => {
   if (context === undefined) {
     // En lugar de lanzar error, devolver tema por defecto
     // Esto previene crashes durante la inicialización
-    console.warn('useTheme usado fuera de ThemeProvider, usando tema por defecto');
+    
     return {
       theme: lightTheme,
       themeMode: 'light',

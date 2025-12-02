@@ -55,7 +55,7 @@ export const RecommendationsCard: React.FC<RecommendationsCardProps> = ({
       const personalizedTips = getPersonalizedTips(expenses, participants, language);
       setTips(personalizedTips);
     } catch (error) {
-      console.error('Error loading recommendations:', error);
+      
     } finally {
       setLoading(false);
     }

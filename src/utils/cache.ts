@@ -118,11 +118,11 @@ export async function withCache<T>(
   // Intentar obtener del caché
   const cached = cache.get<T>(key);
   if (cached !== null) {
-    console.log('📦 Cache HIT:', key);
+    
     return cached;
   }
 
-  console.log('🔄 Cache MISS:', key);
+  
   
   // Si no está en caché, ejecutar la función
   const data = await fetchFn();
@@ -140,7 +140,7 @@ export const useCacheInvalidation = (patterns: string[]) => {
   const invalidate = () => {
     patterns.forEach(pattern => {
       cache.invalidatePattern(pattern);
-      console.log('🗑️ Cache invalidado para patrón:', pattern);
+      
     });
   };
 

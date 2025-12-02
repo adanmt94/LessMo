@@ -52,16 +52,16 @@ class Logger {
     
     switch (level) {
       case 'debug':
-        console.log(prefix, message, data || '');
+        
         break;
       case 'info':
-        console.info(prefix, message, data || '');
+        
         break;
       case 'warn':
-        console.warn(prefix, message, data || '');
+        
         break;
       case 'error':
-        console.error(prefix, message, data || '');
+        
         break;
     }
   }

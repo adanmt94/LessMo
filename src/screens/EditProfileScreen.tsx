@@ -69,7 +69,7 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
         setPhotoURL(user.photoURL || null);
       }
     } catch (error) {
-      console.error('Error loading profile:', error);
+      
       Alert.alert(t('common.error'), t('editProfile.errorLoadingProfile'));
     } finally {
       setLoading(false);
@@ -78,11 +78,11 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
 
   const pickImage = async () => {
     try {
-      console.log('📸 Iniciando selección de imagen...');
+      
       
       // Pedir permisos
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      console.log('🔑 Permisos de galería:', status);
+      
       
       if (status !== 'granted') {
         Alert.alert(
@@ -93,7 +93,7 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
       }
 
       // Abrir selector de imágenes
-      console.log('🖼️ Abriendo selector de imágenes...');
+      
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: 'images' as any, // Workaround for expo-image-picker v15+
         allowsEditing: true,
@@ -101,16 +101,16 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
         quality: 0.3, // Comprimir más para ahorrar espacio (reducido de 0.5 a 0.3)
       });
 
-      console.log('📋 Resultado del picker:', result);
+      
 
       if (!result.canceled && result.assets[0]) {
-        console.log('✅ Imagen seleccionada:', result.assets[0].uri);
+        
         await uploadImage(result.assets[0].uri);
       } else {
-        console.log('❌ Selección cancelada');
+        
       }
     } catch (error: any) {
-      console.error('❌ Error picking image:', error);
+      
       Alert.alert(t('common.error'), error.message || t('editProfile.errorPickingPhoto'));
     }
   };
@@ -139,24 +139,24 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
         await uploadImage(result.assets[0].uri);
       }
     } catch (error) {
-      console.error('Error taking photo:', error);
+      
       Alert.alert(t('common.error'), t('editProfile.errorTakingPhoto'));
     }
   };
 
   const uploadImage = async (uri: string) => {
     if (!user) {
-      console.log('❌ No user');
+      
       return;
     }
 
     try {
       setUploading(true);
-      console.log('📤 Iniciando upload de imagen desde:', uri);
+      
 
       // SOLUCIÓN: Firebase Storage no funciona en Expo Go
       // Usar URI local directamente y guardar en Firestore
-      console.log('💾 Guardando URI local en Firestore...');
+      
       
       const userDocRef = doc(db, 'users', user.uid);
       await setDoc(userDocRef, {
@@ -167,10 +167,10 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
       // Actualizar estado local
       setPhotoURL(uri);
       
-      console.log('✅ Foto guardada exitosamente');
+      
       Alert.alert(t('editProfile.photoSuccess'), t('editProfile.photoSuccessMessage'));
     } catch (error: any) {
-      console.error('❌ Error uploading image:', error);
+      
       Alert.alert(t('common.error'), error.message || t('editProfile.errorUploadingPhoto'));
     } finally {
       setUploading(false);
@@ -215,7 +215,7 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
         ]
       );
     } catch (error: any) {
-      console.error('Error saving profile:', error);
+      
       Alert.alert(t('common.error'), t('editProfile.errorSavingProfile'));
     } finally {
       setSaving(false);

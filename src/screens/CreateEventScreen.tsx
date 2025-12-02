@@ -167,7 +167,7 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   const handleCreateEvent = async () => {
-    console.log('🎯 CreateEvent - groupId recibido:', groupId);
+    
     
     // Validaciones
     if (!eventName.trim()) {
@@ -207,7 +207,7 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
     setLoading(true);
 
     try {
-      console.log('🎯 Creando evento con participantes:', validParticipants);
+      
       
       // Calcular presupuesto total (usar presupuesto grupal o suma de individuales)
       let totalBudget = 0;
@@ -220,10 +220,10 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
         );
       }
 
-      console.log('💰 Presupuesto total:', totalBudget);
+      
 
       // Crear evento
-      console.log('📤 Enviando a createEvent - groupId:', groupId);
+      
       const eventId = await createEvent(
         eventName,
         totalBudget,
@@ -233,14 +233,14 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
         groupId // Asociar con grupo si viene desde un grupo
       );
 
-      console.log('✅ Evento creado con ID:', eventId, '- groupId:', groupId);
+      
 
       // Calcular presupuesto individual por defecto
       const groupBudgetNum = groupBudget.trim() ? parseFloat(groupBudget) : 0;
       const defaultIndividualBudget = groupBudgetNum > 0 
         ? groupBudgetNum / validParticipants.length 
         : 0;
-      console.log('💰 Presupuesto individual por defecto:', defaultIndividualBudget);
+      
 
       // Agregar participantes
       for (const participant of validParticipants) {
@@ -249,14 +249,14 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
         const budget = participant.budget.trim() 
           ? parseFloat(participant.budget) 
           : defaultIndividualBudget;
-        console.log('👤 Agregando participante:', participant.name, 'con presupuesto:', budget);
+        
         const participantId = await addParticipant(
           eventId,
           participant.name,
           budget,
           participant.email
         );
-        console.log('✅ Participante agregado con ID:', participantId);
+        
       }
 
       Alert.alert(t('common.success'), t('createEvent.eventCreated'), [

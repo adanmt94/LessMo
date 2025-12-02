@@ -61,7 +61,7 @@ export const AnalyticsScreen: React.FC<Props> = ({ navigation, route }) => {
       const eventData = await getEvent(eventId);
       setEvent(eventData);
     } catch (error) {
-      console.error('Error loading event:', error);
+      
     } finally {
       setLoading(false);
     }

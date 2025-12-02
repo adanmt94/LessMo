@@ -114,7 +114,7 @@ export const JoinEventScreen: React.FC<Props> = ({ navigation, route }) => {
           ]
         );
       } catch (error: any) {
-        console.error('❌ Error al vincular participante:', error);
+        
         Alert.alert(t('common.error'), t('joinEvent.errorJoining'));
       } finally {
         setLoading(false);
@@ -176,7 +176,7 @@ export const JoinEventScreen: React.FC<Props> = ({ navigation, route }) => {
         ]
       );
     } catch (error: any) {
-      console.error('❌ Error al unirse al evento:', error);
+      
       Alert.alert(
         'Error', 
         error.message || 'No se pudo unir al evento. Verifica que tengas permisos.'
