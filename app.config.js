@@ -21,6 +21,9 @@ export default {
       supportsTablet: true,
       bundleIdentifier: "com.lessmo.app",
       googleServicesFile: "./GoogleService-Info.plist",
+      infoPlist: {
+        ITSAppUsesNonExemptEncryption: false
+      },
       config: {
         googleSignIn: {
           reservedClientId: "com.googleusercontent.apps.364537925711-vtgqi80bk7i7f3ioqo8gilafo7hjj0vc"
