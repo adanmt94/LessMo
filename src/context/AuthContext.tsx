@@ -19,7 +19,9 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  console.log('🔑 [AUTH] Inicializando AuthProvider...');
   const auth = useAuth();
+  console.log('🔑 [AUTH] useAuth hook ejecutado, loading:', auth.loading);
 
   return <AuthContext.Provider value={auth}>{children}</AuthContext.Provider>;
 };

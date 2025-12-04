@@ -17,6 +17,8 @@ import { Navigation } from './src/navigation';
 import { BiometricLockScreen } from './src/screens/BiometricLockScreen';
 import { globalEmitter, GlobalEvents } from './src/utils/globalEvents';
 
+console.log('🚀 [APP] Iniciando aplicación LessMo...');
+
 const BIOMETRIC_ENABLED_KEY = 'biometric_auth_enabled';
 
 // Componente interno que tiene acceso al ThemeContext
@@ -27,11 +29,12 @@ const AppContent: React.FC<{ appKey: number }> = ({ appKey }) => {
   const [checkingBiometric, setCheckingBiometric] = useState(true);
 
   useEffect(() => {
+    console.log('🔐 [APP] Iniciando verificación de biometría...');
     checkBiometricStatus();
     
     // Timeout de seguridad: si después de 3 segundos no se resolvió, desbloquear
     const timeout = setTimeout(() => {
-      console.log('⚠️ Timeout verificando biometría - desbloqueando app');
+      console.log('⚠️ [APP] Timeout verificando biometría - desbloqueando app');
       setCheckingBiometric(false);
       setIsLocked(false);
     }, 3000);
@@ -41,18 +44,23 @@ const AppContent: React.FC<{ appKey: number }> = ({ appKey }) => {
 
   const checkBiometricStatus = async () => {
     try {
+      console.log('🔐 [APP] Verificando estado de biometría en SecureStore...');
       const enabled = await SecureStore.getItemAsync(BIOMETRIC_ENABLED_KEY);
-      console.log('🔐 Biometría habilitada:', enabled);
+      console.log('🔐 [APP] Biometría habilitada:', enabled);
       setBiometricEnabled(enabled === 'true');
       
       // Si NO está habilitada, desbloquear inmediatamente
       if (enabled !== 'true') {
+        console.log('✅ [APP] Biometría no habilitada - desbloqueando');
         setIsLocked(false);
+      } else {
+        console.log('🔒 [APP] Biometría habilitada - mostrando pantalla de bloqueo');
       }
     } catch (error) {
-      console.error('❌ Error verificando biometría:', error);
+      console.error('❌ [APP] Error verificando biometría:', error);
       setIsLocked(false); // En caso de error, desbloquear
     } finally {
+      console.log('✅ [APP] Verificación de biometría completada');
       setCheckingBiometric(false);
     }
   };
@@ -89,8 +97,11 @@ const AppContent: React.FC<{ appKey: number }> = ({ appKey }) => {
 export default function App() {
   // Key para forzar remount completo de la app
   const [appKey, setAppKey] = useState(0);
+  const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
+    console.log('🚀 App iniciando...');
+    
     // Escuchar cambios de idioma/moneda y forzar remount
     const handleForceRemount = () => {
       console.log('🔄 FORZANDO REMOUNT COMPLETO DE LA APP');
@@ -106,13 +117,30 @@ export default function App() {
     };
   }, []);
 
-  return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+  // Manejo global de errores
+  if (error) {
+    return (
       <SafeAreaProvider>
-        <ThemeProvider>
-          <AppContent appKey={appKey} />
-        </ThemeProvider>
+        <GestureHandlerRootView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <StatusBar style="auto" />
+        </GestureHandlerRootView>
       </SafeAreaProvider>
-    </GestureHandlerRootView>
-  );
+    );
+  }
+
+  try {
+    return (
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaProvider>
+          <ThemeProvider>
+            <AppContent appKey={appKey} />
+          </ThemeProvider>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    );
+  } catch (err) {
+    console.error('❌ Error crítico en App:', err);
+    setError(err as Error);
+    return null;
+  }
 }

@@ -62,17 +62,52 @@ const firebaseConfig = {
   appId: '1:364537925711:web:145b2f74d691c58b905a3a'
 };
 
+console.log('🔥 [FIREBASE] Iniciando inicialización de Firebase...');
+console.log('🔥 [FIREBASE] Config:', {
+  apiKey: firebaseConfig.apiKey ? '✓ Presente' : '✗ Falta',
+  authDomain: firebaseConfig.authDomain,
+  projectId: firebaseConfig.projectId
+});
+
 // Inicializar Firebase
-const app = initializeApp(firebaseConfig);
+let app;
+try {
+  console.log('🔥 [FIREBASE] Llamando a initializeApp...');
+  app = initializeApp(firebaseConfig);
+  console.log('✅ [FIREBASE] Firebase app inicializada correctamente');
+} catch (error) {
+  console.error('❌ [FIREBASE] Error inicializando Firebase app:', error);
+  throw error;
+}
 
 // Usar getAuth directamente - Firebase Web SDK maneja persistencia automáticamente en React Native
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const storage = getStorage(app);
+console.log('🔥 [FIREBASE] Inicializando servicios de Firebase...');
+try {
+  console.log('🔥 [FIREBASE] Obteniendo auth...');
+  const auth = getAuth(app);
+  console.log('✅ [FIREBASE] Auth obtenido');
+  
+  console.log('🔥 [FIREBASE] Obteniendo firestore...');
+  const db = getFirestore(app);
+  console.log('✅ [FIREBASE] Firestore obtenido');
+  
+  console.log('🔥 [FIREBASE] Obteniendo storage...');
+  const storage = getStorage(app);
+  console.log('✅ [FIREBASE] Storage obtenido');
 
-// Providers para autenticación social
-export const googleProvider = new GoogleAuthProvider();
-export const appleProvider = new OAuthProvider('apple.com');
+  // Providers para autenticación social
+  console.log('🔥 [FIREBASE] Creando providers...');
+  const googleProvider = new GoogleAuthProvider();
+  const appleProvider = new OAuthProvider('apple.com');
+  console.log('✅ [FIREBASE] Providers creados');
+  
+  console.log('✅ [FIREBASE] Todos los servicios inicializados correctamente');
+  
+  export { auth, db, storage, googleProvider, appleProvider };
+} catch (error) {
+  console.error('❌ [FIREBASE] Error inicializando servicios:', error);
+  throw error;
+}
 
 // ==================== AUTENTICACIÓN ====================
 
@@ -130,6 +165,11 @@ export const signOut = async (): Promise<void> => {
  * Observar cambios en el estado de autenticación
  */
 export const onAuthChange = (callback: (user: FirebaseUser | null) => void) => {
+  if (!auth) {
+    console.error('❌ Auth no está inicializado');
+    // Retornar función vacía para evitar crash
+    return () => {};
+  }
   return onAuthStateChanged(auth, callback);
 };
 
