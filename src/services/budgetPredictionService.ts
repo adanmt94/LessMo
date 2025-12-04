@@ -51,13 +51,15 @@ export function predictBudgetExceedance(
   const daysRemaining = Math.max(0, totalDays - daysPassed);
   
   // Total gastado hasta ahora
-  const totalSpent = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+  const totalSpent = expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
   
-  // Promedio diario
-  const dailyAverage = totalSpent / daysPassed;
+  // Promedio diario (validar que no sea NaN)
+  let dailyAverage = daysPassed > 0 ? totalSpent / daysPassed : 0;
+  dailyAverage = isFinite(dailyAverage) ? dailyAverage : 0;
   
-  // Proyección total
-  const projectedTotal = dailyAverage * totalDays;
+  // Proyección total (validar que no sea NaN)
+  let projectedTotal = totalDays > 0 ? dailyAverage * totalDays : totalSpent;
+  projectedTotal = isFinite(projectedTotal) ? projectedTotal : totalSpent;
   
   // ¿Se va a exceder?
   const willExceed = projectedTotal > budget;
@@ -110,15 +112,16 @@ export function predictBudgetExceedance(
   
   // Generar sugerencia
   let suggestion: string;
-  const confidence = Math.min(1, daysPassed / 3); // Más confianza después de 3 días
+  // Más confianza después de 3 días, siempre entre 0.1 y 1
+  const confidence = Math.max(0.1, Math.min(1, daysPassed / 3));
   
   if (willExceed) {
-    const dailyReduction = (projectedTotal - budget) / daysRemaining;
-    suggestion = `Reduce el gasto diario en ${dailyReduction.toFixed(2)}€ para no exceder el presupuesto`;
+    const dailyReduction = (projectedTotal - budget) / Math.max(1, daysRemaining);
+    suggestion = `Reduce el gasto diario en ${isFinite(dailyReduction) ? dailyReduction.toFixed(2) : '0'}€ para no exceder el presupuesto`;
   } else {
     const remainingBudget = budget - totalSpent;
     const dailyBudget = daysRemaining > 0 ? remainingBudget / daysRemaining : remainingBudget;
-    suggestion = `Puedes gastar hasta ${dailyBudget.toFixed(2)}€/día los próximos ${daysRemaining} días`;
+    suggestion = `Puedes gastar hasta ${isFinite(dailyBudget) ? dailyBudget.toFixed(2) : '0'}€/día los próximos ${daysRemaining} días`;
   }
   
   return {

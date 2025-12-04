@@ -6,6 +6,37 @@
 import { Expense, Participant, ExpenseCategory } from '../types';
 import { logger, LogCategory } from '../utils/logger';
 
+/**
+ * Convierte un Timestamp de Firestore a Date de forma segura
+ */
+function toDate(timestamp: any): Date {
+  if (!timestamp) {
+    return new Date();
+  }
+  
+  // Si ya es un Date
+  if (timestamp instanceof Date) {
+    return timestamp;
+  }
+  
+  // Si es un Timestamp de Firestore
+  if (timestamp.toDate && typeof timestamp.toDate === 'function') {
+    return timestamp.toDate();
+  }
+  
+  // Si tiene seconds (Firestore Timestamp object)
+  if (timestamp.seconds) {
+    return new Date(timestamp.seconds * 1000);
+  }
+  
+  // Si es un string o número
+  try {
+    return new Date(timestamp);
+  } catch {
+    return new Date();
+  }
+}
+
 export interface MonthlyStats {
   month: string; // "2024-11"
   totalSpent: number;
@@ -75,7 +106,7 @@ export function getMonthlyStats(expenses: Expense[], participants: Participant[]
   try {
     // Agrupar gastos por mes
     const expensesByMonth = expenses.reduce((acc, expense) => {
-      const createdAt = expense.createdAt instanceof Date ? expense.createdAt : new Date(expense.createdAt);
+      const createdAt = toDate(expense.createdAt);
       const monthKey = createdAt.toISOString().substring(0, 7); // "2024-11"
       if (!acc[monthKey]) {
         acc[monthKey] = [];
@@ -135,11 +166,11 @@ export function getCategoryTrends(expenses: Expense[], days: number = 30): Categ
     cutoffDate.setDate(cutoffDate.getDate() - days);
 
     const recentExpenses = expenses.filter(e => {
-      const createdAt = e.createdAt instanceof Date ? e.createdAt : new Date(e.createdAt);
+      const createdAt = toDate(e.createdAt);
       return createdAt >= cutoffDate;
     });
     const oldExpenses = expenses.filter(e => {
-      const createdAt = e.createdAt instanceof Date ? e.createdAt : new Date(e.createdAt);
+      const createdAt = toDate(e.createdAt);
       return createdAt < cutoffDate;
     });
 
@@ -152,7 +183,7 @@ export function getCategoryTrends(expenses: Expense[], days: number = 30): Categ
       // Datos por día
       const dataByDay: { [key: string]: number } = {};
       categoryExpenses.forEach(e => {
-        const createdAt = e.createdAt instanceof Date ? e.createdAt : new Date(e.createdAt);
+        const createdAt = toDate(e.createdAt);
         const dateKey = createdAt.toISOString().substring(0, 10);
         dataByDay[dateKey] = (dataByDay[dateKey] || 0) + e.amount;
       });
@@ -196,7 +227,7 @@ export function detectSpendingPatterns(expenses: Expense[]): SpendingPattern[] {
     // Patrón 1: Día de la semana más común
     const dayOfWeekCount: { [key: number]: { count: number; total: number } } = {};
     expenses.forEach(e => {
-      const createdAt = e.createdAt instanceof Date ? e.createdAt : new Date(e.createdAt);
+      const createdAt = toDate(e.createdAt);
       const day = createdAt.getDay();
       if (!dayOfWeekCount[day]) {
         dayOfWeekCount[day] = { count: 0, total: 0 };
@@ -223,7 +254,7 @@ export function detectSpendingPatterns(expenses: Expense[]): SpendingPattern[] {
     // Patrón 2: Hora del día
     const hourCount: { [key: number]: { count: number; total: number } } = {};
     expenses.forEach(e => {
-      const createdAt = e.createdAt instanceof Date ? e.createdAt : new Date(e.createdAt);
+      const createdAt = toDate(e.createdAt);
       const hour = createdAt.getHours();
       const period = hour < 12 ? 0 : hour < 18 ? 1 : 2; // Mañana, Tarde, Noche
       if (!hourCount[period]) {
@@ -325,11 +356,11 @@ export function getParticipantStats(expenses: Expense[], participants: Participa
       cutoffDate.setDate(cutoffDate.getDate() - 30);
       
       const recentExpenses = paidExpenses.filter(e => {
-        const createdAt = e.createdAt instanceof Date ? e.createdAt : new Date(e.createdAt);
+        const createdAt = toDate(e.createdAt);
         return createdAt >= cutoffDate;
       });
       const oldExpenses = paidExpenses.filter(e => {
-        const createdAt = e.createdAt instanceof Date ? e.createdAt : new Date(e.createdAt);
+        const createdAt = toDate(e.createdAt);
         return createdAt < cutoffDate;
       });
       
@@ -434,7 +465,7 @@ export function getForecast(
   try {
     const now = new Date();
     const totalSpent = expenses.reduce((sum, e) => sum + e.amount, 0);
-    const firstExpenseDate = expenses[0]?.createdAt instanceof Date ? expenses[0].createdAt : new Date(expenses[0]?.createdAt || now);
+    const firstExpenseDate = toDate(expenses[0]?.createdAt);
     const daysElapsed = Math.max(1, Math.floor((now.getTime() - firstExpenseDate.getTime()) / (1000 * 60 * 60 * 24)));
     const daysRemaining = Math.max(0, Math.floor((eventEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
     
@@ -486,7 +517,7 @@ export function getDailySpendingRate(expenses: Expense[]): { [date: string]: num
   const dailySpending: { [date: string]: number } = {};
   
   expenses.forEach(expense => {
-    const createdAt = expense.createdAt instanceof Date ? expense.createdAt : new Date(expense.createdAt);
+    const createdAt = toDate(expense.createdAt);
     const dateKey = createdAt.toISOString().substring(0, 10);
     dailySpending[dateKey] = (dailySpending[dateKey] || 0) + expense.amount;
   });

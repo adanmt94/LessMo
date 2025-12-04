@@ -13,7 +13,9 @@ import {
   RefreshControl,
   Alert,
   Share,
+  Animated,
 } from 'react-native';
+import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp, useFocusEffect } from '@react-navigation/native';
@@ -64,6 +66,8 @@ export const GroupEventsScreen: React.FC<Props> = ({ navigation, route }) => {
   const [groupColor, setGroupColor] = useState(initialGroupColor);
   const [groupType, setGroupType] = useState<'project' | 'recurring'>('project');
   const [defaultEventId, setDefaultEventId] = useState<string | undefined>();
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedEvents, setSelectedEvents] = useState<Set<string>>(new Set());
 
   useFocusEffect(
     useCallback(() => {
@@ -111,6 +115,78 @@ export const GroupEventsScreen: React.FC<Props> = ({ navigation, route }) => {
     setRefreshing(false);
   };
 
+  const toggleSelection = (eventId: string) => {
+    setSelectedEvents(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(eventId)) {
+        newSet.delete(eventId);
+      } else {
+        newSet.add(eventId);
+      }
+      return newSet;
+    });
+  };
+
+  const exitSelectionMode = () => {
+    setSelectionMode(false);
+    setSelectedEvents(new Set());
+  };
+
+  const deleteSelectedEvents = () => {
+    if (selectedEvents.size === 0) return;
+    
+    Alert.alert(
+      'Eliminar eventos',
+      `¿Estás seguro de eliminar ${selectedEvents.size} evento${selectedEvents.size > 1 ? 's' : ''}?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { deleteEvent } = await import('../services/firebase');
+              const deletePromises = Array.from(selectedEvents).map(id => deleteEvent(id));
+              await Promise.all(deletePromises);
+              Alert.alert('Éxito', `${selectedEvents.size} evento${selectedEvents.size > 1 ? 's' : ''} eliminado${selectedEvents.size > 1 ? 's' : ''} correctamente`);
+              exitSelectionMode();
+              loadEvents();
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'No se pudieron eliminar los eventos');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const deleteEvent = (eventId: string) => {
+    const event = events.find(e => e.id === eventId);
+    if (!event) return;
+    
+    Alert.alert(
+      'Eliminar evento',
+      `¿Estás seguro de eliminar "${event.name}"?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { deleteEvent: deleteEventFn } = await import('../services/firebase');
+              await deleteEventFn(eventId);
+              Alert.alert('Éxito', 'Evento eliminado correctamente');
+              loadEvents();
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'No se pudo eliminar el evento');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleShareGroup = async () => {
     try {
       const deepLink = `lessmo://group/${groupId}`;
@@ -147,9 +223,29 @@ export const GroupEventsScreen: React.FC<Props> = ({ navigation, route }) => {
   const displayEvents = activeTab === 'active' ? activeEvents : pastEvents;
 
   return (
-    <SafeAreaView edges={['top']} style={styles.container}>
-      {/* Header */}
-      <View style={[styles.header, { shadowColor: theme.colors.text }]}>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaView edges={['top']} style={styles.container}>
+        {selectionMode && (
+          <View style={[styles.selectionHeader, { backgroundColor: theme.colors.primary }]}>
+            <TouchableOpacity onPress={exitSelectionMode} style={styles.selectionButton}>
+              <Text style={styles.selectionButtonText}>✕ Cancelar</Text>
+            </TouchableOpacity>
+            <Text style={styles.selectionCount}>
+              {selectedEvents.size} seleccionado{selectedEvents.size !== 1 ? 's' : ''}
+            </Text>
+            <TouchableOpacity 
+              onPress={deleteSelectedEvents} 
+              style={styles.selectionButton}
+              disabled={selectedEvents.size === 0}
+            >
+              <Text style={[styles.selectionButtonText, selectedEvents.size === 0 && { opacity: 0.4 }]}>
+                🗑️ Eliminar
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {/* Header */}
+        <View style={[styles.header, { shadowColor: theme.colors.text }]}>
         <View style={styles.headerTop}>
           <TouchableOpacity 
             style={[styles.backButton, { backgroundColor: theme.colors.surface }]}
@@ -320,17 +416,61 @@ export const GroupEventsScreen: React.FC<Props> = ({ navigation, route }) => {
             <Text style={styles.emptySubtext}>{t('groupEvents.tryAnotherTerm')}</Text>
           </View>
         ) : (
-          displayEvents.map((event) => (
-            <TouchableOpacity
-              key={event.id}
-              onPress={() => navigation.navigate('EventDetail', { eventId: event.id, eventName: event.name })}
-              activeOpacity={0.7}
-              style={[styles.eventCard, { 
-                backgroundColor: theme.colors.card,
-                shadowColor: event.status === 'active' ? '#10B981' : theme.colors.textSecondary,
-                borderColor: theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)'
-              }]}
-            >
+          displayEvents.map((event) => {
+            const isSelected = selectedEvents.has(event.id);
+            
+            // Render swipe actions
+            const renderRightActions = (progress: Animated.AnimatedInterpolation<number>, dragX: Animated.AnimatedInterpolation<number>) => {
+              const trans = dragX.interpolate({
+                inputRange: [-80, 0],
+                outputRange: [0, 80],
+                extrapolate: 'clamp',
+              });
+              
+              return (
+                <TouchableOpacity
+                  style={styles.deleteAction}
+                  onPress={() => deleteEvent(event.id)}
+                >
+                  <Animated.View style={{ transform: [{ translateX: trans }] }}>
+                    <Text style={styles.deleteActionText}>🗑️ Eliminar</Text>
+                  </Animated.View>
+                </TouchableOpacity>
+              );
+            };
+            
+            return (
+              <Swipeable
+                key={event.id}
+                renderRightActions={renderRightActions}
+                enabled={!selectionMode}
+              >
+                <TouchableOpacity
+                  onPress={() => {
+                    if (selectionMode) {
+                      toggleSelection(event.id);
+                    } else {
+                      navigation.navigate('EventDetail', { eventId: event.id, eventName: event.name });
+                    }
+                  }}
+                  onLongPress={() => {
+                    if (!selectionMode) {
+                      setSelectionMode(true);
+                      setSelectedEvents(new Set([event.id]));
+                    }
+                  }}
+                  activeOpacity={0.7}
+                  style={[styles.eventCard, { 
+                    backgroundColor: theme.colors.card,
+                    shadowColor: event.status === 'active' ? '#10B981' : theme.colors.textSecondary,
+                    borderColor: theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)'
+                  }, isSelected && styles.eventCardSelected]}
+                >
+                  {selectionMode && (
+                    <View style={[styles.checkbox, isSelected && { backgroundColor: theme.colors.primary }]}>
+                      {isSelected && <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '700' }}>✓</Text>}
+                    </View>
+                  )}
               <View style={styles.eventHeader}>
                 <View style={[styles.eventIconContainer, {
                   backgroundColor: event.status === 'active' ? '#10B981' + '20' : '#6B7280' + '20',
@@ -401,11 +541,14 @@ export const GroupEventsScreen: React.FC<Props> = ({ navigation, route }) => {
                   </>
                 )}
               </View>
-            </TouchableOpacity>
-          ))
+                </TouchableOpacity>
+              </Swipeable>
+            );
+          })
         )}
       </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </GestureHandlerRootView>
   );
 };
 
@@ -758,5 +901,60 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   statusDotPast: {
     backgroundColor: '#9CA3AF',
+  },
+  selectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  selectionButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  selectionButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  selectionCount: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  eventCardSelected: {
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
+    opacity: 0.9,
+  },
+  checkbox: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  deleteAction: {
+    backgroundColor: '#EF4444',
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+    paddingRight: 20,
+    marginVertical: 14,
+    marginRight: 16,
+    borderRadius: 20,
+    marginLeft: 10,
+  },
+  deleteActionText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 15,
   },
 });

@@ -15,8 +15,12 @@
     },
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.lessmo.app",
+      "buildNumber": "1",
       "infoPlist": {
-        "UIBackgroundModes": ["remote-notification"]
+        "UIBackgroundModes": ["remote-notification"],
+        "NSCameraUsageDescription": "LessMo necesita acceso a tu cámara para tomar fotos de recibos.",
+        "NSPhotoLibraryUsageDescription": "LessMo necesita acceso a tus fotos para adjuntar recibos a los gastos."
       }
     },
     "android": {

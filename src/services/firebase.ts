@@ -901,8 +901,6 @@ export const createGroup = async (
           defaultEventId,
           eventIds: [defaultEventId]
         });
-        
-        console.log('✅ Evento "General" creado automáticamente:', defaultEventId);
       } catch (error) {
         console.error('⚠️ Error creando evento General:', error);
         // No fallar la creación del grupo por esto
@@ -1100,8 +1098,6 @@ export const addGroupMember = async (groupId: string, userId: string): Promise<v
       memberIds: [...currentMembers, userId],
       updatedAt: serverTimestamp()
     });
-    
-    console.log('✅ Miembro agregado al grupo:', userId);
   } catch (error: any) {
     console.error('❌ Error agregando miembro:', error);
     throw new Error(error.message || 'No se pudo agregar al grupo');
@@ -1116,7 +1112,6 @@ export const getUserEventsByStatus = async (
   status?: 'active' | 'completed' | 'archived'
 ): Promise<Event[]> => {
   try {
-    console.log('🔍 getUserEventsByStatus - userId:', userId, 'status:', status);
     
     // 1. Obtener eventos creados por el usuario
     let q;
@@ -1176,11 +1171,7 @@ export const getUserEventsByStatus = async (
         
         groupEvents = [...groupEvents, ...batchEvents];
       }
-    }
-    
-    console.log('📁 Eventos de grupos:', groupEvents.length);
-    
-    // 4. Combinar y eliminar duplicados (por si un evento está en ambas listas)
+    }    // 4. Combinar y eliminar duplicados (por si un evento está en ambas listas)
     const allEventsMap = new Map<string, Event>();
     
     // Primero agregar eventos del usuario

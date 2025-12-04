@@ -19,7 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import * as ImagePicker from 'expo-image-picker';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, updateDoc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db, storage } from '../services/firebase';
 import { RootStackParamList } from '../types';
 import { Button, Input, Card } from '../components/lovable';
@@ -203,6 +203,28 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
         photoURL: photoURL || '',
         updatedAt: new Date(),
       }, { merge: true });
+
+      // Actualizar también todos los participantes con este userId
+      try {
+        const participantsQuery = query(
+          collection(db, 'participants'),
+          where('userId', '==', user.uid)
+        );
+        const participantsSnapshot = await getDocs(participantsQuery);
+        
+        const updatePromises = participantsSnapshot.docs.map(participantDoc => 
+          updateDoc(doc(db, 'participants', participantDoc.id), {
+            photoURL: photoURL || '',
+            name: name.trim() // También actualizamos el nombre
+          })
+        );
+        
+        await Promise.all(updatePromises);
+        console.log(`✅ Actualizados ${updatePromises.length} participantes con la nueva foto`);
+      } catch (error) {
+        console.log('⚠️ No se pudieron actualizar los participantes:', error);
+        // No mostramos error al usuario, solo logueamos
+      }
 
       Alert.alert(
         t('editProfile.profileUpdated'),

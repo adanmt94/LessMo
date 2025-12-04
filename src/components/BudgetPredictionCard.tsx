@@ -210,7 +210,9 @@ export function BudgetPredictionCard({ prediction, insights, onViewDetails }: Pr
         <Text style={styles.title}>Predicción IA</Text>
         <View style={styles.confidenceContainer}>
           <Text style={styles.confidenceText}>
-            {Math.round(prediction.confidence * 100)}% confianza
+            {isNaN(prediction.confidence) || !isFinite(prediction.confidence)
+              ? '0'
+              : Math.round(prediction.confidence * 100)}% confianza
           </Text>
         </View>
       </View>
@@ -219,16 +221,22 @@ export function BudgetPredictionCard({ prediction, insights, onViewDetails }: Pr
 
       <View style={styles.statsRow}>
         <View style={styles.statBox}>
-          <Text style={styles.statValue}>{prediction.dailyAverage.toFixed(0)}€</Text>
+          <Text style={styles.statValue}>
+            {isNaN(prediction.dailyAverage) || !isFinite(prediction.dailyAverage) 
+              ? '0' 
+              : prediction.dailyAverage.toFixed(0)}€
+          </Text>
           <Text style={styles.statLabel}>/ día actual</Text>
         </View>
         <View style={styles.statBox}>
           <Text style={[styles.statValue, prediction.willExceed && { color: '#EF4444' }]}>
-            {prediction.projectedTotal.toFixed(0)}€
+            {isNaN(prediction.projectedTotal) || !isFinite(prediction.projectedTotal)
+              ? '0'
+              : prediction.projectedTotal.toFixed(0)}€
           </Text>
           <Text style={styles.statLabel}>proyectado</Text>
         </View>
-        {prediction.daysUntilExceeded !== undefined && (
+        {prediction.daysUntilExceeded !== undefined && isFinite(prediction.daysUntilExceeded) && (
           <View style={styles.statBox}>
             <Text style={[styles.statValue, { color: '#EF4444' }]}>
               {prediction.daysUntilExceeded}

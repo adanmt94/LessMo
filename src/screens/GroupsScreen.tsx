@@ -12,7 +12,9 @@ import {
   TouchableOpacity,
   RefreshControl,
   Alert,
+  Animated,
 } from 'react-native';
+import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useFocusEffect } from '@react-navigation/native';
@@ -42,6 +44,8 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [userName, setUserName] = useState<string>('');
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set());
 
   // Cargar nombre del usuario desde Firestore
   useEffect(() => {
@@ -180,10 +184,29 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
     });
   };
 
-  const handleDeleteGroup = (groupId: string, groupName: string) => {
+  const toggleSelection = (groupId: string) => {
+    setSelectedGroups(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(groupId)) {
+        newSet.delete(groupId);
+      } else {
+        newSet.add(groupId);
+      }
+      return newSet;
+    });
+  };
+
+  const exitSelectionMode = () => {
+    setSelectionMode(false);
+    setSelectedGroups(new Set());
+  };
+
+  const deleteSelectedGroups = () => {
+    if (selectedGroups.size === 0) return;
+    
     Alert.alert(
-      'Eliminar grupo',
-      `¿Estás seguro de eliminar "${groupName}"? Los eventos asociados no se eliminarán.`,
+      'Eliminar grupos',
+      `¿Estás seguro de eliminar ${selectedGroups.size} grupo${selectedGroups.size > 1 ? 's' : ''}? Los eventos asociados no se eliminarán.`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -192,7 +215,36 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
           onPress: async () => {
             try {
               const { deleteGroup } = await import('../services/firebase');
-              await deleteGroup(groupId);
+              const deletePromises = Array.from(selectedGroups).map(id => deleteGroup(id));
+              await Promise.all(deletePromises);
+              Alert.alert('Éxito', `${selectedGroups.size} grupo${selectedGroups.size > 1 ? 's' : ''} eliminado${selectedGroups.size > 1 ? 's' : ''} correctamente`);
+              exitSelectionMode();
+              loadGroups();
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'No se pudieron eliminar los grupos');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const deleteGroup = (groupId: string) => {
+    const group = groups.find(g => g.id === groupId);
+    if (!group) return;
+    
+    Alert.alert(
+      'Eliminar grupo',
+      `¿Estás seguro de eliminar "${group.name}"? Los eventos asociados no se eliminarán.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { deleteGroup: deleteGroupFn } = await import('../services/firebase');
+              await deleteGroupFn(groupId);
               Alert.alert('Éxito', 'Grupo eliminado correctamente');
               loadGroups();
             } catch (error: any) {
@@ -202,6 +254,10 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
         },
       ]
     );
+  };
+
+  const handleDeleteGroup = (groupId: string, groupName: string) => {
+    deleteGroup(groupId);
   };
 
   const getGroupColor = (color?: string) => color || '#6366F1';
@@ -217,17 +273,61 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
     : groups;
 
   // Render item memoizado para FlatList
-  const renderGroupItem = useCallback(({ item: group }: { item: Group }) => (
-    <TouchableOpacity 
-      key={group.id}
-      onPress={() => handleViewGroupEvents(group.id, group.name, group.icon, group.color)}
-      activeOpacity={0.7}
-      style={[styles.groupCard, { 
-        backgroundColor: theme.colors.card,
-        shadowColor: getGroupColor(group.color),
-        borderColor: theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)'
-      }]}
-    >
+  const renderGroupItem = useCallback(({ item: group }: { item: Group }) => {
+    const isSelected = selectedGroups.has(group.id);
+    
+    // Render swipe actions
+    const renderRightActions = (progress: Animated.AnimatedInterpolation<number>, dragX: Animated.AnimatedInterpolation<number>) => {
+      const trans = dragX.interpolate({
+        inputRange: [-80, 0],
+        outputRange: [0, 80],
+        extrapolate: 'clamp',
+      });
+      
+      return (
+        <TouchableOpacity
+          style={styles.deleteAction}
+          onPress={() => deleteGroup(group.id)}
+        >
+          <Animated.View style={{ transform: [{ translateX: trans }] }}>
+            <Text style={styles.deleteActionText}>🗑️ Eliminar</Text>
+          </Animated.View>
+        </TouchableOpacity>
+      );
+    };
+    
+    return (
+      <Swipeable
+        renderRightActions={renderRightActions}
+        enabled={!selectionMode}
+      >
+        <TouchableOpacity 
+          key={group.id}
+          onPress={() => {
+            if (selectionMode) {
+              toggleSelection(group.id);
+            } else {
+              handleViewGroupEvents(group.id, group.name, group.icon, group.color);
+            }
+          }}
+          onLongPress={() => {
+            if (!selectionMode) {
+              setSelectionMode(true);
+              setSelectedGroups(new Set([group.id]));
+            }
+          }}
+          activeOpacity={0.7}
+          style={[styles.groupCard, { 
+            backgroundColor: theme.colors.card,
+            shadowColor: getGroupColor(group.color),
+            borderColor: theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)'
+          }, isSelected && styles.groupCardSelected]}
+        >
+          {selectionMode && (
+            <View style={[styles.checkbox, isSelected && { backgroundColor: theme.colors.primary }]}>
+              {isSelected && <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '700' }}>✓</Text>}
+            </View>
+          )}
       <View style={styles.groupHeader}>
         <View style={[styles.groupIconContainer, { 
           backgroundColor: getGroupColor(group.color) + '20',
@@ -339,8 +439,10 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </View>
-    </TouchableOpacity>
-  ), [navigation, theme, styles, handleViewGroupEvents, handleEditGroup, handleDeleteGroup, getGroupColor]);
+        </TouchableOpacity>
+      </Swipeable>
+    );
+  }, [navigation, theme, styles, handleViewGroupEvents, handleEditGroup, getGroupColor, selectionMode, selectedGroups, toggleSelection, deleteGroup]);
 
   // Componente empty state memoizado
   const renderEmptyComponent = useCallback(() => {
@@ -382,8 +484,28 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
   }, [loading, searchQuery, navigation, theme, styles, t]);
 
   return (
-    <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <View style={[styles.header, { backgroundColor: theme.colors.background, shadowColor: theme.colors.text }]}>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        {selectionMode && (
+          <View style={[styles.selectionHeader, { backgroundColor: theme.colors.primary }]}>
+            <TouchableOpacity onPress={exitSelectionMode} style={styles.selectionButton}>
+              <Text style={styles.selectionButtonText}>✕ Cancelar</Text>
+            </TouchableOpacity>
+            <Text style={styles.selectionCount}>
+              {selectedGroups.size} seleccionado{selectedGroups.size !== 1 ? 's' : ''}
+            </Text>
+            <TouchableOpacity 
+              onPress={deleteSelectedGroups} 
+              style={styles.selectionButton}
+              disabled={selectedGroups.size === 0}
+            >
+              <Text style={[styles.selectionButtonText, selectedGroups.size === 0 && { opacity: 0.4 }]}>
+                🗑️ Eliminar
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        <View style={[styles.header, { backgroundColor: theme.colors.background, shadowColor: theme.colors.text }]}>
         <View style={styles.headerTop}>
           <Text style={[styles.greeting, { color: theme.colors.textSecondary }]}>
             Hola {userName.split(' ')[0]} 👋
@@ -447,7 +569,8 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
         windowSize={5}
         removeClippedSubviews={true}
       />
-    </SafeAreaView>
+      </SafeAreaView>
+    </GestureHandlerRootView>
   );
 };
 
@@ -730,5 +853,59 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   clearButtonText: {
     fontSize: 18,
+  },
+  selectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  selectionButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  selectionButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  selectionCount: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  groupCardSelected: {
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
+    opacity: 0.9,
+  },
+  checkbox: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  deleteAction: {
+    backgroundColor: '#EF4444',
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+    paddingRight: 20,
+    marginVertical: 10,
+    borderRadius: 16,
+    marginLeft: 10,
+  },
+  deleteActionText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 15,
   },
 });

@@ -2,7 +2,7 @@
  * EventDetailScreen - Pantalla de detalle del evento con tabs
  */
 
-import React, { useState, useEffect, useCallback, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -20,6 +20,8 @@ import { RouteProp, useFocusEffect } from '@react-navigation/native';
 import { RootStackParamList, Event, CurrencySymbols } from '../types';
 import { Button, Card, ExpenseItem, ParticipantItem } from '../components/lovable';
 import { getEvent } from '../services/firebase';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { db } from '../services/firebase';
 import { useExpenses } from '../hooks/useExpenses';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -52,6 +54,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   const [activeTab, setActiveTab] = useState<TabType>('expenses');
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [userPhotos, setUserPhotos] = useState<{[userId: string]: string}>({});
   
   const {
     expenses,
@@ -69,10 +72,157 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   // Reload event data when screen gains focus
   useFocusEffect(
     useCallback(() => {
-      loadEvent();
-      loadData();
+      const init = async () => {
+        await loadEvent();
+        await loadData();
+      };
+      init();
     }, [eventId])
   );
+
+  // Migrar participantes y cargar fotos cuando cambien los participantes
+  useEffect(() => {
+    if (participants.length === 0) return;
+
+    console.log('🚀 Iniciando carga de fotos. Total participantes:', participants.length);
+    
+    // Primero ejecutar migración
+    const migrateAndLoadPhotos = async () => {
+      // Migrar participantes sin userId pero con email que coincide con usuarios
+      try {
+        const { collection, query, where, getDocs, updateDoc } = await import('firebase/firestore');
+        
+        let needsReload = false;
+        
+        console.log('📋 Estado de participantes:');
+        participants.forEach((p, i) => {
+          console.log(`  ${i + 1}. ${p.name}: userId=${p.userId || 'NO'}, email=${p.email || 'NO'}, photo=${p.photoURL || 'NO'}`);
+        });
+        
+        for (const participant of participants) {
+          // Solo procesar participantes sin userId
+          if (!participant.userId) {
+            try {
+              let usersSnapshot = null;
+              
+              // Estrategia 1: Buscar por email si existe
+              if (participant.email) {
+                console.log(`🔍 Buscando usuario para email: ${participant.email}`);
+                const usersQuery = query(
+                  collection(db, 'users'),
+                  where('email', '==', participant.email.toLowerCase())
+                );
+                usersSnapshot = await getDocs(usersQuery);
+              }
+              
+              // Estrategia 2: Si no hay email o no se encontró, buscar por nombre
+              if (!usersSnapshot || usersSnapshot.empty) {
+                console.log(`🔍 Buscando usuario por nombre: ${participant.name}`);
+                
+                // Obtener todos los usuarios y buscar coincidencia por nombre
+                const allUsersSnapshot = await getDocs(collection(db, 'users'));
+                const normalizeString = (str: string) => 
+                  str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                
+                const participantNameNormalized = normalizeString(participant.name);
+                
+                // Buscar coincidencia exacta o parcial
+                const matchingUsers = allUsersSnapshot.docs.filter(userDoc => {
+                  const userData = userDoc.data();
+                  const userName = userData.name || userData.email?.split('@')[0] || '';
+                  const userNameNormalized = normalizeString(userName);
+                  
+                  // Coincidencia: nombre contiene el nombre del participante o viceversa
+                  return userNameNormalized.includes(participantNameNormalized) || 
+                         participantNameNormalized.includes(userNameNormalized);
+                });
+                
+                if (matchingUsers.length > 0) {
+                  console.log(`✅ Encontradas ${matchingUsers.length} coincidencias por nombre`);
+                  usersSnapshot = { 
+                    empty: false, 
+                    docs: matchingUsers 
+                  } as any;
+                }
+              }
+              
+              if (usersSnapshot && !usersSnapshot.empty) {
+                const userData = usersSnapshot.docs[0].data();
+                const userId = usersSnapshot.docs[0].id;
+                
+                console.log(`✅ Usuario encontrado: ${userId}, foto: ${userData.photoURL ? 'Sí' : 'No'}`);
+                
+                // Actualizar participante con userId y photoURL
+                const updateData: any = { 
+                  userId,
+                  email: userData.email // También guardar el email
+                };
+                if (userData.photoURL) {
+                  updateData.photoURL = userData.photoURL;
+                }
+                
+                await updateDoc(
+                  doc(db, 'participants', participant.id),
+                  updateData
+                );
+                
+                console.log(`✅ Participante ${participant.name} actualizado en Firestore`);
+                needsReload = true;
+              } else {
+                console.log(`⚠️ No se encontró usuario para: ${participant.name}`);
+              }
+            } catch (error) {
+              console.log(`⚠️ No se pudo migrar participante ${participant.id}:`, error);
+            }
+          }
+        }
+        
+        // Si se actualizó algún participante, recargar datos
+        if (needsReload) {
+          console.log('🔄 Recargando participantes actualizados...');
+          await loadData();
+        }
+      } catch (error) {
+        console.log('⚠️ Error en migración de participantes:', error);
+      }
+    };
+
+    migrateAndLoadPhotos();
+
+    const unsubscribers: (() => void)[] = [];
+    
+    // Crear un listener para cada usuario
+    participants.forEach(participant => {
+      if (participant.userId) {
+        const userDocRef = doc(db, 'users', participant.userId);
+        
+        const unsubscribe = onSnapshot(
+          userDocRef,
+          (docSnapshot) => {
+            if (docSnapshot.exists()) {
+              const userData = docSnapshot.data();
+              if (userData.photoURL) {
+                setUserPhotos(prev => ({
+                  ...prev,
+                  [participant.userId!]: userData.photoURL
+                }));
+              }
+            }
+          },
+          (error) => {
+            console.log(`Error en listener de usuario ${participant.userId}:`, error);
+          }
+        );
+        
+        unsubscribers.push(unsubscribe);
+      }
+    });
+
+    // Cleanup: cancelar todos los listeners cuando el componente se desmonte
+    return () => {
+      unsubscribers.forEach(unsubscribe => unsubscribe());
+    };
+  }, [participants]);
 
   const loadEvent = async () => {
     try {
@@ -85,7 +235,9 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([loadEvent(), loadData()]);
+    await loadEvent();
+    await loadData();
+    // loadUserPhotos se ejecutará automáticamente cuando participants cambie
     setRefreshing(false);
   };
 
@@ -221,12 +373,17 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
         >
           {filteredExpenses.map((expense) => {
             const participant = getParticipantById(expense.paidBy);
+            // Usar foto actualizada del usuario si existe
+            const photoURL = participant?.userId 
+              ? (userPhotos[participant.userId] || participant?.photoURL)
+              : participant?.photoURL;
+            
             return (
               <ExpenseItem
                 key={expense.id}
                 expense={expense}
                 participantName={participant?.name || 'Desconocido'}
-                participantPhoto={participant?.photoURL}
+                participantPhoto={photoURL}
                 currency={event.currency}
                 onPress={() => navigation.navigate('AddExpense', { 
                   eventId, 
@@ -269,10 +426,15 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
         >
           {participants.map((participant) => {
             const balance = participantBalances.find(b => b.participantId === participant.id);
+            // Agregar foto del usuario si existe
+            const participantWithPhoto = {
+              ...participant,
+              photoURL: participant.userId ? (userPhotos[participant.userId] || participant.photoURL) : participant.photoURL
+            };
             return (
               <ParticipantItem
                 key={participant.id}
-                participant={participant}
+                participant={participantWithPhoto}
                 currency={event.currency}
                 totalPaid={balance?.totalPaid}
                 totalOwed={balance?.totalOwed}
@@ -293,6 +455,10 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
     return (
       <ScrollView
         style={styles.tabContent}
+        contentContainerStyle={{ paddingBottom: 180, flexGrow: 1 }}
+        showsVerticalScrollIndicator={true}
+        bounces={true}
+        nestedScrollEnabled={true}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         <Card style={styles.summaryCard}>
@@ -476,7 +642,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
       )}
 
       {/* Action Buttons Footer */}
-      <View style={styles.actionButtonsContainer}>
+      <View style={[styles.actionButtonsContainer, { backgroundColor: theme.colors.card, borderTopColor: theme.colors.border }]}>
         <TouchableOpacity 
           style={styles.actionButton}
           onPress={() => navigation.navigate('Statistics', { 
@@ -485,8 +651,8 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
             currency: event?.currency || 'EUR'
           })}
         >
-          <View style={[styles.iconCircle, { backgroundColor: theme.colors.primary + '15' }]}>
-            <Text style={styles.actionButtonIcon}>📊</Text>
+          <View style={[styles.iconCircle, { backgroundColor: theme.colors.primary + '20' }]}>
+            <Text style={[styles.actionButtonIcon, { color: theme.colors.primary }]}>📊</Text>
           </View>
           <Text style={[styles.actionButtonText, { color: theme.colors.text }]}>{t('eventDetail.stats')}</Text>
         </TouchableOpacity>
@@ -499,8 +665,8 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
           })}
           activeOpacity={0.7}
         >
-          <View style={[styles.iconCircle, { backgroundColor: theme.colors.primary + '15' }]}>
-            <Text style={styles.actionButtonIcon}>💬</Text>
+          <View style={[styles.iconCircle, { backgroundColor: theme.colors.primary + '20' }]}>
+            <Text style={[styles.actionButtonIcon, { color: theme.colors.primary }]}>💬</Text>
           </View>
           <Text style={[styles.actionButtonText, { color: theme.colors.text }]}>{t('eventDetail.chat')}</Text>
         </TouchableOpacity>
@@ -510,8 +676,8 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
           onPress={handleShareEvent}
           activeOpacity={0.7}
         >
-          <View style={[styles.iconCircle, { backgroundColor: theme.colors.primary + '15' }]}>
-            <Text style={styles.actionButtonIcon}>↗</Text>
+          <View style={[styles.iconCircle, { backgroundColor: theme.colors.primary + '20' }]}>
+            <Text style={[styles.actionButtonIcon, { color: theme.colors.primary }]}>↗</Text>
           </View>
           <Text style={[styles.actionButtonText, { color: theme.colors.text }]}>{t('common.share')}</Text>
         </TouchableOpacity>
@@ -521,8 +687,8 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
           onPress={handleEditEvent}
           activeOpacity={0.7}
         >
-          <View style={[styles.iconCircle, { backgroundColor: theme.colors.primary + '15' }]}>
-            <Text style={styles.actionButtonIcon}>✎</Text>
+          <View style={[styles.iconCircle, { backgroundColor: theme.colors.primary + '20' }]}>
+            <Text style={[styles.actionButtonIcon, { color: theme.colors.primary }]}>✏️</Text>
           </View>
           <Text style={[styles.actionButtonText, { color: theme.colors.text }]}>{t('common.edit')}</Text>
         </TouchableOpacity>
@@ -532,8 +698,8 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
           onPress={handleDeleteEvent}
           activeOpacity={0.7}
         >
-          <View style={[styles.iconCircle, { backgroundColor: '#EF444415' }]}>
-            <Text style={styles.actionButtonIcon}>×</Text>
+          <View style={[styles.iconCircle, { backgroundColor: '#EF444420' }]}>
+            <Text style={[styles.actionButtonIcon, { color: '#EF4444' }]}>×</Text>
           </View>
           <Text style={[styles.actionButtonText, { color: '#EF4444' }]}>{t('common.delete')}</Text>
         </TouchableOpacity>

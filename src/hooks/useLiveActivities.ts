@@ -49,8 +49,6 @@ export const useLiveActivities = () => {
         currentAmount: 0,
         expenseCount: 0,
       }));
-
-      console.log('✅ Tracking iniciado para:', eventName);
     } catch (error) {
       console.error('❌ Error iniciando tracking:', error);
     }
@@ -79,8 +77,6 @@ export const useLiveActivities = () => {
         currentAmount: newAmount,
         expenseCount: newCount,
       }));
-
-      console.log(`✅ Gasto añadido: ${amount} (Total: ${newAmount})`);
     } catch (error) {
       console.error('❌ Error actualizando tracking:', error);
     }

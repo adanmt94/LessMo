@@ -154,10 +154,8 @@ export const useBiometricAuth = (): BiometricAuthHook => {
       });
 
       if (result.success) {
-        console.log('✅ Autenticación biométrica exitosa');
         return true;
       } else {
-        console.log('❌ Autenticación biométrica fallida');
         return false;
       }
     } catch (error) {

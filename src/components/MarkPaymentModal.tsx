@@ -15,6 +15,7 @@ import {
   Linking,
   ActivityIndicator,
 } from 'react-native';
+import QRCode from 'react-native-qrcode-svg';
 import { useTheme } from '../context/ThemeContext';
 import { Settlement } from '../types';
 import { Button } from './lovable';
@@ -69,6 +70,8 @@ export const MarkPaymentModal: React.FC<Props> = ({
     { id: 'bizum', name: 'Bizum', icon: '📱', hasLink: false },
     { id: 'paypal', name: 'PayPal', icon: '💳', hasLink: true },
     { id: 'venmo', name: 'Venmo', icon: '💸', hasLink: true },
+    { id: 'apple_pay', name: 'Apple Pay', icon: '🍎', hasLink: false },
+    { id: 'google_pay', name: 'Google Pay', icon: '🔷', hasLink: false },
     { id: 'bank_transfer', name: 'Transferencia', icon: '🏦', hasLink: false },
     { id: 'cash', name: 'Efectivo', icon: '💵', hasLink: false },
     { id: 'other', name: 'Otro', icon: '📋', hasLink: false },
@@ -217,6 +220,53 @@ export const MarkPaymentModal: React.FC<Props> = ({
     }
   };
 
+  const handlePayNow = async () => {
+    if (!selectedMethod) {
+      Alert.alert('Error', 'Selecciona un método de pago primero');
+      return;
+    }
+
+    // Abrir el método de pago directamente
+    const link = generatePaymentLink(
+      selectedMethod,
+      toUserName,
+      settlement.amount,
+      `Pago ${eventName}`
+    );
+
+    if (link) {
+      try {
+        const supported = await Linking.canOpenURL(link);
+        if (supported) {
+          await Linking.openURL(link);
+          // Después de abrir, marcar como enviado
+          setTimeout(() => {
+            handleMarkAsPaid();
+          }, 1000);
+        } else {
+          Alert.alert('Error', 'No se puede abrir la aplicación de pago');
+        }
+      } catch (error) {
+        Alert.alert('Error', 'No se pudo abrir el método de pago');
+      }
+    } else {
+      // Para métodos sin enlace directo (efectivo, transferencia, etc), solo marcar
+      handleMarkAsPaid();
+    }
+  };
+
+  const getBizumQRData = () => {
+    // Generar datos para QR de Bizum
+    return JSON.stringify({
+      type: 'bizum',
+      recipientName: toUserName,
+      amount: settlement.amount.toFixed(2),
+      currency,
+      description: `Pago ${eventName}`,
+      eventId,
+    });
+  };
+
   return (
     <Modal
       visible={visible}
@@ -230,14 +280,14 @@ export const MarkPaymentModal: React.FC<Props> = ({
             <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
               {existingPayment && existingPayment.status === 'sent_waiting_confirmation' && isCreditor
                 ? '✅ Confirmar Pago'
-                : '💳 Marcar como Pagado'}
+                : '💰 Realizar Pago'}
             </Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Text style={styles.closeButtonText}>✕</Text>
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.content}>
+          <ScrollView style={styles.content} showsVerticalScrollIndicator={true}>
             {/* Info del pago */}
             <View style={[styles.paymentInfo, { backgroundColor: theme.colors.background }]}>
               <Text style={[styles.paymentAmount, { color: theme.colors.primary }]}>
@@ -251,8 +301,8 @@ export const MarkPaymentModal: React.FC<Props> = ({
               </Text>
             </View>
 
-            {/* Si hay pago pendiente de confirmación y eres el receptor */}
-            {existingPayment && existingPayment.status === 'sent_waiting_confirmation' && isCreditor ? (
+            {/* SIEMPRE mostrar opciones de pago */}
+            {existingPayment && existingPayment.status === 'sent_waiting_confirmation' ? (
               <View style={styles.confirmationSection}>
                 <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
                   ⏳ Pago pendiente de confirmación
@@ -288,11 +338,16 @@ export const MarkPaymentModal: React.FC<Props> = ({
                   </TouchableOpacity>
                 </View>
               </View>
-            ) : isDebtor ? (
-              // Si eres el deudor, muestra opciones para marcar como pagado
+            ) : (
+              // Mostrar opciones de pago para marcar como pagado
               <>
-                <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-                  Selecciona método de pago:
+                <Text style={[styles.sectionTitle, { 
+                  color: theme.colors.text,
+                  fontSize: 18,
+                  fontWeight: '700',
+                  marginBottom: 16,
+                }]}>
+                  💳 Selecciona método de pago:
                 </Text>
 
                 <View style={styles.methodsGrid}>
@@ -322,77 +377,87 @@ export const MarkPaymentModal: React.FC<Props> = ({
                           {method.name}
                         </Text>
                       </TouchableOpacity>
-                      {method.hasLink && (
-                        <TouchableOpacity
-                          style={[styles.linkButton, { borderColor: theme.colors.primary }]}
-                          onPress={() => handleOpenPaymentLink(method.id)}
-                        >
-                          <Text style={[styles.linkButtonText, { color: theme.colors.primary }]}>
-                            🔗 Abrir
-                          </Text>
-                        </TouchableOpacity>
-                      )}
                     </View>
                   ))}
                 </View>
 
                 {selectedMethod && (
                   <>
-                    <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-                      Referencia (opcional):
-                    </Text>
-                    <TextInput
-                      style={[styles.input, { 
-                        backgroundColor: theme.colors.background,
-                        color: theme.colors.text,
-                        borderColor: theme.colors.border,
-                      }]}
-                      placeholder="Ej: Número de transacción"
-                      placeholderTextColor={theme.colors.textSecondary}
-                      value={reference}
-                      onChangeText={setReference}
-                    />
+                    {/* Mostrar QR para Bizum */}
+                    {selectedMethod === 'bizum' && (
+                      <View style={[styles.qrContainer, { backgroundColor: theme.colors.background }]}>
+                        <Text style={[styles.qrTitle, { color: theme.colors.text }]}>
+                          📱 Código QR para Bizum
+                        </Text>
+                        <View style={styles.qrCodeWrapper}>
+                          <QRCode
+                            value={getBizumQRData()}
+                            size={200}
+                            backgroundColor="white"
+                            color="black"
+                          />
+                        </View>
+                        <Text style={[styles.qrInstructions, { color: theme.colors.textSecondary }]}>
+                          Escanea este código con tu app de Bizum
+                        </Text>
+                      </View>
+                    )}
 
-                    <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-                      Nota (opcional):
-                    </Text>
-                    <TextInput
-                      style={[styles.input, styles.textArea, { 
-                        backgroundColor: theme.colors.background,
-                        color: theme.colors.text,
-                        borderColor: theme.colors.border,
-                      }]}
-                      placeholder="Ej: Pagado el 28/11"
-                      placeholderTextColor={theme.colors.textSecondary}
-                      value={note}
-                      onChangeText={setNote}
-                      multiline
-                      numberOfLines={3}
-                    />
-
+                    {/* Botón PAGAR principal */}
                     <TouchableOpacity
-                      style={[styles.submitButton, { backgroundColor: theme.colors.primary }]}
-                      onPress={handleMarkAsPaid}
+                      style={[styles.payButton, { backgroundColor: theme.colors.success || theme.colors.primary }]}
+                      onPress={handlePayNow}
                       disabled={loading}
                     >
                       {loading ? (
                         <ActivityIndicator color="#FFFFFF" />
                       ) : (
-                        <Text style={styles.submitButtonText}>
-                          ✓ Marcar como Pagado
-                        </Text>
+                        <>
+                          <Text style={styles.payButtonIcon}>💳</Text>
+                          <Text style={styles.payButtonText}>
+                            PAGAR CON {paymentMethods.find(m => m.id === selectedMethod)?.name.toUpperCase()}
+                          </Text>
+                        </>
                       )}
                     </TouchableOpacity>
+
+                    {/* Campos opcionales */}
+                    <View style={styles.optionalFields}>
+                      <Text style={[styles.sectionTitle, { color: theme.colors.text, fontSize: 14 }]}>
+                        Referencia (opcional):
+                      </Text>
+                      <TextInput
+                        style={[styles.input, { 
+                          backgroundColor: theme.colors.background,
+                          color: theme.colors.text,
+                          borderColor: theme.colors.border,
+                        }]}
+                        placeholder="Ej: Número de transacción"
+                        placeholderTextColor={theme.colors.textSecondary}
+                        value={reference}
+                        onChangeText={setReference}
+                      />
+
+                      <Text style={[styles.sectionTitle, { color: theme.colors.text, fontSize: 14 }]}>
+                        Nota (opcional):
+                      </Text>
+                      <TextInput
+                        style={[styles.input, styles.textArea, { 
+                          backgroundColor: theme.colors.background,
+                          color: theme.colors.text,
+                          borderColor: theme.colors.border,
+                        }]}
+                        placeholder="Ej: Pagado el 28/11"
+                        placeholderTextColor={theme.colors.textSecondary}
+                        value={note}
+                        onChangeText={setNote}
+                        multiline
+                        numberOfLines={2}
+                      />
+                    </View>
                   </>
                 )}
               </>
-            ) : (
-              // Si eres el receptor pero no hay pago pendiente
-              <View style={styles.infoSection}>
-                <Text style={[styles.infoText, { color: theme.colors.textSecondary }]}>
-                  Esperando a que {fromUserName} marque el pago como realizado
-                </Text>
-              </View>
             )}
           </ScrollView>
         </View>
@@ -413,7 +478,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 40,
-    maxHeight: '85%',
+    maxHeight: '90%',
+    minHeight: '70%',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -439,13 +505,13 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   content: {
-    flex: 1,
+    flexGrow: 1,
   },
   paymentInfo: {
     borderRadius: 12,
     padding: 20,
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 16,
   },
   paymentAmount: {
     fontSize: 32,
@@ -464,31 +530,36 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 12,
-    marginTop: 8,
+    marginTop: 4,
   },
   methodsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    justifyContent: 'space-between',
     marginBottom: 20,
   },
   methodContainer: {
     width: '48%',
+    marginBottom: 12,
   },
   methodButton: {
     borderRadius: 12,
-    padding: 16,
+    padding: 20,
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    backgroundColor: 'rgba(100, 100, 100, 0.15)',
     marginBottom: 8,
+    minHeight: 100,
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(100, 100, 100, 0.2)',
   },
   methodIcon: {
-    fontSize: 32,
+    fontSize: 40,
     marginBottom: 8,
   },
   methodName: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
   },
   linkButton: {
     borderRadius: 8,
@@ -560,5 +631,60 @@ const styles = StyleSheet.create({
   infoText: {
     fontSize: 15,
     textAlign: 'center',
+  },
+  qrContainer: {
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    marginVertical: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  qrTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 20,
+  },
+  qrCodeWrapper: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  qrInstructions: {
+    fontSize: 14,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  payButton: {
+    borderRadius: 16,
+    paddingVertical: 20,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    marginVertical: 16,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  payButtonIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  payButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  optionalFields: {
+    marginTop: 8,
+    opacity: 0.8,
   },
 });

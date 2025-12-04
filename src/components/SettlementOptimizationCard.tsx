@@ -23,11 +23,21 @@ import {
 interface SettlementOptimizationCardProps {
   optimization: OptimizationResult;
   onSelectSettlement?: (settlement: Settlement) => void;
+  currentUserId?: string;
+  currentUserName?: string;
+  currentUserEmail?: string;
+  currentUserDisplayName?: string;
+  currentUserFirstName?: string;
 }
 
 export const SettlementOptimizationCard: React.FC<SettlementOptimizationCardProps> = ({
   optimization,
   onSelectSettlement,
+  currentUserId,
+  currentUserName,
+  currentUserEmail,
+  currentUserDisplayName,
+  currentUserFirstName,
 }) => {
   const { theme } = useTheme();
   const { currentLanguage } = useLanguage();
@@ -121,36 +131,61 @@ export const SettlementOptimizationCard: React.FC<SettlementOptimizationCardProp
 
         {/* Settlements List */}
         <View style={styles.settlementsList}>
-          {settlements.map((settlement, index) => (
-            <TouchableOpacity
-              key={`${settlement.from.id}-${settlement.to.id}-${index}`}
-              style={[
-                styles.settlementItem,
-                {
-                  backgroundColor: theme.isDark
-                    ? 'rgba(255, 255, 255, 0.05)'
-                    : 'rgba(0, 0, 0, 0.02)',
-                  borderColor: theme.colors.border,
-                },
-              ]}
-              onPress={() => onSelectSettlement && onSelectSettlement(settlement)}
-            >
-              <View style={styles.settlementInfo}>
-                <Text style={[styles.fromName, { color: theme.colors.text }]}>
-                  {settlement.from.name}
-                </Text>
-                <Text style={[styles.arrow, { color: theme.colors.textSecondary }]}>
-                  →
-                </Text>
-                <Text style={[styles.toName, { color: theme.colors.text }]}>
-                  {settlement.to.name}
-                </Text>
+          {settlements.map((settlement, index) => {
+            // PRIORIDAD: 1. userId, 2. email, 3. displayName, 4. nombre parcial
+            const participantEmail = settlement.from.email?.toLowerCase();
+            const participantName = settlement.from.name?.toLowerCase();
+            
+            const isDebtor = currentUserId && (
+              settlement.from.id === currentUserId || 
+              settlement.from.userId === currentUserId ||
+              (participantEmail && participantEmail === currentUserEmail) || // Por email (más confiable)
+              (participantName === currentUserDisplayName) || // Por displayName completo
+              (participantName === currentUserFirstName) || // Por primer nombre
+              (participantName === currentUserName?.toLowerCase()) // Fallback original
+            );
+            
+            return (
+              <View
+                key={`${settlement.from.id}-${settlement.to.id}-${index}`}
+                style={[
+                  styles.settlementItem,
+                  {
+                    backgroundColor: theme.isDark
+                      ? 'rgba(255, 255, 255, 0.05)'
+                      : 'rgba(0, 0, 0, 0.02)',
+                    borderColor: theme.colors.border,
+                  },
+                ]}
+              >
+                <View style={styles.settlementMainInfo}>
+                  <View style={styles.settlementInfo}>
+                    <Text style={[styles.fromName, { color: theme.colors.text }]}>
+                      {settlement.from.name}
+                    </Text>
+                    <Text style={[styles.arrow, { color: theme.colors.textSecondary }]}>
+                      →
+                    </Text>
+                    <Text style={[styles.toName, { color: theme.colors.text }]}>
+                      {settlement.to.name}
+                    </Text>
+                  </View>
+                  <Text style={[styles.amount, { color: '#10B981' }]}>
+                    {settlement.amount.toFixed(2)}€
+                  </Text>
+                </View>
+                
+                {isDebtor && (
+                  <TouchableOpacity
+                    style={[styles.payButton, { backgroundColor: theme.colors.primary }]}
+                    onPress={() => onSelectSettlement && onSelectSettlement(settlement)}
+                  >
+                    <Text style={styles.payButtonText}>💰 Realizar Pago</Text>
+                  </TouchableOpacity>
+                )}
               </View>
-              <Text style={[styles.amount, { color: '#10B981' }]}>
-                {settlement.amount.toFixed(2)}€
-              </Text>
-            </TouchableOpacity>
-          ))}
+            );
+          })}
         </View>
 
         {/* Compare Button */}
@@ -349,18 +384,33 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   settlementItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'column',
     padding: 12,
     borderRadius: 10,
     borderWidth: 1,
+    gap: 8,
+  },
+  settlementMainInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   settlementInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     flex: 1,
+  },
+  payButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  payButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
   fromName: {
     fontSize: 14,

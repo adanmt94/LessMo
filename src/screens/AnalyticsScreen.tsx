@@ -77,21 +77,45 @@ export const AnalyticsScreen: React.FC<Props> = ({ navigation, route }) => {
     );
   }
 
-  // Calcular todas las estadísticas
-  const monthlyStats = getMonthlyStats(expenses, participants);
-  const categoryTrends = getCategoryTrends(expenses, 30);
-  const patterns = detectSpendingPatterns(expenses);
-  const participantStats = getParticipantStats(expenses, participants);
-  const comparison = getComparisonStats(expenses, 30);
-  const forecast = getForecast(expenses, event.initialBudget, event.endDate || new Date());
-  const topExpenses = getTopExpenses(expenses, 5);
-  const dailySpending = getDailySpendingRate(expenses);
+  // Calcular todas las estadísticas con manejo de errores
+  let monthlyStats: any[] = [];
+  let categoryTrends: any[] = [];
+  let patterns: any = { recurring: [], unusual: [], seasonal: [] };
+  let participantStats: any[] = [];
+  let comparison: any = { 
+    percentageChange: { totalSpent: 0, expenseCount: 0, avgExpenseAmount: 0 },
+    trend: 'stable' as const,
+    currentPeriod: { totalSpent: 0, expenseCount: 0, avgExpenseAmount: 0 }
+  };
+  let forecast: any = { 
+    predictedTotal: 0, 
+    daysRemaining: 0, 
+    willExceedBudget: false, 
+    suggestedDailyLimit: 0,
+    projectedSpending: 0,
+    currentRunRate: 0
+  };
+  let topExpenses: any[] = [];
+  let dailySpending: any = {};
+  
+  try {
+    monthlyStats = getMonthlyStats(expenses, participants);
+    categoryTrends = getCategoryTrends(expenses, 30);
+    patterns = detectSpendingPatterns(expenses);
+    participantStats = getParticipantStats(expenses, participants);
+    comparison = getComparisonStats(expenses, 30);
+    forecast = getForecast(expenses, event.initialBudget, event.endDate || new Date());
+    topExpenses = getTopExpenses(expenses, 5);
+    dailySpending = getDailySpendingRate(expenses);
+  } catch (error) {
+    console.error('Error calculando estadísticas:', error);
+  }
 
   // Preparar datos para gráficos
   const dailySpendingData = {
     labels: Object.keys(dailySpending).slice(-7).map(d => d.substring(5)),
     datasets: [{
-      data: Object.values(dailySpending).slice(-7),
+      data: Object.values(dailySpending).slice(-7).map(v => Number(v) || 0),
     }],
   };
 
@@ -215,7 +239,7 @@ export const AnalyticsScreen: React.FC<Props> = ({ navigation, route }) => {
                 {expense.description}
               </Text>
               <Text style={[styles.topExpenseDate, { color: theme.colors.textSecondary }]}>
-                {expense.createdAt.toLocaleDateString()}
+                {expense.createdAt?.toDate ? expense.createdAt.toDate().toLocaleDateString() : new Date(expense.createdAt).toLocaleDateString()}
               </Text>
             </View>
             <Text style={[styles.topExpenseAmount, { color: theme.colors.primary }]}>
@@ -320,7 +344,7 @@ export const AnalyticsScreen: React.FC<Props> = ({ navigation, route }) => {
             No hay suficientes datos para detectar patrones
           </Text>
         ) : (
-          patterns.map((pattern, index) => (
+          (patterns.recurring || []).map((pattern: any, index: number) => (
             <View key={index} style={styles.patternItem}>
               <View style={styles.patternIcon}>
                 <Text style={styles.patternEmoji}>
@@ -399,7 +423,7 @@ export const AnalyticsScreen: React.FC<Props> = ({ navigation, route }) => {
               <Text style={[styles.sectionSubtitle, { color: theme.colors.text }]}>
                 Top Categorías
               </Text>
-              {stats.topCategories.map((cat) => (
+              {(stats.topCategories || []).map((cat: any) => (
                 <View key={cat.category} style={styles.categoryStatItem}>
                   <Text style={[styles.categoryStatName, { color: theme.colors.text }]}>
                     {cat.category.toUpperCase()}

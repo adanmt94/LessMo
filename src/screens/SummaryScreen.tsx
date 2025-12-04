@@ -288,8 +288,13 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
   }));
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView 
+        style={{ flex: 1 }}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={true}
+        bounces={true}
+      >
         <ViewShot ref={viewShotRef} options={{ format: 'png', quality: 0.9 }}>
         {/* Resumen general */}
         <Card style={styles.card}>
@@ -498,6 +503,11 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
         {event && participants.length > 0 && expenses.length > 0 && (
           <SettlementOptimizationCard
             optimization={optimizeSettlements(expenses, participants)}
+            currentUserId={user?.uid}
+            currentUserName={user?.displayName || user?.email?.split('@')[0]}
+            currentUserEmail={user?.email?.toLowerCase()}
+            currentUserDisplayName={user?.displayName?.toLowerCase()}
+            currentUserFirstName={user?.displayName?.split(' ')[0]?.toLowerCase()}
             onSelectSettlement={(settlement) => {
               navigation.navigate('PaymentMethod', {
                 recipientName: settlement.to.name,
@@ -531,6 +541,52 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
               );
               
               const paymentStatus = relatedPayment?.status;
+              
+              // Determinar si el usuario actual es el deudor (from) o acreedor (to)
+              // PRIORIDAD: 1. userId, 2. email del participante, 3. match por nombre flexible
+              const userEmail = user?.email?.toLowerCase();
+              const userEmailPrefix = user?.email?.split('@')[0]?.toLowerCase(); // "adanmontero7"
+              const userDisplayName = user?.displayName?.toLowerCase();
+              const userFirstName = user?.displayName?.split(' ')[0]?.toLowerCase();
+              
+              // Normalizar nombres (quitar acentos para comparar)
+              const normalizeString = (str: string) => 
+                str.toLowerCase()
+                  .normalize('NFD')
+                  .replace(/[\u0300-\u036f]/g, ''); // Quita acentos
+              
+              const participantNameNormalized = normalizeString(fromParticipant?.name || '');
+              const toParticipantNameNormalized = normalizeString(toParticipant?.name || '');
+              
+              // Comparar: el prefijo del email contiene el nombre del participante O viceversa
+              const emailMatchesName = userEmailPrefix && (
+                userEmailPrefix.includes(participantNameNormalized) || 
+                participantNameNormalized.includes(userEmailPrefix.substring(0, 4)) // Primeros 4 chars
+              );
+              
+              const emailMatchesToName = userEmailPrefix && (
+                userEmailPrefix.includes(toParticipantNameNormalized) || 
+                toParticipantNameNormalized.includes(userEmailPrefix.substring(0, 4))
+              );
+              
+              const isDebtor = 
+                fromParticipant?.userId === user?.uid || // Por userId
+                (fromParticipant?.email?.toLowerCase() === userEmail) || // Por email directo
+                (fromParticipant?.name.toLowerCase() === userDisplayName) || // Por displayName
+                (fromParticipant?.name.toLowerCase() === userFirstName) || // Por primer nombre
+                emailMatchesName; // Por coincidencia email-nombre
+              
+              const isCreditor = 
+                toParticipant?.userId === user?.uid || 
+                (toParticipant?.email?.toLowerCase() === userEmail) ||
+                (toParticipant?.name.toLowerCase() === userDisplayName) ||
+                (toParticipant?.name.toLowerCase() === userFirstName) ||
+                emailMatchesToName;
+              
+              // Solo mostrar botón si:
+              // 1. El usuario es el deudor (debe pagar)
+              // 2. O el usuario es el acreedor Y hay un pago pendiente de confirmar
+              const shouldShowButton = isDebtor || (isCreditor && paymentStatus === 'sent_waiting_confirmation');
 
               return (
                 <View key={index} style={styles.settlementItem}>
@@ -547,17 +603,21 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
                       <Text style={styles.paymentStatusBadge}>⏳ Pendiente confirmación</Text>
                     )}
                   </View>
-                  <TouchableOpacity
-                    style={[
-                      styles.payButton,
-                      paymentStatus === 'sent_waiting_confirmation' && styles.payButtonPending
-                    ]}
-                    onPress={() => handleMarkPayment(settlement)}
-                  >
-                    <Text style={styles.payButtonText}>
-                      {paymentStatus === 'sent_waiting_confirmation' ? '✓ Confirmar' : '💳 Marcar Pago'}
-                    </Text>
-                  </TouchableOpacity>
+                  {shouldShowButton && (
+                    <TouchableOpacity
+                      style={[
+                        styles.payButton,
+                        paymentStatus === 'sent_waiting_confirmation' && styles.payButtonPending
+                      ]}
+                      onPress={() => handleMarkPayment(settlement)}
+                    >
+                      <Text style={styles.payButtonText}>
+                        {paymentStatus === 'sent_waiting_confirmation' && isCreditor
+                          ? '✓ Confirmar' 
+                          : '💰 Realizar Pago'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               );
             })}
@@ -565,7 +625,7 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
         )}
         </ViewShot>
 
-        {/* Botones de compartir */}
+        {/* Botones de compartir - DENTRO del ScrollView */}
         <View style={styles.shareActions}>
           <TouchableOpacity
             style={[styles.shareButton, styles.shareButtonOutline, { borderColor: theme.colors.primary }]}
@@ -663,7 +723,8 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 24,
+    paddingBottom: 200,
+    flexGrow: 1,
   },
   card: {
     marginBottom: 20,

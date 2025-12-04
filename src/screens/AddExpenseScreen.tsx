@@ -123,7 +123,6 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
     if (isEditMode && expenses.length > 0) {
       const expense = expenses.find(e => e.id === expenseId);
       if (expense) {
-        console.log('📝 Cargando datos del gasto para editar:', expense);
         setDescription(expense.description);
         setAmount(expense.amount.toString());
         setPaidBy(expense.paidBy);
@@ -469,19 +468,8 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   const handleAddExpense = async () => {
-    console.log('💰 handleAddExpense - Iniciando registro de gasto');
-    console.log('📝 Datos del gasto:', {
-      description: description.trim(),
-      amount,
-      paidBy,
-      category,
-      selectedBeneficiaries: selectedBeneficiaries.length,
-      participantsAvailable: participants.length
-    });
-
     // Validaciones
     if (!description.trim()) {
-      console.log('❌ Error: Descripción vacía');
       Alert.alert(t('common.error'), t('addExpense.descriptionRequired'));
       return;
     }
@@ -497,13 +485,11 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
     }
 
     if (!paidBy) {
-      console.log('❌ Error: No hay pagador seleccionado');
       Alert.alert(t('common.error'), t('addExpense.selectWhoPaid'));
       return;
     }
 
     if (selectedBeneficiaries.length === 0) {
-      console.log('❌ Error: No hay beneficiarios seleccionados');
       Alert.alert(t('common.error'), t('addExpense.selectBeneficiaries'));
       return;
     }
@@ -534,9 +520,6 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
         return;
       }
     }
-
-    console.log('✅ Validaciones pasadas, guardando gasto...');
-    console.log('📊 Tipo de división:', splitType, customSplitsData);
     setLoading(true);
 
     try {
@@ -586,7 +569,6 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
           photoURL
         );
       } else {
-        console.log('➕ Modo creación - Creando gasto nuevo');
         success = await addExpense(
           paidBy,
           amountNum,
@@ -602,7 +584,6 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
       console.log(`📊 Resultado ${isEditMode ? 'editExpense' : 'addExpense'}:`, success);
 
       if (success) {
-        console.log(`✅ Gasto ${isEditMode ? 'actualizado' : 'registrado'} exitosamente`);
         
         // Enviar notificación solo para gastos nuevos
         if (!isEditMode && eventData) {
@@ -620,7 +601,6 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
           ]
         );
       } else {
-        console.log(`❌ ${isEditMode ? 'editExpense' : 'addExpense'} retornó false`);
         Alert.alert(t('common.error'), isEditMode ? t('addExpense.errorUpdating') : t('addExpense.errorAdding'));
       }
     } catch (error: any) {

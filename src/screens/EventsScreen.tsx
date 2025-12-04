@@ -13,7 +13,9 @@ import {
   RefreshControl,
   Alert,
   Platform,
+  Animated,
 } from 'react-native';
+import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useFocusEffect } from '@react-navigation/native';
@@ -52,6 +54,8 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
   const [isFromTab, setIsFromTab] = useState(true);
   const [groupNames, setGroupNames] = useState<{[key: string]: string}>({});
   const [userName, setUserName] = useState<string>('');
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedEvents, setSelectedEvents] = useState<Set<string>>(new Set());
 
   // Cargar nombre del usuario desde Firestore
   useEffect(() => {
@@ -189,6 +193,81 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
     setRefreshing(false);
   };
 
+  // Funciones de selección múltiple
+  const toggleSelection = (eventId: string) => {
+    const newSelection = new Set(selectedEvents);
+    if (newSelection.has(eventId)) {
+      newSelection.delete(eventId);
+    } else {
+      newSelection.add(eventId);
+    }
+    setSelectedEvents(newSelection);
+    
+    // Salir del modo selección si no hay eventos seleccionados
+    if (newSelection.size === 0) {
+      setSelectionMode(false);
+    }
+  };
+
+  const exitSelectionMode = () => {
+    setSelectionMode(false);
+    setSelectedEvents(new Set());
+  };
+
+  const deleteSelectedEvents = async () => {
+    if (selectedEvents.size === 0) return;
+
+    Alert.alert(
+      'Eliminar eventos',
+      `¿Estás seguro de que quieres eliminar ${selectedEvents.size} evento(s)?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { deleteEvent } = await import('../services/firebase');
+              const deletePromises = Array.from(selectedEvents).map(id => deleteEvent(id));
+              await Promise.all(deletePromises);
+              
+              exitSelectionMode();
+              await loadEvents();
+              
+              Alert.alert('Éxito', `${selectedEvents.size} evento(s) eliminado(s)`);
+            } catch (error: any) {
+              Alert.alert('Error', 'No se pudieron eliminar algunos eventos');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const deleteEvent = async (eventId: string) => {
+    Alert.alert(
+      'Eliminar evento',
+      '¿Estás seguro de que quieres eliminar este evento?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { deleteEvent: deleteEventFn } = await import('../services/firebase');
+              await deleteEventFn(eventId);
+              await loadEvents();
+              Alert.alert('Éxito', 'Evento eliminado');
+            } catch (error: any) {
+              Alert.alert('Error', 'No se pudo eliminar el evento');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   // Filtrar eventos
   let filteredEvents = events;
   
@@ -215,18 +294,69 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
   const pastEvents = filteredEvents.filter(e => e.status === 'completed' || e.status === 'archived');
   const displayEvents = activeTab === 'active' ? activeEvents : pastEvents;
 
-  // DEBUG: Log del título que se va a mostrar
-  console.log('🎯 EventsScreen RENDER - filterGroupId:', filterGroupId);
-  console.log('🎯 EventsScreen RENDER - Título que se muestra:', filterGroupId ? 'EVENTOS DEL GRUPO' : 'EVENTOS');
+
 
   // Render item memoizado para FlatList
-  const renderEventItem = useCallback(({ item: event }: { item: Event }) => (
-    <View key={event.id} style={styles.eventCardWrapper}>
-      <TouchableOpacity
-        onPress={() => navigation.navigate('EventDetail', { eventId: event.id, eventName: event.name })}
-        activeOpacity={0.7}
-        style={styles.eventCard}
+  const renderEventItem = useCallback(({ item: event }: { item: Event }) => {
+    const isSelected = selectedEvents.has(event.id);
+    
+    // Render acción de eliminar para swipe
+    const renderRightActions = (progress: Animated.AnimatedInterpolation<number>, dragX: Animated.AnimatedInterpolation<number>) => {
+      const trans = dragX.interpolate({
+        inputRange: [-80, 0],
+        outputRange: [0, 80],
+        extrapolate: 'clamp',
+      });
+      
+      return (
+        <TouchableOpacity
+          style={styles.deleteAction}
+          onPress={() => deleteEvent(event.id)}
+        >
+          <Animated.View style={{ transform: [{ translateX: trans }] }}>
+            <Text style={styles.deleteActionText}>🗑️ Eliminar</Text>
+          </Animated.View>
+        </TouchableOpacity>
+      );
+    };
+    
+    return (
+      <Swipeable
+        key={event.id}
+        renderRightActions={renderRightActions}
+        enabled={!selectionMode}
       >
+        <View style={styles.eventCardWrapper}>
+          <TouchableOpacity
+            onPress={() => {
+              if (selectionMode) {
+                toggleSelection(event.id);
+              } else {
+                navigation.navigate('EventDetail', { eventId: event.id, eventName: event.name });
+              }
+            }}
+            onLongPress={() => {
+              if (!selectionMode) {
+                setSelectionMode(true);
+                setSelectedEvents(new Set([event.id]));
+              }
+            }}
+            activeOpacity={0.7}
+            style={[
+              styles.eventCard,
+              isSelected && styles.eventCardSelected
+            ]}
+          >
+            {selectionMode && (
+              <View style={styles.selectionCheckbox}>
+                <View style={[
+                  styles.checkbox,
+                  isSelected && styles.checkboxSelected
+                ]}>
+                  {isSelected && <Text style={styles.checkboxCheck}>✓</Text>}
+                </View>
+              </View>
+            )}
         {/* Header con emoji y nombre */}
         <View style={styles.eventCardHeader}>
           <View style={styles.eventIconContainer}>
@@ -288,7 +418,9 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
         </View>
       </TouchableOpacity>
     </View>
-  ), [navigation, groupNames, theme.colors.primary, styles]);
+      </Swipeable>
+    );
+  }, [navigation, groupNames, theme.colors.primary, styles, selectionMode, selectedEvents]);
 
   // Componente empty state memoizado
   const renderEmptyComponent = useCallback(() => {
@@ -323,7 +455,32 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
   }, [loading, activeTab, navigation, styles]);
 
   return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
     <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: theme.colors.surface }]}>
+      {/* Header de modo selección */}
+      {selectionMode && (
+        <View style={[styles.selectionHeader, { backgroundColor: theme.colors.primary }]}>
+          <TouchableOpacity onPress={exitSelectionMode} style={styles.selectionHeaderButton}>
+            <Text style={styles.selectionHeaderButtonText}>✕ Cancelar</Text>
+          </TouchableOpacity>
+          <Text style={styles.selectionHeaderTitle}>
+            {selectedEvents.size} seleccionado{selectedEvents.size !== 1 ? 's' : ''}
+          </Text>
+          <TouchableOpacity 
+            onPress={deleteSelectedEvents}
+            style={styles.selectionHeaderButton}
+            disabled={selectedEvents.size === 0}
+          >
+            <Text style={[
+              styles.selectionHeaderButtonText,
+              selectedEvents.size === 0 && { opacity: 0.5 }
+            ]}>
+              🗑️ Eliminar
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+      
       <View style={[styles.header, { backgroundColor: theme.colors.card }]}>
         <View style={styles.headerTop}>
           <View>
@@ -438,6 +595,7 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
         removeClippedSubviews={true}
       />
     </SafeAreaView>
+    </GestureHandlerRootView>
   );
 };
 
@@ -843,5 +1001,73 @@ const getStyles = (theme: any) => StyleSheet.create({
   clearButtonText: {
     fontSize: 18,
     color: theme.colors.textSecondary,
+  },
+  // Estilos para modo selección
+  selectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: theme.colors.primary,
+  },
+  selectionHeaderButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  selectionHeaderButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  selectionHeaderTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  eventCardSelected: {
+    backgroundColor: theme.colors.primary + '15',
+    borderColor: theme.colors.primary,
+    borderWidth: 2,
+  },
+  selectionCheckbox: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    zIndex: 10,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxSelected: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  checkboxCheck: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  // Estilos para swipe
+  deleteAction: {
+    backgroundColor: '#EF4444',
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+    paddingRight: 20,
+    marginVertical: 4,
+    borderRadius: 12,
+    width: 100,
+  },
+  deleteActionText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

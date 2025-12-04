@@ -250,11 +250,42 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
           ? parseFloat(participant.budget) 
           : defaultIndividualBudget;
         
+        // Determinar si este participante es el usuario actual
+        let participantUserId: string | undefined = undefined;
+        let participantEmail = participant.email;
+        
+        // Normalizar strings para comparación
+        const normalizeString = (str: string) => 
+          str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        
+        const participantNameNormalized = normalizeString(participant.name);
+        const userEmailPrefix = user?.email?.split('@')[0]?.toLowerCase() || '';
+        
+        // Estrategia 1: Email coincide exactamente
+        if (participant.email && user?.email && 
+            participant.email.toLowerCase() === user.email.toLowerCase()) {
+          participantUserId = user.uid;
+          console.log(`✅ Participante ${participant.name} vinculado por email exacto`);
+        }
+        // Estrategia 2: Nombre del participante contiene el prefijo del email del usuario
+        else if (user && userEmailPrefix && participantNameNormalized.includes(userEmailPrefix)) {
+          participantUserId = user.uid;
+          participantEmail = user.email || undefined; // Asignar el email del usuario
+          console.log(`✅ Participante ${participant.name} vinculado por coincidencia de nombre con email`);
+        }
+        // Estrategia 3: El nombre del participante coincide con nombre similar al email
+        else if (user && userEmailPrefix.includes(participantNameNormalized) && participantNameNormalized.length >= 3) {
+          participantUserId = user.uid;
+          participantEmail = user.email || undefined; // Asignar el email del usuario
+          console.log(`✅ Participante ${participant.name} vinculado por nombre contenido en email`);
+        }
+        
         const participantId = await addParticipant(
           eventId,
           participant.name,
           budget,
-          participant.email
+          participantEmail,
+          participantUserId
         );
         
       }
