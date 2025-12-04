@@ -90,23 +90,39 @@ export const Navigation: React.FC = () => {
   useEffect(() => {
     checkOnboarding();
     initializeSyncService(); // Initialize offline sync
+    
+    // Timeout de seguridad: si después de 2 segundos no se resolvió, continuar
+    const timeout = setTimeout(() => {
+      console.log('⚠️ Timeout verificando onboarding - continuando');
+      setCheckingOnboarding(false);
+    }, 2000);
+    
+    return () => clearTimeout(timeout);
   }, [isAuthenticated]);
 
   const checkOnboarding = async () => {
-    if (isAuthenticated) {
-      const shouldShow = await shouldShowOnboarding();
-      setShowOnboarding(shouldShow);
+    try {
+      if (isAuthenticated) {
+        const shouldShow = await shouldShowOnboarding();
+        console.log('📱 Mostrar onboarding:', shouldShow);
+        setShowOnboarding(shouldShow);
+      }
+    } catch (error) {
+      console.error('❌ Error verificando onboarding:', error);
+    } finally {
+      setCheckingOnboarding(false);
     }
-    setCheckingOnboarding(false);
   };
 
   const handleOnboardingComplete = () => {
     setShowOnboarding(false);
   };
 
-  if (loading || checkingOnboarding) {
-    return null; // Puedes mostrar un splash screen aquí
-  }
+  // NOTA: Ya no bloqueamos la UI mientras carga
+  // Los timeouts de seguridad aseguran que nunca nos quedemos en pantalla en blanco
+  // if (loading || checkingOnboarding) {
+  //   return null;
+  // }
 
   // Mostrar onboarding si es la primera vez y está autenticado
   if (isAuthenticated && showOnboarding) {

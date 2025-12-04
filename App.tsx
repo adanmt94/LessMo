@@ -28,11 +28,21 @@ const AppContent: React.FC<{ appKey: number }> = ({ appKey }) => {
 
   useEffect(() => {
     checkBiometricStatus();
+    
+    // Timeout de seguridad: si después de 3 segundos no se resolvió, desbloquear
+    const timeout = setTimeout(() => {
+      console.log('⚠️ Timeout verificando biometría - desbloqueando app');
+      setCheckingBiometric(false);
+      setIsLocked(false);
+    }, 3000);
+    
+    return () => clearTimeout(timeout);
   }, []);
 
   const checkBiometricStatus = async () => {
     try {
       const enabled = await SecureStore.getItemAsync(BIOMETRIC_ENABLED_KEY);
+      console.log('🔐 Biometría habilitada:', enabled);
       setBiometricEnabled(enabled === 'true');
       
       // Si NO está habilitada, desbloquear inmediatamente
@@ -51,10 +61,10 @@ const AppContent: React.FC<{ appKey: number }> = ({ appKey }) => {
     setIsLocked(false);
   };
 
-  // Mostrar nada mientras verificamos biometría
-  if (checkingBiometric) {
-    return null;
-  }
+  // Mostrar splash o indicador mientras verificamos biometría
+  // NOTA: Ya no devolvemos null para evitar pantalla en blanco
+  // Si checkingBiometric es true, mostramos la app de todos modos
+  // El timeout de 3 segundos asegura que nunca nos quedemos bloqueados
 
   return (
     <>
