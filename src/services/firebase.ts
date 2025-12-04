@@ -53,13 +53,19 @@ import {
 
 // Configuración de Firebase desde variables de entorno
 const firebaseConfig = {
-  apiKey: Constants.expoConfig?.extra?.firebaseApiKey,
-  authDomain: Constants.expoConfig?.extra?.firebaseAuthDomain,
-  projectId: Constants.expoConfig?.extra?.firebaseProjectId,
-  storageBucket: Constants.expoConfig?.extra?.firebaseStorageBucket,
-  messagingSenderId: Constants.expoConfig?.extra?.firebaseMessagingSenderId,
-  appId: Constants.expoConfig?.extra?.firebaseAppId
+  apiKey: Constants.expoConfig?.extra?.firebaseApiKey || 'AIzaSyD1NN6qPdBXgRFXiFBhPI8RbJfBQP3slmQ',
+  authDomain: Constants.expoConfig?.extra?.firebaseAuthDomain || 'lessmo-9023f.firebaseapp.com',
+  projectId: Constants.expoConfig?.extra?.firebaseProjectId || 'lessmo-9023f',
+  storageBucket: Constants.expoConfig?.extra?.firebaseStorageBucket || 'lessmo-9023f.appspot.com',
+  messagingSenderId: Constants.expoConfig?.extra?.firebaseMessagingSenderId || '364537925711',
+  appId: Constants.expoConfig?.extra?.firebaseAppId || '1:364537925711:web:145b2f74d691c58b905a3a'
 };
+
+// Validar que la configuración de Firebase esté completa
+if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+  console.error('❌ Firebase configuration is missing critical values');
+  console.error('Config:', firebaseConfig);
+}
 
 // Inicializar Firebase
 const app = initializeApp(firebaseConfig);

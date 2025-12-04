@@ -42,12 +42,12 @@ export default {
       eas: {
         projectId: "6efb7e40-76ab-461f-8c48-691488aef80c"
       },
-      firebaseApiKey: process.env.FIREBASE_API_KEY,
-      firebaseAuthDomain: process.env.FIREBASE_AUTH_DOMAIN,
-      firebaseProjectId: process.env.FIREBASE_PROJECT_ID,
-      firebaseStorageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-      firebaseMessagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
-      firebaseAppId: process.env.FIREBASE_APP_ID,
+      firebaseApiKey: process.env.FIREBASE_API_KEY || 'AIzaSyD1NN6qPdBXgRFXiFBhPI8RbJfBQP3slmQ',
+      firebaseAuthDomain: process.env.FIREBASE_AUTH_DOMAIN || 'lessmo-9023f.firebaseapp.com',
+      firebaseProjectId: process.env.FIREBASE_PROJECT_ID || 'lessmo-9023f',
+      firebaseStorageBucket: process.env.FIREBASE_STORAGE_BUCKET || 'lessmo-9023f.appspot.com',
+      firebaseMessagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || '364537925711',
+      firebaseAppId: process.env.FIREBASE_APP_ID || '1:364537925711:web:145b2f74d691c58b905a3a',
       googleAndroidClientId: process.env.GOOGLE_ANDROID_CLIENT_ID,
       googleIosClientId: process.env.GOOGLE_IOS_CLIENT_ID,
       googleWebClientId: process.env.GOOGLE_WEB_CLIENT_ID,
