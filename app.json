@@ -20,7 +20,8 @@
       "infoPlist": {
         "UIBackgroundModes": ["remote-notification"],
         "NSCameraUsageDescription": "LessMo necesita acceso a tu cámara para tomar fotos de recibos.",
-        "NSPhotoLibraryUsageDescription": "LessMo necesita acceso a tus fotos para adjuntar recibos a los gastos."
+        "NSPhotoLibraryUsageDescription": "LessMo necesita acceso a tus fotos para adjuntar recibos a los gastos.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
