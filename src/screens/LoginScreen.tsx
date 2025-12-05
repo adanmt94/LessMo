@@ -44,6 +44,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const styles = getStyles(theme);
   const [hasSavedCredentials, setHasSavedCredentials] = useState(false);
   const [hasTriedAutoLaunch, setHasTriedAutoLaunch] = useState(false);
+  const [userInteracted, setUserInteracted] = useState(false);
 
   useEffect(() => {
     checkSavedCredentials();
@@ -51,16 +52,16 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
 
   // Auto-lanzar Face ID si está habilitado y hay credenciales
   useEffect(() => {
-    if (!hasTriedAutoLaunch && isEnabled && hasSavedCredentials && isAvailable && isEnrolled && !loading) {
+    if (!hasTriedAutoLaunch && !userInteracted && isEnabled && hasSavedCredentials && isAvailable && isEnrolled && !loading) {
       console.log('🔐 Auto-launching Face ID...');
       setHasTriedAutoLaunch(true);
       // Delay mayor para evitar conflictos con el teclado
       const timer = setTimeout(() => {
         handleBiometricLogin();
-      }, 800);
+      }, 1000);
       return () => clearTimeout(timer);
     }
-  }, [isEnabled, hasSavedCredentials, isAvailable, isEnrolled, hasTriedAutoLaunch, loading]);
+  }, [isEnabled, hasSavedCredentials, isAvailable, isEnrolled, hasTriedAutoLaunch, loading, userInteracted]);
 
   const checkSavedCredentials = async () => {
     try {
@@ -197,13 +198,14 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        keyboardVerticalOffset={0}
+        enabled
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
+          keyboardShouldPersistTaps="always"
           showsVerticalScrollIndicator={false}
-          keyboardDismissMode="on-drag"
+          bounces={false}
         >
           <View style={styles.header}>
             <View style={styles.logoContainer}>
@@ -222,6 +224,10 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
               placeholder={t('auth.emailPlaceholder')}
               value={email}
               onChangeText={setEmail}
+              onFocus={() => {
+                setUserInteracted(true);
+                setHasTriedAutoLaunch(true);
+              }}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
@@ -234,6 +240,10 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
               placeholder={t('auth.passwordPlaceholder')}
               value={password}
               onChangeText={setPassword}
+              onFocus={() => {
+                setUserInteracted(true);
+                setHasTriedAutoLaunch(true);
+              }}
               secureTextEntry
               autoCapitalize="none"
               autoCorrect={false}
