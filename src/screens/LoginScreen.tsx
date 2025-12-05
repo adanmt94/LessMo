@@ -26,6 +26,7 @@ import { useLanguage } from '../context/LanguageContext';
 
 const STORED_EMAIL_KEY = 'biometric_user_email';
 const STORED_PASSWORD_KEY = 'biometric_user_password';
+const STORED_LOGIN_METHOD_KEY = 'biometric_login_method';
 
 type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -43,25 +44,13 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const { t } = useLanguage();
   const styles = getStyles(theme);
   const [hasSavedCredentials, setHasSavedCredentials] = useState(false);
-  const [hasTriedAutoLaunch, setHasTriedAutoLaunch] = useState(false);
-  const [userInteracted, setUserInteracted] = useState(false);
 
   useEffect(() => {
     checkSavedCredentials();
   }, []);
 
-  // Auto-lanzar Face ID si está habilitado y hay credenciales
-  useEffect(() => {
-    if (!hasTriedAutoLaunch && !userInteracted && isEnabled && hasSavedCredentials && isAvailable && isEnrolled && !loading) {
-      console.log('🔐 Auto-launching Face ID...');
-      setHasTriedAutoLaunch(true);
-      // Delay mayor para evitar conflictos con el teclado
-      const timer = setTimeout(() => {
-        handleBiometricLogin();
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [isEnabled, hasSavedCredentials, isAvailable, isEnrolled, hasTriedAutoLaunch, loading, userInteracted]);
+  // Auto-launch DESACTIVADO - causaba conflictos con el teclado
+  // El usuario debe tocar manualmente el botón de Face ID
 
   const checkSavedCredentials = async () => {
     try {
@@ -224,10 +213,6 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
               placeholder={t('auth.emailPlaceholder')}
               value={email}
               onChangeText={setEmail}
-              onFocus={() => {
-                setUserInteracted(true);
-                setHasTriedAutoLaunch(true);
-              }}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
@@ -240,10 +225,6 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
               placeholder={t('auth.passwordPlaceholder')}
               value={password}
               onChangeText={setPassword}
-              onFocus={() => {
-                setUserInteracted(true);
-                setHasTriedAutoLaunch(true);
-              }}
               secureTextEntry
               autoCapitalize="none"
               autoCorrect={false}
@@ -260,11 +241,12 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
             />
 
             {/* Botón de Face ID / Touch ID - Siempre visible si biometría disponible */}
-            {isAvailable && isEnrolled && (
+            {isAvailable && isEnrolled && biometricType && (
               <TouchableOpacity
                 style={styles.biometricButton}
                 onPress={handleBiometricLogin}
                 disabled={!hasSavedCredentials}
+                activeOpacity={hasSavedCredentials ? 0.7 : 1}
               >
                 <Text style={styles.biometricIcon}>{biometricType === 'Face ID' ? '🔐' : '👆'}</Text>
                 <Text style={[styles.biometricText, !hasSavedCredentials && styles.biometricTextDisabled]}>
