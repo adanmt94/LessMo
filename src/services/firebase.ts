@@ -62,46 +62,72 @@ const firebaseConfig = {
   appId: '1:364537925711:web:145b2f74d691c58b905a3a'
 };
 
-console.log('🔥 [FIREBASE] Iniciando inicialización de Firebase...');
-console.log('🔥 [FIREBASE] Config:', {
-  apiKey: firebaseConfig.apiKey ? '✓ Presente' : '✗ Falta',
-  authDomain: firebaseConfig.authDomain,
-  projectId: firebaseConfig.projectId
-});
+// Variables que se inicializarán de forma segura
+let app: any = null;
+let authInstance: any = null;
+let dbInstance: any = null;
+let storageInstance: any = null;
+let googleProviderInstance: any = null;
+let appleProviderInstance: any = null;
+let initError: Error | null = null;
 
-// Inicializar Firebase
-let app;
-try {
-  console.log('🔥 [FIREBASE] Llamando a initializeApp...');
-  app = initializeApp(firebaseConfig);
-  console.log('✅ [FIREBASE] Firebase app inicializada correctamente');
-} catch (error) {
-  console.error('❌ [FIREBASE] Error inicializando Firebase app:', error);
-  throw error;
-}
+// Función de inicialización segura que NUNCA lanza excepciones
+const initializeFirebaseSafely = () => {
+  try {
+    console.log('🔥 [FIREBASE] === INICIO INICIALIZACIÓN ===');
+    
+    // Inicializar app
+    console.log('🔥 [FIREBASE] Step 1: initializeApp...');
+    app = initializeApp(firebaseConfig);
+    console.log('✅ [FIREBASE] App inicializada');
 
-// Usar getAuth directamente - Firebase Web SDK maneja persistencia automáticamente en React Native
-console.log('🔥 [FIREBASE] Inicializando servicios de Firebase...');
+    // Inicializar servicios uno por uno
+    console.log('🔥 [FIREBASE] Step 2: getAuth...');
+    authInstance = getAuth(app);
+    console.log('✅ [FIREBASE] Auth OK');
 
-console.log('🔥 [FIREBASE] Obteniendo auth...');
-export const auth = getAuth(app);
-console.log('✅ [FIREBASE] Auth obtenido');
+    console.log('🔥 [FIREBASE] Step 3: getFirestore...');
+    dbInstance = getFirestore(app);
+    console.log('✅ [FIREBASE] Firestore OK');
 
-console.log('🔥 [FIREBASE] Obteniendo firestore...');
-export const db = getFirestore(app);
-console.log('✅ [FIREBASE] Firestore obtenido');
+    console.log('🔥 [FIREBASE] Step 4: getStorage...');
+    storageInstance = getStorage(app);
+    console.log('✅ [FIREBASE] Storage OK');
 
-console.log('🔥 [FIREBASE] Obteniendo storage...');
-export const storage = getStorage(app);
-console.log('✅ [FIREBASE] Storage obtenido');
+    console.log('🔥 [FIREBASE] Step 5: Providers...');
+    googleProviderInstance = new GoogleAuthProvider();
+    appleProviderInstance = new OAuthProvider('apple.com');
+    console.log('✅ [FIREBASE] Providers OK');
 
-// Providers para autenticación social
-console.log('🔥 [FIREBASE] Creando providers...');
-export const googleProvider = new GoogleAuthProvider();
-export const appleProvider = new OAuthProvider('apple.com');
-console.log('✅ [FIREBASE] Providers creados');
+    console.log('✅ [FIREBASE] === INICIALIZACIÓN COMPLETA ===');
+    return true;
+  } catch (error: any) {
+    console.error('❌ [FIREBASE] === ERROR EN INICIALIZACIÓN ===');
+    console.error('❌ [FIREBASE] Error:', error?.message || 'Unknown error');
+    console.error('❌ [FIREBASE] Stack:', error?.stack || 'No stack');
+    initError = error;
+    
+    // Crear objetos mock para evitar crashes
+    authInstance = { currentUser: null };
+    dbInstance = {};
+    storageInstance = {};
+    googleProviderInstance = {};
+    appleProviderInstance = {};
+    
+    return false;
+  }
+};
 
-console.log('✅ [FIREBASE] Todos los servicios inicializados correctamente');
+// Ejecutar inicialización inmediatamente
+console.log('🔥 [FIREBASE] Iniciando...');
+initializeFirebaseSafely();
+
+// Exportar con fallbacks seguros
+export const auth = authInstance;
+export const db = dbInstance;
+export const storage = storageInstance;
+export const googleProvider = googleProviderInstance;
+export const appleProvider = appleProviderInstance;
 
 // ==================== AUTENTICACIÓN ====================
 
