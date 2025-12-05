@@ -43,16 +43,9 @@ import {
   getDownloadURL 
 } from 'firebase/storage';
 
-import { 
-  User, 
-  Event, 
-  Participant, 
-  Expense, 
-  Currency 
-} from '../types';
-
-// Configuración de Firebase desde variables de entorno
-// Usar valores hardcodeados como fallback para evitar crashes
+// ====================================================================
+// CONFIGURACIÓN DE FIREBASE
+// ====================================================================
 const firebaseConfig = {
   apiKey: 'AIzaSyD1NN6qPdBXgRFXiFBhPI8RbJfBQP3slmQ',
   authDomain: 'lessmo-9023f.firebaseapp.com',
@@ -62,72 +55,64 @@ const firebaseConfig = {
   appId: '1:364537925711:web:145b2f74d691c58b905a3a'
 };
 
-// Variables que se inicializarán de forma segura
-let app: any = null;
-let authInstance: any = null;
-let dbInstance: any = null;
-let storageInstance: any = null;
-let googleProviderInstance: any = null;
-let appleProviderInstance: any = null;
-let initError: Error | null = null;
+// ====================================================================
+// INICIALIZACIÓN SIMPLE Y SEGURA
+// ====================================================================
+console.log('🔥 [FIREBASE-INIT] Starting...');
 
-// Función de inicialización segura que NUNCA lanza excepciones
-const initializeFirebaseSafely = () => {
-  try {
-    console.log('🔥 [FIREBASE] === INICIO INICIALIZACIÓN ===');
-    
-    // Inicializar app
-    console.log('🔥 [FIREBASE] Step 1: initializeApp...');
-    app = initializeApp(firebaseConfig);
-    console.log('✅ [FIREBASE] App inicializada');
+let app: any;
+let authInstance: any;
+let dbInstance: any;
+let storageInstance: any;
+let googleProviderInstance: any;
+let appleProviderInstance: any;
 
-    // Inicializar servicios uno por uno
-    console.log('🔥 [FIREBASE] Step 2: getAuth...');
-    authInstance = getAuth(app);
-    console.log('✅ [FIREBASE] Auth OK');
+try {
+  // Step 1: App
+  app = initializeApp(firebaseConfig);
+  console.log('✅ [FIREBASE-INIT] App OK');
+  
+  // Step 2: Auth
+  authInstance = getAuth(app);
+  console.log('✅ [FIREBASE-INIT] Auth OK');
+  
+  // Step 3: DB
+  dbInstance = getFirestore(app);
+  console.log('✅ [FIREBASE-INIT] DB OK');
+  
+  // Step 4: Storage
+  storageInstance = getStorage(app);
+  console.log('✅ [FIREBASE-INIT] Storage OK');
+  
+  // Step 5: Providers
+  googleProviderInstance = new GoogleAuthProvider();
+  appleProviderInstance = new OAuthProvider('apple.com');
+  console.log('✅ [FIREBASE-INIT] All OK!');
+} catch (e: any) {
+  console.error('❌ [FIREBASE-INIT] FAILED:', e?.message);
+  // Mock objects to prevent crashes
+  authInstance = authInstance || { currentUser: null };
+  dbInstance = dbInstance || {};
+  storageInstance = storageInstance || {};
+  googleProviderInstance = googleProviderInstance || {};
+  appleProviderInstance = appleProviderInstance || {};
+}
 
-    console.log('🔥 [FIREBASE] Step 3: getFirestore...');
-    dbInstance = getFirestore(app);
-    console.log('✅ [FIREBASE] Firestore OK');
-
-    console.log('🔥 [FIREBASE] Step 4: getStorage...');
-    storageInstance = getStorage(app);
-    console.log('✅ [FIREBASE] Storage OK');
-
-    console.log('🔥 [FIREBASE] Step 5: Providers...');
-    googleProviderInstance = new GoogleAuthProvider();
-    appleProviderInstance = new OAuthProvider('apple.com');
-    console.log('✅ [FIREBASE] Providers OK');
-
-    console.log('✅ [FIREBASE] === INICIALIZACIÓN COMPLETA ===');
-    return true;
-  } catch (error: any) {
-    console.error('❌ [FIREBASE] === ERROR EN INICIALIZACIÓN ===');
-    console.error('❌ [FIREBASE] Error:', error?.message || 'Unknown error');
-    console.error('❌ [FIREBASE] Stack:', error?.stack || 'No stack');
-    initError = error;
-    
-    // Crear objetos mock para evitar crashes
-    authInstance = { currentUser: null };
-    dbInstance = {};
-    storageInstance = {};
-    googleProviderInstance = {};
-    appleProviderInstance = {};
-    
-    return false;
-  }
-};
-
-// Ejecutar inicialización inmediatamente
-console.log('🔥 [FIREBASE] Iniciando...');
-initializeFirebaseSafely();
-
-// Exportar con fallbacks seguros
+// Exports
 export const auth = authInstance;
 export const db = dbInstance;
 export const storage = storageInstance;
 export const googleProvider = googleProviderInstance;
 export const appleProvider = appleProviderInstance;
+
+// Import types AFTER exports to avoid circular dependency
+import { 
+  User, 
+  Event, 
+  Participant, 
+  Expense, 
+  Currency 
+} from '../types';
 
 // ==================== AUTENTICACIÓN ====================
 
