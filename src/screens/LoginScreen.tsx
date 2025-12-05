@@ -64,9 +64,22 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
 
   const checkSavedCredentials = async () => {
     try {
-      const savedEmail = await SecureStore.getItemAsync(STORED_EMAIL_KEY);
-      const savedPassword = await SecureStore.getItemAsync(STORED_PASSWORD_KEY);
-      setHasSavedCredentials(!!(savedEmail && savedPassword));
+      const loginMethod = await SecureStore.getItemAsync(STORED_LOGIN_METHOD_KEY);
+      
+      if (loginMethod === 'google') {
+        // Si el último login fue con Google, considerar que hay credenciales guardadas
+        setHasSavedCredentials(true);
+        console.log('🔐 Credenciales guardadas: Google');
+      } else if (loginMethod === 'email') {
+        // Si fue con email/password, verificar que existan
+        const savedEmail = await SecureStore.getItemAsync(STORED_EMAIL_KEY);
+        const savedPassword = await SecureStore.getItemAsync(STORED_PASSWORD_KEY);
+        setHasSavedCredentials(!!(savedEmail && savedPassword));
+        console.log('🔐 Credenciales guardadas: Email/Password');
+      } else {
+        setHasSavedCredentials(false);
+        console.log('⚠️ No hay credenciales guardadas');
+      }
     } catch (error) {
       console.error('Error checking saved credentials:', error);
       setHasSavedCredentials(false);
@@ -93,21 +106,38 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
 
       console.log('✅ Biometric authentication successful');
       
-      // Recuperar credenciales guardadas
-      const savedEmail = await SecureStore.getItemAsync(STORED_EMAIL_KEY);
-      const savedPassword = await SecureStore.getItemAsync(STORED_PASSWORD_KEY);
+      // Verificar qué método de login se usó la última vez
+      const loginMethod = await SecureStore.getItemAsync(STORED_LOGIN_METHOD_KEY);
+      
+      if (loginMethod === 'google') {
+        // Iniciar sesión con Google
+        console.log('🔐 Signing in with Google (last used method)...');
+        await signInWithGoogle();
+        if (googleError) {
+          Alert.alert(t('common.error'), googleError);
+        }
+      } else if (loginMethod === 'email') {
+        // Recuperar credenciales de email/password
+        const savedEmail = await SecureStore.getItemAsync(STORED_EMAIL_KEY);
+        const savedPassword = await SecureStore.getItemAsync(STORED_PASSWORD_KEY);
 
-      if (!savedEmail || !savedPassword) {
-        Alert.alert(t('common.error'), 'No hay credenciales guardadas');
-        setHasSavedCredentials(false);
-        return;
-      }
+        if (!savedEmail || !savedPassword) {
+          Alert.alert(t('common.error'), 'No hay credenciales guardadas');
+          setHasSavedCredentials(false);
+          return;
+        }
 
-      // Iniciar sesión con las credenciales guardadas
-      console.log('🔐 Signing in with saved credentials...');
-      const success = await signIn(savedEmail, savedPassword);
-      if (!success) {
-        Alert.alert(t('common.error'), error || t('auth.loginError'));
+        // Iniciar sesión con las credenciales guardadas
+        console.log('🔐 Signing in with email/password (last used method)...');
+        const success = await signIn(savedEmail, savedPassword);
+        if (!success) {
+          Alert.alert(t('common.error'), error || t('auth.loginError'));
+        }
+      } else {
+        Alert.alert(
+          t('common.error'),
+          'No se pudo determinar el método de inicio de sesión anterior'
+        );
       }
     } catch (error) {
       console.error('❌ Error in biometric login:', error);
@@ -128,8 +158,11 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
         try {
           await SecureStore.setItemAsync(STORED_EMAIL_KEY, email);
           await SecureStore.setItemAsync(STORED_PASSWORD_KEY, password);
+          await SecureStore.setItemAsync(STORED_LOGIN_METHOD_KEY, 'email');
+          await checkSavedCredentials(); // Actualizar estado
+          console.log('✅ Credenciales guardadas para Face ID (email/password)');
         } catch (error) {
-          
+          console.error('❌ Error guardando credenciales:', error);
         }
       }
       // La navegación se maneja automáticamente en App.tsx
@@ -142,6 +175,20 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
     await signInWithGoogle();
     if (googleError) {
       Alert.alert(t('common.error'), googleError);
+    } else {
+      // Si el login fue exitoso y Face ID está habilitado, guardar el método
+      if (isEnabled) {
+        try {
+          await SecureStore.setItemAsync(STORED_LOGIN_METHOD_KEY, 'google');
+          // Limpiar credenciales de email/password si existían
+          await SecureStore.deleteItemAsync(STORED_EMAIL_KEY);
+          await SecureStore.deleteItemAsync(STORED_PASSWORD_KEY);
+          await checkSavedCredentials(); // Actualizar estado
+          console.log('✅ Método Google guardado para Face ID');
+        } catch (error) {
+          console.error('❌ Error guardando método Google:', error);
+        }
+      }
     }
   };
 
