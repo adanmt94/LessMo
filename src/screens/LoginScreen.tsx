@@ -51,47 +51,66 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
 
   // Auto-lanzar Face ID si está habilitado y hay credenciales
   useEffect(() => {
-    if (!hasTriedAutoLaunch && isEnabled && hasSavedCredentials && isAvailable && isEnrolled) {
+    if (!hasTriedAutoLaunch && isEnabled && hasSavedCredentials && isAvailable && isEnrolled && !loading) {
+      console.log('🔐 Auto-launching Face ID...');
       setHasTriedAutoLaunch(true);
-      // Pequeño delay para que la UI esté lista
-      setTimeout(() => {
+      // Delay mayor para evitar conflictos con el teclado
+      const timer = setTimeout(() => {
         handleBiometricLogin();
-      }, 500);
+      }, 800);
+      return () => clearTimeout(timer);
     }
-  }, [isEnabled, hasSavedCredentials, isAvailable, isEnrolled, hasTriedAutoLaunch]);
+  }, [isEnabled, hasSavedCredentials, isAvailable, isEnrolled, hasTriedAutoLaunch, loading]);
 
   const checkSavedCredentials = async () => {
     try {
       const savedEmail = await SecureStore.getItemAsync(STORED_EMAIL_KEY);
-      setHasSavedCredentials(!!savedEmail && isEnabled);
+      const savedPassword = await SecureStore.getItemAsync(STORED_PASSWORD_KEY);
+      setHasSavedCredentials(!!(savedEmail && savedPassword));
     } catch (error) {
-      
+      console.error('Error checking saved credentials:', error);
+      setHasSavedCredentials(false);
     }
   };
 
   const handleBiometricLogin = async () => {
+    if (!hasSavedCredentials) {
+      Alert.alert(
+        t('common.error'),
+        'Debes iniciar sesión primero y activar Face ID en Ajustes'
+      );
+      return;
+    }
+
     try {
+      console.log('🔐 Starting biometric authentication...');
       const authenticated = await authenticateWithBiometric();
+      
       if (!authenticated) {
+        console.log('❌ Biometric authentication cancelled or failed');
         return;
       }
 
+      console.log('✅ Biometric authentication successful');
+      
       // Recuperar credenciales guardadas
       const savedEmail = await SecureStore.getItemAsync(STORED_EMAIL_KEY);
       const savedPassword = await SecureStore.getItemAsync(STORED_PASSWORD_KEY);
 
       if (!savedEmail || !savedPassword) {
         Alert.alert(t('common.error'), 'No hay credenciales guardadas');
+        setHasSavedCredentials(false);
         return;
       }
 
       // Iniciar sesión con las credenciales guardadas
+      console.log('🔐 Signing in with saved credentials...');
       const success = await signIn(savedEmail, savedPassword);
       if (!success) {
         Alert.alert(t('common.error'), error || t('auth.loginError'));
       }
     } catch (error) {
-      
+      console.error('❌ Error in biometric login:', error);
       Alert.alert(t('common.error'), 'Error al iniciar sesión con biometría');
     }
   };
@@ -129,14 +148,15 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
   return (
     <SafeAreaView edges={['top']} style={styles.container}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
-        enabled={Platform.OS === 'ios'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="always"
+          keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          keyboardDismissMode="on-drag"
         >
           <View style={styles.header}>
             <View style={styles.logoContainer}>
