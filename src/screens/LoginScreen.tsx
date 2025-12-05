@@ -43,10 +43,22 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const { t } = useLanguage();
   const styles = getStyles(theme);
   const [hasSavedCredentials, setHasSavedCredentials] = useState(false);
+  const [hasTriedAutoLaunch, setHasTriedAutoLaunch] = useState(false);
 
   useEffect(() => {
     checkSavedCredentials();
   }, []);
+
+  // Auto-lanzar Face ID si está habilitado y hay credenciales
+  useEffect(() => {
+    if (!hasTriedAutoLaunch && isEnabled && hasSavedCredentials && isAvailable && isEnrolled) {
+      setHasTriedAutoLaunch(true);
+      // Pequeño delay para que la UI esté lista
+      setTimeout(() => {
+        handleBiometricLogin();
+      }, 500);
+    }
+  }, [isEnabled, hasSavedCredentials, isAvailable, isEnrolled, hasTriedAutoLaunch]);
 
   const checkSavedCredentials = async () => {
     try {
@@ -170,15 +182,19 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
               size="large"
             />
 
-            {/* Botón de Face ID / Touch ID */}
-            {isAvailable && isEnrolled && hasSavedCredentials && (
+            {/* Botón de Face ID / Touch ID - Siempre visible si biometría disponible */}
+            {isAvailable && isEnrolled && (
               <TouchableOpacity
                 style={styles.biometricButton}
                 onPress={handleBiometricLogin}
+                disabled={!hasSavedCredentials}
               >
                 <Text style={styles.biometricIcon}>{biometricType === 'Face ID' ? '🔐' : '👆'}</Text>
-                <Text style={styles.biometricText}>
-                  {t('auth.loginWith')} {biometricType}
+                <Text style={[styles.biometricText, !hasSavedCredentials && styles.biometricTextDisabled]}>
+                  {hasSavedCredentials 
+                    ? `${t('auth.loginWith')} ${biometricType}`
+                    : `Activa ${biometricType} en Ajustes después de iniciar sesión`
+                  }
                 </Text>
               </TouchableOpacity>
             )}
@@ -351,6 +367,10 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: theme.colors.primary,
+  },
+  biometricTextDisabled: {
+    color: theme.colors.textTertiary,
+    fontSize: 13,
   },
   registerLink: {
     alignItems: 'center',

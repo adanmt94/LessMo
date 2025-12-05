@@ -43,13 +43,9 @@ export const BiometricLockScreen: React.FC<Props> = ({ onUnlock }) => {
           console.log('✅ [BIOMETRIC LOCK] Usuario autenticado correctamente');
           onUnlock();
         } else if (!currentUser) {
-          // No hay usuario autenticado - debemos mostrar login
-          console.log('⚠️ [BIOMETRIC LOCK] No hay usuario autenticado, requiere login manual');
-          Alert.alert(
-            'Sesión expirada',
-            'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.',
-            [{ text: 'OK', onPress: onUnlock }] // Desbloquear para que vea la pantalla de login
-          );
+          // No hay usuario autenticado - desbloquear para mostrar login
+          console.log('⚠️ [BIOMETRIC LOCK] No hay usuario autenticado, desbloqueando para login');
+          onUnlock(); // Ir directo a login, sin alertas
         } else {
           // Hay otro usuario autenticado
           console.log('⚠️ [BIOMETRIC LOCK] Usuario diferente autenticado, cerrando sesión');
@@ -61,21 +57,30 @@ export const BiometricLockScreen: React.FC<Props> = ({ onUnlock }) => {
           );
         }
       } else {
-        setAttempts(prev => prev + 1);
-        
-        if (attempts >= 2) {
-          Alert.alert(
-            'Demasiados intentos',
-            '¿Deseas iniciar sesión manualmente?',
-            [
-              { text: 'Reintentar', onPress: handleAuthenticate },
-              { text: 'Iniciar sesión', onPress: onUnlock }
-            ]
-          );
+        // Solo incrementar intentos si hay un usuario activo (no incrementar si no hay sesión)
+        const currentUser = auth.currentUser;
+        if (currentUser) {
+          setAttempts(prev => prev + 1);
+          
+          if (attempts >= 2) {
+            Alert.alert(
+              'Demasiados intentos',
+              '¿Deseas iniciar sesión manualmente?',
+              [
+                { text: 'Reintentar', onPress: handleAuthenticate },
+                { text: 'Iniciar sesión', onPress: onUnlock }
+              ]
+            );
+          }
+        } else {
+          // Si no hay usuario, ir directo a login sin contar como intento fallido
+          console.log('⚠️ [BIOMETRIC LOCK] No hay usuario - desbloqueando para login');
+          onUnlock();
         }
       }
     } catch (error) {
       console.error('❌ [BIOMETRIC LOCK] Error en autenticación:', error);
+      onUnlock(); // En caso de error, desbloquear para mostrar login
     }
   };
 
