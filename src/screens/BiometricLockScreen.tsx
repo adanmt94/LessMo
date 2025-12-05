@@ -10,6 +10,8 @@ import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { Button } from '../components/lovable';
 import { useBiometricAuth } from '../hooks/useBiometricAuth';
+import { auth } from '../services/firebase';
+import { signInAnonymously } from 'firebase/auth';
 
 interface Props {
   onUnlock: () => void;
@@ -29,26 +31,51 @@ export const BiometricLockScreen: React.FC<Props> = ({ onUnlock }) => {
 
   const handleAuthenticate = async () => {
     try {
-      const success = await authenticateWithBiometric();
+      // authenticateWithBiometric ahora devuelve el UID del usuario
+      const savedUID = await authenticateWithBiometric();
       
-      if (success) {
-        onUnlock();
+      if (savedUID) {
+        // Verificar si el usuario actual coincide con el UID guardado
+        const currentUser = auth.currentUser;
+        
+        if (currentUser && currentUser.uid === savedUID) {
+          // Usuario correcto ya autenticado
+          console.log('✅ [BIOMETRIC LOCK] Usuario autenticado correctamente');
+          onUnlock();
+        } else if (!currentUser) {
+          // No hay usuario autenticado - debemos mostrar login
+          console.log('⚠️ [BIOMETRIC LOCK] No hay usuario autenticado, requiere login manual');
+          Alert.alert(
+            'Sesión expirada',
+            'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.',
+            [{ text: 'OK', onPress: onUnlock }] // Desbloquear para que vea la pantalla de login
+          );
+        } else {
+          // Hay otro usuario autenticado
+          console.log('⚠️ [BIOMETRIC LOCK] Usuario diferente autenticado, cerrando sesión');
+          await auth.signOut();
+          Alert.alert(
+            'Usuario diferente',
+            'Hay una sesión activa con otra cuenta. Por favor, inicia sesión con la cuenta correcta.',
+            [{ text: 'OK', onPress: onUnlock }]
+          );
+        }
       } else {
         setAttempts(prev => prev + 1);
         
         if (attempts >= 2) {
           Alert.alert(
-            t('biometricLock.tooManyAttempts'),
-            t('biometricLock.tooManyAttemptsMessage'),
+            'Demasiados intentos',
+            '¿Deseas iniciar sesión manualmente?',
             [
-              { text: t('biometricLock.retry'), onPress: handleAuthenticate },
-              { text: t('biometricLock.closeApp'), style: 'cancel' }
+              { text: 'Reintentar', onPress: handleAuthenticate },
+              { text: 'Iniciar sesión', onPress: onUnlock }
             ]
           );
         }
       }
     } catch (error) {
-      
+      console.error('❌ [BIOMETRIC LOCK] Error en autenticación:', error);
     }
   };
 

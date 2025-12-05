@@ -7,8 +7,10 @@ import { useState, useEffect } from 'react';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
 import { Alert, Platform } from 'react-native';
+import { auth } from '../services/firebase';
 
 const BIOMETRIC_ENABLED_KEY = 'biometric_auth_enabled';
+const BIOMETRIC_USER_UID_KEY = 'biometric_user_uid';
 
 export interface BiometricAuthHook {
   isAvailable: boolean;
@@ -17,8 +19,9 @@ export interface BiometricAuthHook {
   biometricType: string;
   enableBiometricAuth: () => Promise<void>;
   disableBiometricAuth: () => Promise<void>;
-  authenticateWithBiometric: () => Promise<boolean>;
+  authenticateWithBiometric: () => Promise<string | null>;
   isLoading: boolean;
+  canEnableBiometric: boolean;
 }
 
 export const useBiometricAuth = (): BiometricAuthHook => {
@@ -96,6 +99,24 @@ export const useBiometricAuth = (): BiometricAuthHook => {
         return;
       }
 
+      // Verificar que hay un usuario autenticado y NO es anónimo
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        Alert.alert(
+          'Error',
+          'Debes iniciar sesión primero para activar la protección biométrica'
+        );
+        return;
+      }
+
+      if (currentUser.isAnonymous) {
+        Alert.alert(
+          'No disponible',
+          'La protección biométrica no está disponible para usuarios anónimos. Crea una cuenta para usar esta función.'
+        );
+        return;
+      }
+
       // Solicitar autenticación para confirmar
       const result = await LocalAuthentication.authenticateAsync({
         promptMessage: `Confirma tu identidad con ${biometricType}`,
@@ -104,15 +125,17 @@ export const useBiometricAuth = (): BiometricAuthHook => {
       });
 
       if (result.success) {
+        // Guardar que está habilitado Y el UID del usuario
         await SecureStore.setItemAsync(BIOMETRIC_ENABLED_KEY, 'true');
+        await SecureStore.setItemAsync(BIOMETRIC_USER_UID_KEY, currentUser.uid);
         setIsEnabled(true);
         
         Alert.alert(
           '✅ Activado',
-          `${biometricType} activado correctamente. Ahora se te pedirá al abrir la app.`
+          `${biometricType} activado correctamente. La próxima vez que abras la app se te pedirá ${biometricType} para acceder directamente a tu cuenta.`
         );
         
-        console.log('✅ Autenticación biométrica activada');
+        console.log('✅ Autenticación biométrica activada para usuario:', currentUser.uid);
       } else {
         console.log('❌ Autenticación cancelada o fallida');
       }
@@ -125,6 +148,7 @@ export const useBiometricAuth = (): BiometricAuthHook => {
   const disableBiometricAuth = async (): Promise<void> => {
     try {
       await SecureStore.deleteItemAsync(BIOMETRIC_ENABLED_KEY);
+      await SecureStore.deleteItemAsync(BIOMETRIC_USER_UID_KEY);
       setIsEnabled(false);
       
       Alert.alert(
@@ -139,11 +163,11 @@ export const useBiometricAuth = (): BiometricAuthHook => {
     }
   };
 
-  const authenticateWithBiometric = async (): Promise<boolean> => {
+  const authenticateWithBiometric = async (): Promise<string | null> => {
     try {
       if (!isAvailable || !isEnrolled) {
         console.log('⚠️ Biometría no disponible');
-        return false;
+        return null;
       }
 
       const result = await LocalAuthentication.authenticateAsync({
@@ -154,15 +178,26 @@ export const useBiometricAuth = (): BiometricAuthHook => {
       });
 
       if (result.success) {
-        return true;
+        // Recuperar el UID del usuario guardado
+        const savedUID = await SecureStore.getItemAsync(BIOMETRIC_USER_UID_KEY);
+        if (!savedUID) {
+          console.log('⚠️ No hay UID guardado');
+          return null;
+        }
+        console.log('✅ Autenticación biométrica exitosa para UID:', savedUID);
+        return savedUID;
       } else {
-        return false;
+        return null;
       }
     } catch (error) {
       console.error('❌ Error en autenticación biométrica:', error);
-      return false;
+      return null;
     }
   };
+
+  // Determinar si el usuario PUEDE activar biometría (no es anónimo)
+  const currentUser = auth.currentUser;
+  const canEnableBiometric = !!(currentUser && !currentUser.isAnonymous && isAvailable && isEnrolled);
 
   return {
     isAvailable,
@@ -173,5 +208,6 @@ export const useBiometricAuth = (): BiometricAuthHook => {
     disableBiometricAuth,
     authenticateWithBiometric,
     isLoading,
+    canEnableBiometric,
   };
 };

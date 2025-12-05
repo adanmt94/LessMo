@@ -16,6 +16,8 @@ import { AuthProvider } from './src/context/AuthContext';
 import { Navigation } from './src/navigation';
 import { BiometricLockScreen } from './src/screens/BiometricLockScreen';
 import { globalEmitter, GlobalEvents } from './src/utils/globalEvents';
+import { isBiometricUserCurrent } from './src/services/biometricAuthService';
+import { auth } from './src/services/firebase';
 
 console.log('🚀 [APP] Iniciando aplicación LessMo...');
 
@@ -47,14 +49,25 @@ const AppContent: React.FC<{ appKey: number }> = ({ appKey }) => {
       console.log('🔐 [APP] Verificando estado de biometría en SecureStore...');
       const enabled = await SecureStore.getItemAsync(BIOMETRIC_ENABLED_KEY);
       console.log('🔐 [APP] Biometría habilitada:', enabled);
-      setBiometricEnabled(enabled === 'true');
       
-      // Si NO está habilitada, desbloquear inmediatamente
       if (enabled !== 'true') {
         console.log('✅ [APP] Biometría no habilitada - desbloqueando');
+        setBiometricEnabled(false);
         setIsLocked(false);
+        return;
+      }
+
+      // Verificar si el usuario actual coincide con el guardado en biometría
+      const isCurrentUser = await isBiometricUserCurrent();
+      
+      if (!isCurrentUser) {
+        console.log('⚠️ [APP] Usuario actual no coincide con el guardado - requiere autenticación');
+        setBiometricEnabled(true);
+        setIsLocked(true); // Mantener bloqueado para que autentique con biometría
       } else {
-        console.log('🔒 [APP] Biometría habilitada - mostrando pantalla de bloqueo');
+        console.log('✅ [APP] Usuario ya autenticado correctamente - desbloqueando');
+        setBiometricEnabled(true);
+        setIsLocked(false); // Desbloquear porque ya está autenticado con el usuario correcto
       }
     } catch (error) {
       console.error('❌ [APP] Error verificando biometría:', error);

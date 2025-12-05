@@ -61,6 +61,7 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
     enableBiometricAuth,
     disableBiometricAuth,
     isLoading: biometricLoading,
+    canEnableBiometric,
   } = useBiometricAuth();
   const {
     isEnabled: dailyReminderEnabled,
@@ -566,8 +567,8 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
             }
           />
           
-          {/* Autenticación Biométrica */}
-          {biometricAvailable && biometricEnrolled && (
+          {/* Autenticación Biométrica - Solo para usuarios NO anónimos */}
+          {canEnableBiometric && (
             <SettingItem styles={styles}
               icon="🔐"
               title={biometricType}
