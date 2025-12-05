@@ -51,9 +51,10 @@ export default {
       firebaseStorageBucket: process.env.FIREBASE_STORAGE_BUCKET || 'lessmo-9023f.appspot.com',
       firebaseMessagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || '364537925711',
       firebaseAppId: process.env.FIREBASE_APP_ID || '1:364537925711:web:145b2f74d691c58b905a3a',
-      googleAndroidClientId: process.env.GOOGLE_ANDROID_CLIENT_ID,
-      googleIosClientId: process.env.GOOGLE_IOS_CLIENT_ID,
-      googleWebClientId: process.env.GOOGLE_WEB_CLIENT_ID,
+      // Google Sign-In Client IDs (from GoogleService-Info.plist)
+      googleAndroidClientId: process.env.GOOGLE_ANDROID_CLIENT_ID || '364537925711-8k9moeddmi8n3b56ipchr37j1l14vvff.apps.googleusercontent.com',
+      googleIosClientId: process.env.GOOGLE_IOS_CLIENT_ID || '364537925711-vtgqi80bk7i7f3ioqo8gilafo7hjj0vc.apps.googleusercontent.com',
+      googleWebClientId: process.env.GOOGLE_WEB_CLIENT_ID || '364537925711-vtgqi80bk7i7f3ioqo8gilafo7hjj0vc.apps.googleusercontent.com',
       // Configuración de pagos
       PAYPAL_ME_USERNAME: process.env.PAYPAL_ME_USERNAME,
       STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY,
