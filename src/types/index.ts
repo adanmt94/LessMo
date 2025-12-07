@@ -159,6 +159,9 @@ export type RootStackParamList = {
   Summary: { eventId: string };
   JoinEvent: { inviteCode: string };
   JoinGroup: { inviteCode?: string };
+  // TEMPORAL: Mantener compatibilidad durante migración
+  CreateGroup: { groupId?: string; mode?: 'create' | 'edit' } | undefined;
+  GroupEvents: { groupId: string; groupName: string; groupIcon?: string; groupColor?: string };
   Chat: { eventId?: string; groupId?: string; title: string };
   EditProfile: undefined;
   Achievements: { eventId: string; participantId: string };
@@ -196,6 +199,7 @@ export type RootStackParamList = {
 
 export type TabParamList = {
   Events: undefined;    // Lista de eventos (antes "grupos")
+  Groups: undefined;    // TEMPORAL: mantener durante migración
   Activity: undefined;
   Settings: undefined;
 };

@@ -51,6 +51,9 @@ export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
   const [loadingData, setLoadingData] = useState(!!isEditMode);
   const [members, setMembers] = useState<Array<{ id: string; name: string; email?: string }>>([]);
   const [newMemberEmail, setNewMemberEmail] = useState('');
+  // 💰 PRESUPUESTO GRUPAL (característica principal)
+  const [budget, setBudget] = useState('');
+  const [currency, setCurrency] = useState<'EUR' | 'USD' | 'GBP'>('EUR');
 
   // Cargar datos del grupo si estamos en modo edición
   useEffect(() => {
@@ -261,6 +264,54 @@ export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
         enabled={Platform.OS === 'ios'}
       >
         <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
+          {/* 💰 PRESUPUESTO GRUPAL - LO MÁS IMPORTANTE */}
+          {!isEditMode && (
+            <Card style={styles.budgetSection}>
+              <View style={styles.budgetHeader}>
+                <Text style={styles.budgetIcon}>💰</Text>
+                <View style={styles.budgetHeaderText}>
+                  <Text style={styles.budgetTitle}>¿Qué presupuesto grupal quieres añadir?</Text>
+                  <Text style={styles.budgetSubtitle}>Define el límite máximo para este evento</Text>
+                </View>
+              </View>
+              
+              <View style={styles.budgetInputContainer}>
+                <View style={styles.currencySelector}>
+                  {(['EUR', 'USD', 'GBP'] as const).map((curr) => (
+                    <TouchableOpacity
+                      key={curr}
+                      style={[
+                        styles.currencyButton,
+                        currency === curr && styles.currencyButtonSelected,
+                      ]}
+                      onPress={() => setCurrency(curr)}
+                    >
+                      <Text style={[
+                        styles.currencyText,
+                        currency === curr && styles.currencyTextSelected,
+                      ]}>
+                        {curr === 'EUR' ? '€' : curr === 'USD' ? '$' : '£'}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                
+                <Input
+                  label="Presupuesto máximo"
+                  value={budget}
+                  onChangeText={setBudget}
+                  placeholder="Ej: 1000 (Puede quedar en blanco)"
+                  keyboardType="numeric"
+                  style={styles.budgetInput}
+                />
+              </View>
+              
+              <Text style={styles.budgetHelp}>
+                💡 Puedes dejarlo en blanco si aún no lo sabes. Podrás editarlo después.
+              </Text>
+            </Card>
+          )}
+
           {/* Información básica */}
           <Card style={styles.section}>
             <Text style={styles.sectionTitle}>{t('createGroup.groupInfo')}</Text>
@@ -700,5 +751,71 @@ const getStyles = (theme: any) => StyleSheet.create({
     color: theme.colors.textSecondary,
     textAlign: 'center',
     lineHeight: 16,
+  },
+  // 💰 Estilos para sección de presupuesto
+  budgetSection: {
+    backgroundColor: theme.isDark ? 'rgba(99, 102, 241, 0.1)' : 'rgba(99, 102, 241, 0.05)',
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
+  },
+  budgetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  budgetIcon: {
+    fontSize: 48,
+    marginRight: 16,
+  },
+  budgetHeaderText: {
+    flex: 1,
+  },
+  budgetTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: theme.colors.text,
+    marginBottom: 4,
+  },
+  budgetSubtitle: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+  },
+  budgetInputContainer: {
+    marginBottom: 16,
+  },
+  currencySelector: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  currencyButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    alignItems: 'center',
+  },
+  currencyButtonSelected: {
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primary,
+  },
+  currencyText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: theme.colors.text,
+  },
+  currencyTextSelected: {
+    color: '#FFFFFF',
+  },
+  budgetInput: {
+    fontSize: 18,
+  },
+  budgetHelp: {
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+    fontStyle: 'italic',
+    textAlign: 'center',
   },
 });

@@ -444,18 +444,8 @@ export const addParticipant = async (
       const updatedParticipantIds = [...event.participantIds, docRef.id];
       await updateEvent(eventId, { participantIds: updatedParticipantIds });
       
-      // Si el evento pertenece a un grupo y el participante tiene userId, 
-      // agregar el userId al array memberIds del grupo
-      if (event.groupId && userId) {
-        try {
-          const groupRef = doc(db, 'groups', event.groupId);
-          await updateDoc(groupRef, {
-            memberIds: arrayUnion(userId)
-          });
-        } catch (error) {
-          // No lanzar error aquí para no bloquear la adición del participante
-        }
-      }
+      // Nota: En el nuevo modelo, Event ya no tiene groupId
+      // Los eventos son los contenedores principales
     }
     
     return docRef.id;
@@ -1667,6 +1657,33 @@ export const uploadReceiptPhoto = async (uri: string, expenseId: string): Promis
   }
 };
 
+// ====================================================================
+// 🔄 ALIASES PARA NUEVO MODELO
+// ====================================================================
+// NUEVO MODELO:
+//   - EVENTO (Event) = Contenedor con presupuesto (antes "Group")
+//   - GASTO (Expense) = Transacción única (antes "Event")
+// ====================================================================
+
+// Aliases para trabajar con el nuevo modelo
+// Los "grupos" ahora son "eventos" (contenedores con presupuesto)
+export const createEventContainer = createGroup;
+export const getUserEventsContainer = getUserGroups;
+export const getEventContainer = getGroup;
+export const updateEventContainer = updateGroup;
+export const deleteEventContainer = deleteGroup;
+export const getEventContainerByInviteCode = getGroupByInviteCode;
+export const addEventParticipant = addGroupMember;
+export const removeEventParticipant = removeGroupMember;
+export const syncEventStats = syncGroupStats;
+export const sendEventContainerMessage = sendGroupMessage;
+export const getEventContainerMessages = getGroupMessages;
+export const subscribeToEventContainerMessages = subscribeToGroupMessages;
+
+// Los "eventos" viejos ahora son "gastos" pero mantenemos las funciones existentes
+// porque ya se llaman createExpense, updateExpense, etc.
+export const getExpensesByEvent = getEventExpenses;
+
 export default {
   auth,
   db,
@@ -1708,4 +1725,20 @@ export default {
   refreshParticipantPhotos,
   uploadReceiptPhoto,
   uploadChatImage,
+  removeGroupMember,
+  getUserInfo,
+  // Nuevos aliases
+  createEventContainer,
+  getUserEventsContainer,
+  getEventContainer,
+  updateEventContainer,
+  deleteEventContainer,
+  getEventContainerByInviteCode,
+  addEventParticipant,
+  removeEventParticipant,
+  syncEventStats,
+  sendEventContainerMessage,
+  getEventContainerMessages,
+  subscribeToEventContainerMessages,
+  getExpensesByEvent,
 };
