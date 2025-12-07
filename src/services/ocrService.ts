@@ -37,7 +37,11 @@ export async function analyzeReceipt(imageUri: string): Promise<ReceiptData> {
     });
 
     // Google Vision API endpoint
-    const API_KEY = process.env.GOOGLE_VISION_API_KEY || 'AIzaSyDUc5h9M2VqYQZx7fN8wP9kR5aL6tE3mJ0'; // Temporal - debe estar en .env
+    const API_KEY = process.env.EXPO_PUBLIC_GOOGLE_VISION_API_KEY || process.env.GOOGLE_VISION_API_KEY;
+    
+    if (!API_KEY) {
+      throw new Error('Google Vision API key not configured. Please set GOOGLE_VISION_API_KEY in .env file');
+    }
     const API_URL = `https://vision.googleapis.com/v1/images:annotate?key=${API_KEY}`;
 
     const requestBody = {

@@ -47,12 +47,12 @@ import {
 // CONFIGURACIÓN DE FIREBASE
 // ====================================================================
 const firebaseConfig = {
-  apiKey: 'AIzaSyD1NN6qPdBXgRFXiFBhPI8RbJfBQP3slmQ',
-  authDomain: 'lessmo-9023f.firebaseapp.com',
-  projectId: 'lessmo-9023f',
-  storageBucket: 'lessmo-9023f.appspot.com',
-  messagingSenderId: '364537925711',
-  appId: '1:364537925711:web:145b2f74d691c58b905a3a'
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || Constants.expoConfig?.extra?.firebaseApiKey,
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || 'lessmo-9023f.firebaseapp.com',
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || 'lessmo-9023f',
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || 'lessmo-9023f.appspot.com',
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '364537925711',
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || '1:364537925711:web:145b2f74d691c58b905a3a'
 };
 
 // ====================================================================

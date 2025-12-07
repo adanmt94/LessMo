@@ -61,7 +61,9 @@ export default {
       BANK_ACCOUNT_NAME: process.env.BANK_ACCOUNT_NAME,
       BANK_ACCOUNT_NUMBER: process.env.BANK_ACCOUNT_NUMBER,
       BANK_NAME: process.env.BANK_NAME,
-      BANK_SWIFT_BIC: process.env.BANK_SWIFT_BIC
+      BANK_SWIFT_BIC: process.env.BANK_SWIFT_BIC,
+      // Google Vision API (OCR)
+      googleVisionApiKey: process.env.GOOGLE_VISION_API_KEY
     }
   }
 };
