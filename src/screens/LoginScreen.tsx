@@ -12,7 +12,6 @@ import {
   Alert,
   TouchableWithoutFeedback,
   Keyboard,
-  KeyboardEvent,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
@@ -45,49 +44,10 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const { t } = useLanguage();
   const styles = getStyles(theme);
   const [hasSavedCredentials, setHasSavedCredentials] = useState(false);
-  const [keyboardVisible, setKeyboardVisible] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     checkSavedCredentials();
-
-    // Listeners para el teclado
-    const keyboardWillShowListener = Keyboard.addListener(
-      'keyboardWillShow',
-      (e: KeyboardEvent) => {
-        console.log('⌨️ Keyboard will show');
-        setKeyboardVisible(true);
-      }
-    );
-
-    const keyboardWillHideListener = Keyboard.addListener(
-      'keyboardWillHide',
-      () => {
-        console.log('⌨️ Keyboard will hide');
-        setKeyboardVisible(false);
-      }
-    );
-
-    const keyboardDidShowListener = Keyboard.addListener(
-      'keyboardDidShow',
-      (e: KeyboardEvent) => {
-        console.log('⌨️ Keyboard did show, height:', e.endCoordinates.height);
-      }
-    );
-
-    const keyboardDidHideListener = Keyboard.addListener(
-      'keyboardDidHide',
-      () => {
-        console.log('⌨️ Keyboard did hide');
-      }
-    );
-
-    return () => {
-      keyboardWillShowListener.remove();
-      keyboardWillHideListener.remove();
-      keyboardDidShowListener.remove();
-      keyboardDidHideListener.remove();
-    };
   }, []);
 
   // Auto-launch DESACTIVADO - causaba conflictos con el teclado
