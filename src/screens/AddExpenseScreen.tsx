@@ -23,6 +23,7 @@ import { RootStackParamList, ExpenseCategory, CategoryLabels, VALIDATION } from 
 import { Button, Input, Card } from '../components/lovable';
 import { useExpenses } from '../hooks/useExpenses';
 import { useNotifications } from '../hooks/useNotifications';
+import { useSpendingAlerts } from '../hooks/useSpendingAlerts';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { analyzeReceipt, ReceiptData } from '../services/ocrService';
@@ -60,8 +61,9 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
   const { t, currentLanguage } = useLanguage();
   const styles = getStyles(theme);
   const isEditMode = mode === 'edit' && expenseId;
-  const { participants, addExpense, editExpense, expenses } = useExpenses(eventId!);
+  const { participants, addExpense, editExpense, expenses, getRemainingBalance, getTotalExpenses } = useExpenses(eventId!);
   const { notifyNewExpense } = useNotifications();
+  const { checkAvailableAmount, checkTotalSpent } = useSpendingAlerts();
   const [eventData, setEventData] = useState<any>(null);
 
   const [description, setDescription] = useState(prefilledData?.description || '');
@@ -616,6 +618,26 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
         // Enviar notificación solo para gastos nuevos
         if (!isEditMode && eventData) {
           await notifyNewExpense(eventData.name, amountNum, eventData.currency);
+        }
+        
+        // Verificar alertas de gastos
+        if (eventData) {
+          const currentBalance = getRemainingBalance();
+          const totalSpent = getTotalExpenses();
+          
+          // Verificar alerta de dinero disponible bajo
+          await checkAvailableAmount(
+            currentBalance,
+            eventData.currency,
+            eventData.name
+          );
+          
+          // Verificar alerta de gasto máximo superado
+          await checkTotalSpent(
+            totalSpent + amountNum, // Incluir el nuevo gasto
+            eventData.currency,
+            eventData.name
+          );
         }
         
         Alert.alert(
