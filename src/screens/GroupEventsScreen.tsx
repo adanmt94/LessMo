@@ -278,7 +278,7 @@ export const GroupEventsScreen: React.FC<Props> = ({ navigation, route }) => {
             <View style={styles.headerTextContainer}>
               <Text style={[styles.groupName, { color: theme.colors.text }]}>{groupName}</Text>
               <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
-                {activeEvents.length} {activeEvents.length === 1 ? 'evento activo' : 'eventos activos'}
+                {activeEvents.length} {activeEvents.length === 1 ? 'gasto activo' : 'gastos activos'}
               </Text>
             </View>
           </View>
@@ -356,7 +356,7 @@ export const GroupEventsScreen: React.FC<Props> = ({ navigation, route }) => {
               onPress={() => navigation.navigate('CreateEvent', { mode: 'create', groupId })}
             >
               <Text style={[styles.actionIcon, { color: '#FFFFFF' }]}>+</Text>
-              <Text style={[styles.actionLabel, { color: '#FFFFFF' }]}>Crear Evento</Text>
+              <Text style={[styles.actionLabel, { color: '#FFFFFF' }]}>Añadir Gasto</Text>
             </TouchableOpacity>
           )}
         </View>

@@ -440,12 +440,12 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
         </Text>
         <Text style={styles.emptyText}>
           {activeTab === 'active' 
-            ? 'No tienes eventos activos'
-            : 'No tienes eventos pasados'}
+            ? 'No tienes grupos activos'
+            : 'No tienes grupos pasados'}
         </Text>
         {activeTab === 'active' && (
           <Button
-            title="Crear primer evento"
+            title="Crear primer grupo"
             onPress={() => navigation.navigate('CreateEvent', { mode: 'create' })}
             style={styles.emptyButton}
           />
@@ -488,7 +488,7 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
               Hola {userName.split(' ')[0]} 👋
             </Text>
             <Text style={[styles.title, { color: theme.colors.text }]}>
-              {filterGroupId ? 'Eventos del Grupo' : 'Mis Eventos'}
+              {filterGroupId ? 'Gastos del Grupo' : 'Mis Grupos'}
             </Text>
           </View>
         </View>
