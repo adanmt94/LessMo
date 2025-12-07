@@ -49,6 +49,8 @@ export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
   const [groupType, setGroupType] = useState<'project' | 'recurring'>('project');
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(!!isEditMode);
+  const [members, setMembers] = useState<Array<{ id: string; name: string; email?: string }>>([]);
+  const [newMemberEmail, setNewMemberEmail] = useState('');
 
   // Cargar datos del grupo si estamos en modo edición
   useEffect(() => {
@@ -60,18 +62,120 @@ export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
   const loadGroupData = async () => {
     try {
       setLoadingData(true);
-      const { getGroup } = await import('../services/firebase');
+      const { getGroup, getUserInfo } = await import('../services/firebase');
       const group = await getGroup(groupId!);
       
       setGroupName(group.name || '');
       setDescription(group.description || '');
       setSelectedIcon(group.icon || '👥');
+      setSelectedColor(group.color || '#6366F1');
+      
+      // Cargar información de los miembros
+      if (group.memberIds && group.memberIds.length > 0) {
+        const membersInfo = await Promise.all(
+          group.memberIds.map((memberId: string) => getUserInfo(memberId))
+        );
+        setMembers(membersInfo.filter((m): m is { id: string; name: string; email?: string } => m !== null));
+      }
     } catch (error: any) {
       Alert.alert(t('common.error'), error.message || t('createGroup.errorLoading'));
       navigation.goBack();
     } finally {
       setLoadingData(false);
     }
+  };
+
+  const handleAddMember = async () => {
+    if (!newMemberEmail.trim()) {
+      Alert.alert(t('common.error'), 'Por favor ingresa un email');
+      return;
+    }
+
+    try {
+      const { collection, query, where, getDocs } = await import('firebase/firestore');
+      const { db } = await import('../services/firebase');
+      
+      // Buscar usuario por email
+      const usersQuery = query(
+        collection(db, 'users'),
+        where('email', '==', newMemberEmail.trim().toLowerCase())
+      );
+      
+      const usersSnapshot = await getDocs(usersQuery);
+      
+      if (usersSnapshot.empty) {
+        Alert.alert(t('common.error'), 'Usuario no encontrado con ese email');
+        return;
+      }
+      
+      const userData = usersSnapshot.docs[0];
+      const userId = userData.id;
+      const userInfo = userData.data();
+      
+      // Verificar si ya está en la lista
+      if (members.some(m => m.id === userId)) {
+        Alert.alert(t('common.error'), 'Este usuario ya es miembro del grupo');
+        return;
+      }
+      
+      // Si estamos en modo edición, añadir directamente a Firebase
+      if (isEditMode) {
+        const { addGroupMember } = await import('../services/firebase');
+        await addGroupMember(groupId!, userId);
+      }
+      
+      // Añadir a la lista local
+      setMembers([
+        ...members,
+        {
+          id: userId,
+          name: userInfo.name || userInfo.displayName || userInfo.email?.split('@')[0] || 'Usuario',
+          email: userInfo.email
+        }
+      ]);
+      
+      setNewMemberEmail('');
+      Alert.alert('Éxito', 'Miembro añadido correctamente');
+    } catch (error: any) {
+      console.error('Error añadiendo miembro:', error);
+      Alert.alert(t('common.error'), error.message || 'No se pudo añadir el miembro');
+    }
+  };
+
+  const handleRemoveMember = async (memberId: string, memberName: string) => {
+    const { getGroup } = await import('../services/firebase');
+    const group = await getGroup(groupId!);
+    
+    // No permitir eliminar al creador
+    if (group.createdBy === memberId) {
+      Alert.alert(t('common.error'), 'No puedes eliminar al creador del grupo');
+      return;
+    }
+    
+    Alert.alert(
+      'Eliminar miembro',
+      `¿Estás seguro de eliminar a ${memberName} del grupo?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              if (isEditMode) {
+                const { removeGroupMember } = await import('../services/firebase');
+                await removeGroupMember(groupId!, memberId);
+              }
+              
+              setMembers(members.filter(m => m.id !== memberId));
+              Alert.alert('Éxito', 'Miembro eliminado correctamente');
+            } catch (error: any) {
+              Alert.alert(t('common.error'), error.message || 'No se pudo eliminar el miembro');
+            }
+          }
+        }
+      ]
+    );
   };
 
   const handleCreateGroup = async () => {
@@ -271,6 +375,57 @@ export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
             </View>
           </Card>
 
+          {/* Gestión de participantes (solo en modo edición) */}
+          {isEditMode && (
+            <Card style={styles.section}>
+              <Text style={styles.sectionTitle}>Participantes ({members.length})</Text>
+              <Text style={styles.sectionSubtitle}>
+                Gestiona los miembros del grupo
+              </Text>
+              
+              {/* Añadir nuevo miembro */}
+              <View style={styles.addMemberContainer}>
+                <Input
+                  label="Añadir por email"
+                  value={newMemberEmail}
+                  onChangeText={setNewMemberEmail}
+                  placeholder="email@ejemplo.com"
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  style={styles.memberInput}
+                />
+                <TouchableOpacity
+                  style={styles.addMemberButton}
+                  onPress={handleAddMember}
+                >
+                  <Text style={styles.addMemberButtonText}>+ Añadir</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {/* Lista de miembros */}
+              {members.length > 0 && (
+                <View style={styles.membersList}>
+                  {members.map((member) => (
+                    <View key={member.id} style={styles.memberItem}>
+                      <View style={styles.memberInfo}>
+                        <Text style={styles.memberName}>{member.name}</Text>
+                        {member.email && (
+                          <Text style={styles.memberEmail}>{member.email}</Text>
+                        )}
+                      </View>
+                      <TouchableOpacity
+                        style={styles.removeMemberButton}
+                        onPress={() => handleRemoveMember(member.id, member.name)}
+                      >
+                        <Text style={styles.removeMemberButtonText}>✕</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </Card>
+          )}
+
           {/* Preview */}
           <Card style={styles.section}>
             <Text style={styles.sectionTitle}>{t('createGroup.preview')}</Text>
@@ -440,6 +595,67 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   spacing: {
     height: 32,
+  },
+  // Estilos para gestión de participantes
+  addMemberContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 8,
+    marginBottom: 16,
+  },
+  memberInput: {
+    flex: 1,
+  },
+  addMemberButton: {
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  addMemberButtonText: {
+    color: theme.colors.card,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  membersList: {
+    gap: 8,
+  },
+  memberItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  memberInfo: {
+    flex: 1,
+  },
+  memberName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.colors.text,
+    marginBottom: 2,
+  },
+  memberEmail: {
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+  },
+  removeMemberButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: theme.colors.error || '#EF4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removeMemberButtonText: {
+    color: theme.colors.card,
+    fontSize: 16,
+    fontWeight: '600',
   },
   // Estilos para selector de tipo
   sectionSubtitle: {

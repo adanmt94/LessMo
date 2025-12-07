@@ -27,6 +27,7 @@ import {
   PaymentMethod,
   Payment,
 } from '../services/paymentConfirmationService';
+import { PaymentMethodLogo } from './PaymentLogos';
 
 interface Props {
   visible: boolean;
@@ -66,15 +67,15 @@ export const MarkPaymentModal: React.FC<Props> = ({
   const isDebtor = settlement.from === currentUserId;
   const isCreditor = settlement.to === currentUserId;
 
-  const paymentMethods: { id: PaymentMethod; name: string; icon: string; hasLink: boolean }[] = [
-    { id: 'bizum', name: 'Bizum', icon: '📱', hasLink: false },
-    { id: 'paypal', name: 'PayPal', icon: '💳', hasLink: true },
-    { id: 'venmo', name: 'Venmo', icon: '💸', hasLink: true },
-    { id: 'apple_pay', name: 'Apple Pay', icon: '🍎', hasLink: false },
-    { id: 'google_pay', name: 'Google Pay', icon: '🔷', hasLink: false },
-    { id: 'bank_transfer', name: 'Transferencia', icon: '🏦', hasLink: false },
-    { id: 'cash', name: 'Efectivo', icon: '💵', hasLink: false },
-    { id: 'other', name: 'Otro', icon: '📋', hasLink: false },
+  const paymentMethods: { id: PaymentMethod; name: string; hasLink: boolean }[] = [
+    { id: 'bizum', name: 'Bizum', hasLink: false },
+    { id: 'paypal', name: 'PayPal', hasLink: true },
+    { id: 'venmo', name: 'Venmo', hasLink: true },
+    { id: 'apple_pay', name: 'Apple Pay', hasLink: false },
+    { id: 'google_pay', name: 'Google Pay', hasLink: false },
+    { id: 'bank_transfer', name: 'Transferencia', hasLink: false },
+    { id: 'cash', name: 'Efectivo', hasLink: false },
+    { id: 'other', name: 'Otro', hasLink: false },
   ];
 
   const handleMarkAsPaid = async () => {
@@ -129,8 +130,9 @@ export const MarkPaymentModal: React.FC<Props> = ({
       onPaymentMarked();
       onClose();
     } catch (error) {
-      
-      Alert.alert('Error', 'No se pudo marcar el pago');
+      console.error('❌ Error marcando pago:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      Alert.alert('Error', `No se pudo marcar el pago: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -226,16 +228,16 @@ export const MarkPaymentModal: React.FC<Props> = ({
       return;
     }
 
-    // Abrir el método de pago directamente
-    const link = generatePaymentLink(
-      selectedMethod,
-      toUserName,
-      settlement.amount,
-      `Pago ${eventName}`
-    );
+    try {
+      // Abrir el método de pago directamente
+      const link = generatePaymentLink(
+        selectedMethod,
+        toUserName,
+        settlement.amount,
+        `Pago ${eventName}`
+      );
 
-    if (link) {
-      try {
+      if (link) {
         const supported = await Linking.canOpenURL(link);
         if (supported) {
           await Linking.openURL(link);
@@ -244,13 +246,17 @@ export const MarkPaymentModal: React.FC<Props> = ({
             handleMarkAsPaid();
           }, 1000);
         } else {
-          Alert.alert('Error', 'No se puede abrir la aplicación de pago');
+          // Si no se puede abrir el link, solo marcar el pago
+          console.log('⚠️ No se puede abrir el link, marcando pago directamente');
+          handleMarkAsPaid();
         }
-      } catch (error) {
-        Alert.alert('Error', 'No se pudo abrir el método de pago');
+      } else {
+        // Para métodos sin enlace directo (efectivo, transferencia, etc), solo marcar
+        handleMarkAsPaid();
       }
-    } else {
-      // Para métodos sin enlace directo (efectivo, transferencia, etc), solo marcar
+    } catch (error) {
+      console.error('Error en handlePayNow:', error);
+      // En caso de error, permitir marcar el pago manualmente
       handleMarkAsPaid();
     }
   };
@@ -358,11 +364,19 @@ export const MarkPaymentModal: React.FC<Props> = ({
                           styles.methodButton,
                           selectedMethod === method.id && {
                             backgroundColor: theme.colors.primary,
+                            borderWidth: 3,
+                            borderColor: theme.colors.primary,
                           },
                         ]}
                         onPress={() => setSelectedMethod(method.id)}
                       >
-                        <Text style={styles.methodIcon}>{method.icon}</Text>
+                        <View style={styles.methodLogoContainer}>
+                          <PaymentMethodLogo 
+                            method={method.id} 
+                            width={method.id === 'apple_pay' || method.id === 'google_pay' ? 50 : 40} 
+                            height={40} 
+                          />
+                        </View>
                         <Text
                           style={[
                             styles.methodName,
@@ -397,29 +411,45 @@ export const MarkPaymentModal: React.FC<Props> = ({
                             color="black"
                           />
                         </View>
+                        <TouchableOpacity
+                          style={[styles.payButton, { backgroundColor: theme.colors.success || theme.colors.primary }]}
+                          onPress={handleMarkAsPaid}
+                          disabled={loading}
+                        >
+                          {loading ? (
+                            <ActivityIndicator color="#FFFFFF" />
+                          ) : (
+                            <>
+                              <Text style={styles.payButtonIcon}>💳</Text>
+                              <Text style={styles.payButtonText}>PAGAR CON BIZUM</Text>
+                            </>
+                          )}
+                        </TouchableOpacity>
                         <Text style={[styles.qrInstructions, { color: theme.colors.textSecondary }]}>
                           Escanea este código con tu app de Bizum
                         </Text>
                       </View>
                     )}
 
-                    {/* Botón PAGAR principal */}
-                    <TouchableOpacity
-                      style={[styles.payButton, { backgroundColor: theme.colors.success || theme.colors.primary }]}
-                      onPress={handlePayNow}
-                      disabled={loading}
-                    >
-                      {loading ? (
-                        <ActivityIndicator color="#FFFFFF" />
-                      ) : (
-                        <>
-                          <Text style={styles.payButtonIcon}>💳</Text>
-                          <Text style={styles.payButtonText}>
-                            PAGAR CON {paymentMethods.find(m => m.id === selectedMethod)?.name.toUpperCase()}
-                          </Text>
-                        </>
-                      )}
-                    </TouchableOpacity>
+                    {/* Botón PAGAR principal (solo para métodos no-Bizum) */}
+                    {selectedMethod !== 'bizum' && (
+                      <TouchableOpacity
+                        style={[styles.payButton, { backgroundColor: theme.colors.success || theme.colors.primary }]}
+                        onPress={handlePayNow}
+                        disabled={loading}
+                      >
+                        {loading ? (
+                          <ActivityIndicator color="#FFFFFF" />
+                        ) : (
+                          <>
+                            <Text style={styles.payButtonIcon}>💳</Text>
+                            <Text style={styles.payButtonText}>
+                              PAGAR CON {paymentMethods.find(m => m.id === selectedMethod)?.name.toUpperCase()}
+                            </Text>
+                          </>
+                        )}
+                      </TouchableOpacity>
+                    )}
 
                     {/* Campos opcionales */}
                     <View style={styles.optionalFields}>
@@ -543,23 +573,30 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   methodButton: {
-    borderRadius: 12,
-    padding: 20,
+    borderRadius: 16,
+    padding: 16,
     alignItems: 'center',
-    backgroundColor: 'rgba(100, 100, 100, 0.15)',
+    backgroundColor: '#FFFFFF',
     marginBottom: 8,
-    minHeight: 100,
+    minHeight: 110,
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: 'rgba(100, 100, 100, 0.2)',
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  methodIcon: {
-    fontSize: 40,
-    marginBottom: 8,
+  methodLogoContainer: {
+    marginBottom: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   methodName: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '700',
+    textAlign: 'center',
   },
   linkButton: {
     borderRadius: 8,

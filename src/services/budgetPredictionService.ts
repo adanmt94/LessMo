@@ -120,8 +120,20 @@ export function predictBudgetExceedance(
     suggestion = `Reduce el gasto diario en ${isFinite(dailyReduction) ? dailyReduction.toFixed(2) : '0'}€ para no exceder el presupuesto`;
   } else {
     const remainingBudget = budget - totalSpent;
-    const dailyBudget = daysRemaining > 0 ? remainingBudget / daysRemaining : remainingBudget;
-    suggestion = `Puedes gastar hasta ${isFinite(dailyBudget) ? dailyBudget.toFixed(2) : '0'}€/día los próximos ${daysRemaining} días`;
+    
+    if (daysRemaining <= 0) {
+      // Evento terminado o en último día
+      suggestion = remainingBudget > 0 
+        ? `Evento finalizado. Te sobran ${remainingBudget.toFixed(2)}€ del presupuesto`
+        : `Evento finalizado dentro del presupuesto`;
+    } else {
+      const dailyBudget = remainingBudget / daysRemaining;
+      if (isFinite(dailyBudget) && dailyBudget > 0) {
+        suggestion = `Puedes gastar hasta ${dailyBudget.toFixed(2)}€/día los próximos ${daysRemaining} días`;
+      } else {
+        suggestion = `Presupuesto agotado. Intenta reducir gastos`;
+      }
+    }
   }
   
   return {

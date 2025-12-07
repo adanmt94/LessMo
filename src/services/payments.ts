@@ -332,20 +332,32 @@ export async function processPayment(
  * Verificar si un proveedor de pago está disponible
  */
 export async function isPaymentProviderAvailable(provider: PaymentProvider): Promise<boolean> {
-  switch (provider) {
-    case 'bizum':
-      return await Linking.canOpenURL('bizum://');
-    case 'paypal':
-      return true; // PayPal.Me siempre disponible via web
-    case 'stripe':
-      return false; // Requiere configuración
-    case 'apple_pay':
-      // Apple Pay solo está disponible en iOS
-      return Platform.OS === 'ios';
-    case 'bank_transfer':
-      return true; // Siempre disponible
-    default:
-      return false;
+  try {
+    switch (provider) {
+      case 'bizum':
+        try {
+          return await Linking.canOpenURL('bizum://');
+        } catch (error) {
+          // Si falla la verificación, asumimos que está disponible (vía web)
+          console.log('⚠️ Error verificando Bizum, asumiendo disponible:', error);
+          return true;
+        }
+      case 'paypal':
+        return true; // PayPal.Me siempre disponible via web
+      case 'stripe':
+        return false; // Requiere configuración
+      case 'apple_pay':
+        // Apple Pay solo está disponible en iOS
+        return Platform.OS === 'ios';
+      case 'bank_transfer':
+        return true; // Siempre disponible
+      default:
+        return false;
+    }
+  } catch (error) {
+    console.error('Error verificando disponibilidad de pago:', error);
+    // Métodos fallback siempre disponibles
+    return provider === 'bank_transfer' || provider === 'paypal';
   }
 }
 

@@ -236,10 +236,13 @@ export function BudgetPredictionCard({ prediction, insights, onViewDetails }: Pr
           </Text>
           <Text style={styles.statLabel}>proyectado</Text>
         </View>
-        {prediction.daysUntilExceeded !== undefined && isFinite(prediction.daysUntilExceeded) && (
+        {prediction.daysUntilExceeded !== undefined && 
+         !isNaN(prediction.daysUntilExceeded) && 
+         isFinite(prediction.daysUntilExceeded) && 
+         prediction.daysUntilExceeded > 0 && (
           <View style={styles.statBox}>
             <Text style={[styles.statValue, { color: '#EF4444' }]}>
-              {prediction.daysUntilExceeded}
+              {Math.round(prediction.daysUntilExceeded)}
             </Text>
             <Text style={styles.statLabel}>días hasta exceder</Text>
           </View>

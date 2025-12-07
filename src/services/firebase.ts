@@ -1150,6 +1150,66 @@ export const addGroupMember = async (groupId: string, userId: string): Promise<v
 };
 
 /**
+ * Obtener información de un usuario
+ */
+export const getUserInfo = async (userId: string): Promise<{ id: string; name: string; email?: string } | null> => {
+  try {
+    const userDoc = await getDoc(doc(db, 'users', userId));
+    if (!userDoc.exists()) {
+      return null;
+    }
+    const userData = userDoc.data();
+    return {
+      id: userId,
+      name: userData.name || userData.displayName || userData.email?.split('@')[0] || 'Usuario',
+      email: userData.email
+    };
+  } catch (error: any) {
+    console.error('❌ Error obteniendo usuario:', error);
+    return null;
+  }
+};
+
+/**
+ * Eliminar miembro de un grupo
+ */
+export const removeGroupMember = async (groupId: string, userId: string): Promise<void> => {
+  try {
+    const groupRef = doc(db, 'groups', groupId);
+    const groupDoc = await getDoc(groupRef);
+    
+    if (!groupDoc.exists()) {
+      throw new Error('Grupo no encontrado');
+    }
+    
+    const groupData = groupDoc.data();
+    const currentMembers = groupData.memberIds || [];
+    
+    // Verificar si es miembro
+    if (!currentMembers.includes(userId)) {
+      console.log('⚠️ El usuario no es miembro del grupo');
+      return;
+    }
+    
+    // No permitir eliminar al creador
+    if (groupData.createdBy === userId) {
+      throw new Error('No puedes eliminarte como creador del grupo');
+    }
+    
+    // Eliminar userId del array de memberIds
+    await updateDoc(groupRef, {
+      memberIds: currentMembers.filter((id: string) => id !== userId),
+      updatedAt: serverTimestamp()
+    });
+    
+    console.log('✅ Miembro eliminado del grupo:', userId);
+  } catch (error: any) {
+    console.error('❌ Error eliminando miembro:', error);
+    throw new Error(error.message || 'No se pudo eliminar del grupo');
+  }
+};
+
+/**
  * Obtener eventos de un usuario con filtro de estado
  */
 export const getUserEventsByStatus = async (

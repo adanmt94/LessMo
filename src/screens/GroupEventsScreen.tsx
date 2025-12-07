@@ -301,6 +301,23 @@ export const GroupEventsScreen: React.FC<Props> = ({ navigation, route }) => {
             </View>
             <Text style={[styles.actionLabel, { color: theme.colors.primary }]}>Compartir</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionButton, { 
+              backgroundColor: theme.colors.primary + '15',
+              borderColor: theme.colors.primary + '30',
+              shadowColor: theme.colors.primary
+            }]}
+            onPress={() => navigation.navigate('CreateGroup', { 
+              groupId: groupId,
+              mode: 'edit'
+            })}
+          >
+            <View style={[styles.actionIconCircle, { backgroundColor: theme.colors.primary + '20' }]}>
+              <Text style={[styles.actionIcon, { color: theme.colors.primary }]}>✏️</Text>
+            </View>
+            <Text style={[styles.actionLabel, { color: theme.colors.primary }]}>Editar</Text>
+          </TouchableOpacity>
           
           {/* Botón principal según tipo de grupo */}
           {groupType === 'recurring' && defaultEventId ? (

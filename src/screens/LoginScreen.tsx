@@ -2,16 +2,17 @@
  * LoginScreen - Pantalla de inicio de sesión
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   TouchableOpacity,
   Alert,
+  TouchableWithoutFeedback,
+  Keyboard,
+  KeyboardEvent,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
@@ -44,9 +45,49 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const { t } = useLanguage();
   const styles = getStyles(theme);
   const [hasSavedCredentials, setHasSavedCredentials] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     checkSavedCredentials();
+
+    // Listeners para el teclado
+    const keyboardWillShowListener = Keyboard.addListener(
+      'keyboardWillShow',
+      (e: KeyboardEvent) => {
+        console.log('⌨️ Keyboard will show');
+        setKeyboardVisible(true);
+      }
+    );
+
+    const keyboardWillHideListener = Keyboard.addListener(
+      'keyboardWillHide',
+      () => {
+        console.log('⌨️ Keyboard will hide');
+        setKeyboardVisible(false);
+      }
+    );
+
+    const keyboardDidShowListener = Keyboard.addListener(
+      'keyboardDidShow',
+      (e: KeyboardEvent) => {
+        console.log('⌨️ Keyboard did show, height:', e.endCoordinates.height);
+      }
+    );
+
+    const keyboardDidHideListener = Keyboard.addListener(
+      'keyboardDidHide',
+      () => {
+        console.log('⌨️ Keyboard did hide');
+      }
+    );
+
+    return () => {
+      keyboardWillShowListener.remove();
+      keyboardWillHideListener.remove();
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
   }, []);
 
   // Auto-launch DESACTIVADO - causaba conflictos con el teclado
@@ -100,11 +141,29 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
       const loginMethod = await SecureStore.getItemAsync(STORED_LOGIN_METHOD_KEY);
       
       if (loginMethod === 'google') {
-        // Iniciar sesión con Google
+        // Iniciar sesión con Google requiere abrir el navegador
         console.log('🔐 Signing in with Google (last used method)...');
-        await signInWithGoogle();
-        if (googleError) {
-          Alert.alert(t('common.error'), googleError);
+        
+        try {
+          // Llamar al flujo de Google - esto abrirá el navegador
+          await signInWithGoogle();
+          
+          // Esperar un momento para que el flujo se inicie
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Si después de 3 segundos no hay respuesta, podría haber un problema
+          setTimeout(() => {
+            if (googleLoading) {
+              console.log('⚠️ Google login tomando más tiempo del esperado');
+            }
+          }, 3000);
+          
+        } catch (err) {
+          console.error('❌ Error en Google login desde Face ID:', err);
+          Alert.alert(
+            t('common.error'),
+            'Error al abrir Google Sign-In. Por favor, inicia sesión manualmente.'
+          );
         }
       } else if (loginMethod === 'email') {
         // Recuperar credenciales de email/password
@@ -162,39 +221,73 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const handleGoogleLogin = async () => {
-    await signInWithGoogle();
-    if (googleError) {
-      Alert.alert(t('common.error'), googleError);
-    } else {
-      // Si el login fue exitoso y Face ID está habilitado, guardar el método
-      if (isEnabled) {
-        try {
+    try {
+      await signInWithGoogle();
+      // El éxito se manejará en el useEffect que detecta el login completado
+    } catch (err) {
+      console.error('❌ Error iniciando Google login:', err);
+    }
+  };
+
+  // Detectar cuando el usuario ha iniciado sesión exitosamente con Google
+  // Para guardar el método Google en Face ID
+  useEffect(() => {
+    const handleGoogleLoginSuccess = async () => {
+      // Solo proceder si Google terminó de cargar y no hay error
+      if (googleLoading) return;
+      if (googleError) {
+        console.log('⚠️ Error en Google login, no guardar credenciales');
+        return;
+      }
+      
+      // Solo guardar si Face ID está habilitado
+      if (!isEnabled) return;
+
+      try {
+        // Pequeño delay para asegurar que el auth state se actualice
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
+        const currentMethod = await SecureStore.getItemAsync(STORED_LOGIN_METHOD_KEY);
+        
+        // Solo guardar si no está ya guardado (evitar llamadas duplicadas)
+        if (currentMethod !== 'google') {
           await SecureStore.setItemAsync(STORED_LOGIN_METHOD_KEY, 'google');
-          // Limpiar credenciales de email/password si existían
           await SecureStore.deleteItemAsync(STORED_EMAIL_KEY);
           await SecureStore.deleteItemAsync(STORED_PASSWORD_KEY);
-          await checkSavedCredentials(); // Actualizar estado
+          await checkSavedCredentials();
           console.log('✅ Método Google guardado para Face ID');
-        } catch (error) {
-          console.error('❌ Error guardando método Google:', error);
         }
+      } catch (error) {
+        console.error('❌ Error guardando método Google:', error);
       }
+    };
+
+    handleGoogleLoginSuccess();
+  }, [googleLoading, googleError, isEnabled]);
+
+  const handleDismissKeyboard = () => {
+    try {
+      Keyboard.dismiss();
+    } catch (error) {
+      console.error('❌ Error dismissing keyboard:', error);
     }
   };
 
   return (
-    <SafeAreaView edges={['top']} style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-        keyboardVerticalOffset={0}
-        enabled
-      >
+    <TouchableWithoutFeedback 
+      onPress={handleDismissKeyboard}
+      accessible={false}
+    >
+      <SafeAreaView edges={['top']} style={styles.container}>
         <ScrollView
+          ref={scrollViewRef}
           contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="always"
+          keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
-          bounces={false}
+          keyboardDismissMode="on-drag"
+          automaticallyAdjustKeyboardInsets={false}
+          bounces={true}
+          scrollEnabled={true}
         >
           <View style={styles.header}>
             <View style={styles.logoContainer}>
@@ -217,6 +310,16 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
               autoCapitalize="none"
               autoCorrect={false}
               textContentType="emailAddress"
+              returnKeyType="next"
+              blurOnSubmit={false}
+              enablesReturnKeyAutomatically={true}
+              onSubmitEditing={() => {
+                try {
+                  console.log('⌨️ Email submit - moving to password');
+                } catch (error) {
+                  console.error('❌ Error in email submit:', error);
+                }
+              }}
             />
 
             <Input
@@ -229,12 +332,29 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
               autoCapitalize="none"
               autoCorrect={false}
               textContentType="password"
+              returnKeyType="done"
+              blurOnSubmit={true}
+              enablesReturnKeyAutomatically={true}
+              onSubmitEditing={() => {
+                try {
+                  console.log('⌨️ Password submit - attempting login');
+                  handleDismissKeyboard();
+                  if (email && password) {
+                    handleLogin();
+                  }
+                } catch (error) {
+                  console.error('❌ Error in password submit:', error);
+                }
+              }}
             />
 
             <Button
               testID="login-button"
               title={t('auth.loginButton')}
-              onPress={handleLogin}
+              onPress={() => {
+                handleDismissKeyboard();
+                handleLogin();
+              }}
               loading={loading}
               fullWidth
               size="large"
@@ -244,7 +364,10 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
             {isAvailable && isEnrolled && biometricType && (
               <TouchableOpacity
                 style={styles.biometricButton}
-                onPress={handleBiometricLogin}
+                onPress={() => {
+                  handleDismissKeyboard();
+                  handleBiometricLogin();
+                }}
                 disabled={!hasSavedCredentials}
                 activeOpacity={hasSavedCredentials ? 0.7 : 1}
               >
@@ -268,7 +391,10 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
               <TouchableOpacity
                 testID="google-signin-button"
                 style={styles.socialButton}
-                onPress={handleGoogleLogin}
+                onPress={() => {
+                  handleDismissKeyboard();
+                  handleGoogleLogin();
+                }}
                 disabled={googleLoading}
               >
                 <Text style={styles.googleIcon}>G</Text>
@@ -304,8 +430,8 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
             </TouchableOpacity>
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </TouchableWithoutFeedback>
   );
 };
 
