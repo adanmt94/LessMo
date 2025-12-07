@@ -111,7 +111,8 @@ import {
   Event, 
   Participant, 
   Expense, 
-  Currency 
+  Currency,
+  SplitType
 } from '../types';
 
 // ==================== AUTENTICACIÓN ====================
@@ -547,42 +548,58 @@ export const createExpense = async (
   amount: number,
   description: string,
   category: string,
-  beneficiaries: string[],
-  splitType: 'equal' | 'custom' | 'items' = 'equal',
+  participantIds: string[],
+  splitType: SplitType = 'equal',
   customSplits?: { [participantId: string]: number },
-  receiptPhoto?: string
+  percentageSplits?: { [participantId: string]: number },
+  receiptPhoto?: string,
+  name?: string,
+  currency?: Currency,
+  createdBy?: string
 ): Promise<string> => {
   try {
     const expenseData: Omit<Expense, 'id'> = {
       eventId,
+      name: name || description,
       paidBy,
       amount,
       description,
       category: category as any,
       date: new Date(),
-      beneficiaries,
+      participantIds,
       splitType,
       customSplits,
+      percentageSplits,
       createdAt: new Date(),
       receiptPhoto,
+      currency: currency || 'EUR',
+      createdBy: createdBy || paidBy,
     };
     
     // Filtrar campos undefined antes de guardar
     const cleanExpenseData: any = {
       eventId: expenseData.eventId,
+      name: expenseData.name,
       paidBy: expenseData.paidBy,
       amount: expenseData.amount,
       description: expenseData.description,
       category: expenseData.category,
       date: expenseData.date,
-      beneficiaries: expenseData.beneficiaries,
+      participantIds: expenseData.participantIds,
       splitType: expenseData.splitType,
+      currency: expenseData.currency,
+      createdBy: expenseData.createdBy,
       createdAt: expenseData.createdAt,
     };
     
     // Solo agregar customSplits si existe
-    if (customSplits && splitType === 'custom') {
+    if (customSplits && (splitType === 'custom' || splitType === 'amount')) {
       cleanExpenseData.customSplits = customSplits;
+    }
+    
+    // Solo agregar percentageSplits si existe
+    if (percentageSplits && splitType === 'percentage') {
+      cleanExpenseData.percentageSplits = percentageSplits;
     }
     
     // Solo agregar receiptPhoto si existe
@@ -593,7 +610,7 @@ export const createExpense = async (
     const docRef = await addDoc(collection(db, 'expenses'), cleanExpenseData);
     
     // Actualizar balances de participantes
-    await updateBalancesAfterExpense(paidBy, amount, beneficiaries, splitType, customSplits);
+    await updateBalancesAfterExpense(paidBy, amount, participantIds, splitType, customSplits, percentageSplits);
     
     return docRef.id;
   } catch (error: any) {
@@ -607,38 +624,52 @@ export const createExpense = async (
 const updateBalancesAfterExpense = async (
   paidBy: string,
   amount: number,
-  beneficiaries: string[],
-  splitType: 'equal' | 'custom' | 'items',
-  customSplits?: { [participantId: string]: number }
+  participantIds: string[],
+  splitType: SplitType,
+  customSplits?: { [participantId: string]: number },
+  percentageSplits?: { [participantId: string]: number }
 ): Promise<void> => {
   try {
     const batch = writeBatch(db);
     
-    // Lógica: Solo RESTAR de cada beneficiario su parte del gasto
+    // Lógica: Solo RESTAR de cada participante su parte del gasto
     // El balance representa el saldo disponible de su presupuesto individual
     
     if (splitType === 'equal') {
-      const splitAmount = amount / beneficiaries.length;
+      const splitAmount = amount / participantIds.length;
       
-      for (const beneficiaryId of beneficiaries) {
-        const participantDoc = await getDoc(doc(db, 'participants', beneficiaryId));
+      for (const participantId of participantIds) {
+        const participantDoc = await getDoc(doc(db, 'participants', participantId));
         
         if (participantDoc.exists()) {
           const participant = participantDoc.data() as Participant;
           const newBalance = participant.currentBalance - splitAmount;
-          batch.update(doc(db, 'participants', beneficiaryId), {
+          batch.update(doc(db, 'participants', participantId), {
             currentBalance: newBalance
           });
         }
       }
-    } else if (splitType === 'custom' && customSplits) {
-      for (const [beneficiaryId, splitAmount] of Object.entries(customSplits)) {
-        const participantDoc = await getDoc(doc(db, 'participants', beneficiaryId));
+    } else if (splitType === 'percentage' && percentageSplits) {
+      for (const [participantId, percentage] of Object.entries(percentageSplits)) {
+        const splitAmount = (amount * percentage) / 100;
+        const participantDoc = await getDoc(doc(db, 'participants', participantId));
         
         if (participantDoc.exists()) {
           const participant = participantDoc.data() as Participant;
           const newBalance = participant.currentBalance - splitAmount;
-          batch.update(doc(db, 'participants', beneficiaryId), {
+          batch.update(doc(db, 'participants', participantId), {
+            currentBalance: newBalance
+          });
+        }
+      }
+    } else if ((splitType === 'custom' || splitType === 'amount') && customSplits) {
+      for (const [participantId, splitAmount] of Object.entries(customSplits)) {
+        const participantDoc = await getDoc(doc(db, 'participants', participantId));
+        
+        if (participantDoc.exists()) {
+          const participant = participantDoc.data() as Participant;
+          const newBalance = participant.currentBalance - splitAmount;
+          batch.update(doc(db, 'participants', participantId), {
             currentBalance: newBalance
           });
         }
@@ -675,9 +706,10 @@ export const updateExpense = async (
   amount: number,
   description: string,
   category: string,
-  beneficiaries: string[],
-  splitType: 'equal' | 'custom' | 'items' = 'equal',
+  participantIds: string[],
+  splitType: SplitType = 'equal',
   customSplits?: { [participantId: string]: number },
+  percentageSplits?: { [participantId: string]: number },
   receiptPhoto?: string
 ): Promise<void> => {
   try {
@@ -692,9 +724,10 @@ export const updateExpense = async (
     await revertBalanceChanges(
       originalExpense.paidBy,
       originalExpense.amount,
-      originalExpense.beneficiaries,
+      originalExpense.participantIds,
       originalExpense.splitType,
-      originalExpense.customSplits
+      originalExpense.customSplits,
+      originalExpense.percentageSplits
     );
 
     // 3. Actualizar el gasto en Firestore
@@ -704,12 +737,16 @@ export const updateExpense = async (
       amount,
       description,
       category,
-      beneficiaries,
+      participantIds,
       splitType,
     };
     
-    if (customSplits && splitType === 'custom') {
+    if (customSplits && (splitType === 'custom' || splitType === 'amount')) {
       cleanExpenseData.customSplits = customSplits;
+    }
+    
+    if (percentageSplits && splitType === 'percentage') {
+      cleanExpenseData.percentageSplits = percentageSplits;
     }
     
     if (receiptPhoto) {
@@ -719,7 +756,7 @@ export const updateExpense = async (
     await updateDoc(doc(db, 'expenses', expenseId), cleanExpenseData);
 
     // 4. Aplicar los nuevos cambios de balance
-    await updateBalancesAfterExpense(paidBy, amount, beneficiaries, splitType, customSplits);
+    await updateBalancesAfterExpense(paidBy, amount, participantIds, splitType, customSplits, percentageSplits);
   } catch (error: any) {
     throw new Error(error.message);
   }
@@ -731,33 +768,46 @@ export const updateExpense = async (
 const revertBalanceChanges = async (
   paidBy: string,
   amount: number,
-  beneficiaries: string[],
-  splitType: 'equal' | 'custom' | 'items',
-  customSplits?: { [participantId: string]: number }
+  participantIds: string[],
+  splitType: SplitType,
+  customSplits?: { [participantId: string]: number },
+  percentageSplits?: { [participantId: string]: number }
 ): Promise<void> => {
   try {
     const batch = writeBatch(db);
     
     if (splitType === 'equal') {
-      const splitAmount = amount / beneficiaries.length;
+      const splitAmount = amount / participantIds.length;
       
-      for (const beneficiaryId of beneficiaries) {
-        const participantDoc = await getDoc(doc(db, 'participants', beneficiaryId));
+      for (const participantId of participantIds) {
+        const participantDoc = await getDoc(doc(db, 'participants', participantId));
         if (participantDoc.exists()) {
           const participant = participantDoc.data() as Participant;
           const newBalance = participant.currentBalance + splitAmount; // SUMAR para revertir
-          batch.update(doc(db, 'participants', beneficiaryId), {
+          batch.update(doc(db, 'participants', participantId), {
             currentBalance: newBalance
           });
         }
       }
-    } else if (splitType === 'custom' && customSplits) {
-      for (const [beneficiaryId, splitAmount] of Object.entries(customSplits)) {
-        const participantDoc = await getDoc(doc(db, 'participants', beneficiaryId));
+    } else if (splitType === 'percentage' && percentageSplits) {
+      for (const [participantId, percentage] of Object.entries(percentageSplits)) {
+        const splitAmount = (amount * percentage) / 100;
+        const participantDoc = await getDoc(doc(db, 'participants', participantId));
         if (participantDoc.exists()) {
           const participant = participantDoc.data() as Participant;
           const newBalance = participant.currentBalance + splitAmount; // SUMAR para revertir
-          batch.update(doc(db, 'participants', beneficiaryId), {
+          batch.update(doc(db, 'participants', participantId), {
+            currentBalance: newBalance
+          });
+        }
+      }
+    } else if ((splitType === 'custom' || splitType === 'amount') && customSplits) {
+      for (const [participantId, splitAmount] of Object.entries(customSplits)) {
+        const participantDoc = await getDoc(doc(db, 'participants', participantId));
+        if (participantDoc.exists()) {
+          const participant = participantDoc.data() as Participant;
+          const newBalance = participant.currentBalance + splitAmount; // SUMAR para revertir
+          batch.update(doc(db, 'participants', participantId), {
             currentBalance: newBalance
           });
         }
@@ -765,12 +815,12 @@ const revertBalanceChanges = async (
     } else if (splitType === 'items' && customSplits) {
       // Para 'items', usar el mismo comportamiento que 'custom' 
       // ya que customSplits contendrá el desglose calculado por participante
-      for (const [beneficiaryId, splitAmount] of Object.entries(customSplits)) {
-        const participantDoc = await getDoc(doc(db, 'participants', beneficiaryId));
+      for (const [participantId, splitAmount] of Object.entries(customSplits)) {
+        const participantDoc = await getDoc(doc(db, 'participants', participantId));
         if (participantDoc.exists()) {
           const participant = participantDoc.data() as Participant;
           const newBalance = participant.currentBalance + splitAmount; // SUMAR para revertir
-          batch.update(doc(db, 'participants', beneficiaryId), {
+          batch.update(doc(db, 'participants', participantId), {
             currentBalance: newBalance
           });
         }
@@ -890,7 +940,9 @@ export const createGroup = async (
   description?: string,
   color?: string,
   icon?: string,
-  type?: 'project' | 'recurring'
+  type?: 'project' | 'recurring',
+  budget?: number,
+  currency?: 'EUR' | 'USD' | 'GBP'
 ): Promise<string> => {
   try {
     const inviteCode = generateInviteCode();
@@ -903,6 +955,7 @@ export const createGroup = async (
       memberIds: [createdBy],
       eventIds: [],
       type: type || 'project', // Por defecto 'project' (compatible con grupos antiguos)
+      currency: currency || 'EUR', // Moneda por defecto
     };
     
     // Solo agregar campos opcionales si tienen valor
@@ -914,6 +967,10 @@ export const createGroup = async (
     }
     if (icon) {
       groupData.icon = icon;
+    }
+    if (budget !== undefined && budget > 0) {
+      groupData.budget = budget;
+      groupData.initialBudget = budget;
     }
     
     const docRef = await addDoc(collection(db, 'groups'), groupData);

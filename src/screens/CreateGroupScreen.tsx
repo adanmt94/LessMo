@@ -219,13 +219,17 @@ export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
         );
       } else {
         // Crear nuevo grupo
+        const budgetNumber = budget.trim() ? parseFloat(budget) : undefined;
+        
         const newGroupId = await createGroup(
           groupName,
           user!.uid,
           description,
           selectedColor,
           selectedIcon,
-          groupType // Pasar el tipo seleccionado
+          groupType, // Pasar el tipo seleccionado
+          budgetNumber, // Presupuesto
+          currency // Moneda
         );
 
         Alert.alert(
