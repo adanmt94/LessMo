@@ -102,7 +102,7 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
             </View>
             <Text style={styles.title}>Crear cuenta</Text>
             <Text style={styles.subtitle}>
-              Únete a LessMo y comienza a gestionar tus gastos
+              Únete a Les$Mo y comienza a gestionar tus gastos
             </Text>
           </View>
 

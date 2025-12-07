@@ -34,7 +34,7 @@ interface StepData {
 const STEPS: StepData[] = [
   {
     emoji: '👋',
-    title: '¡Bienvenido a LessMo!',
+    title: '¡Bienvenido a Les$Mo!',
     description: 'La forma más fácil de gestionar gastos compartidos con amigos y familia.',
     features: [
       'Divide gastos automáticamente',

@@ -202,7 +202,7 @@ export const GroupEventsScreen: React.FC<Props> = ({ navigation, route }) => {
       // Crear enlace clicable (https) - formato universal
       const shareLink = `https://lessmo.app/join/${inviteCode}`;
       
-      const message = `🎯 ¡Únete al grupo "${groupName}" ${groupIcon || '👥'}!\n\n📊 ${activeEvents.length} ${t('groups.activeEvents')}\n\n🔗 Enlace: ${shareLink}\n\n📱 O usa el código: ${inviteCode}\n\nDescarga LessMo para gestionar gastos compartidos`;
+      const message = `🎯 ¡Únete al grupo "${groupName}" ${groupIcon || '👥'}!\n\n📋 ${activeEvents.length} ${t('groups.activeEvents')}\n\n🔗 Enlace: ${shareLink}\n\n📱 O usa el código: ${inviteCode}\n\nDescarga Les$Mo para gestionar gastos compartidos`;
 
       await Share.share({
         message: message,

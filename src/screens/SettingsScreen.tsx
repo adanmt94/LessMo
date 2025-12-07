@@ -642,7 +642,7 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
             subtitle={t('settings.privacySubtitle')}
             onPress={() => Alert.alert(
               t('settings.privacyConfig'),
-              'LessMo respeta tu privacidad:\n\n' +
+              'Les$Mo respeta tu privacidad:\n\n' +
               '• Tus datos se almacenan de forma segura en Firebase\n' +
               '• Solo tú tienes acceso a tus eventos y gastos\n' +
               '• Los participantes solo ven información del evento compartido\n' +
@@ -847,7 +847,7 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
         </TouchableOpacity>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>LessMo v1.0.0</Text>
+          <Text style={styles.footerText}>Les$Mo v1.0.0</Text>
           <Text style={styles.footerSubtext}>{t('settings.madeWith')}</Text>
         </View>
       </ScrollView>

@@ -66,11 +66,11 @@ export const QRCodePaymentScreen: React.FC<QRCodePaymentScreenProps> = ({
             recipientName,
             amount: amount.toFixed(2),
             currency,
-            description: description || 'Pago LessMo'
+            description: description || 'Pago Les$Mo'
           });
         }
         return `bizum://pay?phone=${recipientPhone}&amount=${amount.toFixed(2)}&concept=${encodeURIComponent(
-          description || 'Pago LessMo'
+          description || 'Pago Les$Mo'
         )}`;
       case 'paypal':
         // PayPal.Me format - usa email o genera JSON
@@ -84,7 +84,7 @@ export const QRCodePaymentScreen: React.FC<QRCodePaymentScreenProps> = ({
           recipientEmail: recipientEmail || '',
           amount: amount.toFixed(2),
           currency,
-          description: description || 'Pago LessMo'
+          description: description || 'Pago Les$Mo'
         });
       case 'venmo':
         // Venmo format
@@ -94,11 +94,11 @@ export const QRCodePaymentScreen: React.FC<QRCodePaymentScreenProps> = ({
             recipientName,
             amount: amount.toFixed(2),
             currency,
-            description: description || 'Pago LessMo'
+            description: description || 'Pago Les$Mo'
           });
         }
         return `venmo://paycharge?txn=pay&recipients=${recipientEmail}&amount=${amount}&note=${encodeURIComponent(
-          description || 'Pago LessMo'
+          description || 'Pago Les$Mo'
         )}`;
       default:
         // Generic payment data in JSON format (always works)
@@ -109,7 +109,7 @@ export const QRCodePaymentScreen: React.FC<QRCodePaymentScreenProps> = ({
           recipientEmail: recipientEmail || '',
           amount: amount.toFixed(2),
           currency,
-          description: description || 'Pago en LessMo',
+          description: description || 'Pago en Les$Mo',
           timestamp: new Date().toISOString()
         }, null, 2);
     }

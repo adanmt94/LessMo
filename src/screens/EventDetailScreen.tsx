@@ -291,7 +291,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
       // Crear enlace clicable (https) - formato universal
       const shareLink = `https://lessmo.app/join/${event.inviteCode}`;
       
-      const message = `🎉 ¡Únete a "${event.name}"!\n\n💰 Presupuesto: ${event.initialBudget} ${CurrencySymbols[event.currency]}\n\n🔗 Enlace: ${shareLink}\n\n📱 O usa el código: ${event.inviteCode}\n\nDescarga LessMo para gestionar gastos compartidos`;
+      const message = `🎉 ¡Únete a "${event.name}"!\n\n💰 Presupuesto: ${event.initialBudget} ${CurrencySymbols[event.currency]}\n\n🔗 Enlace: ${shareLink}\n\n📱 O usa el código: ${event.inviteCode}\n\nDescarga Les$Mo para gestionar gastos compartidos`;
 
       await Share.share({
         message: message,
