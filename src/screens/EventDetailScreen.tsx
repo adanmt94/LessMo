@@ -283,17 +283,20 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
     if (!event) return;
     
     try {
-      const deepLink = event.inviteCode 
-        ? `lessmo://join/${event.inviteCode}`
-        : `lessmo://event/${event.id}`;
+      if (!event.inviteCode) {
+        Alert.alert('Error', 'Este evento no tiene código de invitación');
+        return;
+      }
+
+      // Crear enlace clicable (https) - formato universal
+      const shareLink = `https://lessmo.app/join/${event.inviteCode}`;
       
-      const message = event.inviteCode 
-        ? `🎉 ¡Únete a "${event.name}"!\n\n💰 Presupuesto: ${event.initialBudget} ${CurrencySymbols[event.currency]}\n🔑 Código: ${event.inviteCode}\n\n� Enlace directo: ${deepLink}\n\n�📱 Descarga LessMo para gestionar gastos compartidos`
-        : `🎉 Te invito a "${event.name}"\n\n💰 Presupuesto: ${event.initialBudget} ${CurrencySymbols[event.currency]}\n\n🔗 Enlace: ${deepLink}\n\n📱 Descarga LessMo para gestionar gastos compartidos`;
+      const message = `🎉 ¡Únete a "${event.name}"!\n\n💰 Presupuesto: ${event.initialBudget} ${CurrencySymbols[event.currency]}\n\n🔗 Enlace: ${shareLink}\n\n📱 O usa el código: ${event.inviteCode}\n\nDescarga LessMo para gestionar gastos compartidos`;
 
       await Share.share({
         message: message,
         title: `Invitación a ${event.name}`,
+        url: shareLink, // iOS usa esto para enlaces clicables
       });
     } catch (error: any) {
       if (error.message !== 'User did not share') {

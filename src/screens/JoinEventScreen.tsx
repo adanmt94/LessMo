@@ -7,7 +7,7 @@ import {
   View,
   Text,
   StyleSheet,
-  
+  ScrollView,
   KeyboardAvoidingView,
   Platform,
   Alert,
@@ -192,7 +192,11 @@ export const JoinEventScreen: React.FC<Props> = ({ navigation, route }) => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
-        <View style={styles.content}>
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
           <View style={styles.iconContainer}>
             <Text style={styles.icon}>🎟️</Text>
           </View>
@@ -341,7 +345,7 @@ export const JoinEventScreen: React.FC<Props> = ({ navigation, route }) => {
               </Text>
             </Card>
           )}
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -354,6 +358,13 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   keyboardView: {
     flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    padding: 16,
   },
   header: {
     flexDirection: 'row',
@@ -379,10 +390,6 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: theme.colors.text,
-  },
-  content: {
-    flex: 1,
-    padding: 16,
   },
   iconContainer: {
     alignItems: 'center',

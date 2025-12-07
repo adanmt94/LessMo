@@ -189,12 +189,25 @@ export const GroupEventsScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const handleShareGroup = async () => {
     try {
-      const deepLink = `lessmo://group/${groupId}`;
-      const message = `🎯 ¡Únete al grupo "${groupName}" ${groupIcon || '👥'}!\n\n📊 ${activeEvents.length} ${t('groups.activeEvents')}\n\n🔗 Enlace directo: ${deepLink}\n\n📱 Descarga LessMo para gestionar gastos compartidos en grupo`;
+      // Obtener el grupo completo para el código de invitación
+      const { getGroup } = await import('../services/firebase');
+      const groupData = await getGroup(groupId);
+      
+      if (!groupData || !groupData.inviteCode) {
+        Alert.alert('Error', 'Este grupo no tiene código de invitación');
+        return;
+      }
+
+      const inviteCode = groupData.inviteCode;
+      // Crear enlace clicable (https) - formato universal
+      const shareLink = `https://lessmo.app/join/${inviteCode}`;
+      
+      const message = `🎯 ¡Únete al grupo "${groupName}" ${groupIcon || '👥'}!\n\n📊 ${activeEvents.length} ${t('groups.activeEvents')}\n\n🔗 Enlace: ${shareLink}\n\n📱 O usa el código: ${inviteCode}\n\nDescarga LessMo para gestionar gastos compartidos`;
 
       await Share.share({
         message: message,
         title: `${t('home.groupEvents')} ${groupName}`,
+        url: shareLink, // iOS usa esto para enlaces clicables
       });
     } catch (error: any) {
       if (error.message !== 'User did not share') {
