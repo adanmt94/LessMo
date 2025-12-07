@@ -107,7 +107,7 @@ struct SmallExpenseWidgetView: View {
                 Image(systemName: "dollarsign.circle.fill")
                     .font(.title2)
                     .foregroundColor(.blue)
-                Text("LessMo")
+                Text("Les$Mo")
                     .font(.headline)
                     .bold()
             }
@@ -152,7 +152,7 @@ struct MediumExpenseWidgetView: View {
                     Image(systemName: "dollarsign.circle.fill")
                         .font(.title2)
                         .foregroundColor(.blue)
-                    Text("LessMo")
+                    Text("Les$Mo")
                         .font(.headline)
                         .bold()
                 }
@@ -234,7 +234,7 @@ struct LargeExpenseWidgetView: View {
                 Image(systemName: "dollarsign.circle.fill")
                     .font(.title2)
                     .foregroundColor(.blue)
-                Text("LessMo")
+                Text("Les$Mo")
                     .font(.headline)
                     .bold()
                 
@@ -336,7 +336,7 @@ struct ExpenseWidget: Widget {
         StaticConfiguration(kind: kind, provider: ExpenseProvider()) { entry in
             ExpenseWidgetEntryView(entry: entry)
         }
-        .configurationDisplayName("Gastos LessMo")
+        .configurationDisplayName("Gastos Les$Mo")
         .description("Ve el resumen de tus gastos")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
