@@ -3,23 +3,23 @@
 <plist version="1.0">
 <dict>
 	<key>CLIENT_ID</key>
-	<string>364537925711-vtgqi80bk7i7f3ioqo8gilafo7hjj0vc.apps.googleusercontent.com</string>
+	<string>YOUR_IOS_CLIENT_ID.apps.googleusercontent.com</string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.364537925711-vtgqi80bk7i7f3ioqo8gilafo7hjj0vc</string>
+	<string>com.googleusercontent.apps.YOUR_REVERSED_CLIENT_ID</string>
 	<key>ANDROID_CLIENT_ID</key>
-	<string>364537925711-8k9moeddmi8n3b56ipchr37j1l14vvff.apps.googleusercontent.com</string>
+	<string>YOUR_ANDROID_CLIENT_ID.apps.googleusercontent.com</string>
 	<key>API_KEY</key>
-	<string>AIzaSyC0Cnt9UQRNAp0S8ekwXw3x7ksHEo5nJBs</string>
+	<string>YOUR_IOS_API_KEY_HERE</string>
 	<key>GCM_SENDER_ID</key>
-	<string>364537925711</string>
+	<string>YOUR_SENDER_ID</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
 	<string>com.lessmo.app</string>
 	<key>PROJECT_ID</key>
-	<string>lessmo-9023f</string>
+	<string>your-project-id</string>
 	<key>STORAGE_BUCKET</key>
-	<string>lessmo-9023f.firebasestorage.app</string>
+	<string>your-project-id.firebasestorage.app</string>
 	<key>IS_ADS_ENABLED</key>
 	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
@@ -31,6 +31,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:364537925711:ios:1871a9c5eb2b4758905a3a</string>
+	<string>YOUR_GOOGLE_APP_ID</string>
 </dict>
 </plist>
