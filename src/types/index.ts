@@ -1,5 +1,13 @@
 /**
- * Tipos y interfaces principales de LessMo
+ * Tipos y interfaces principales de Les$Mo
+ * 
+ * NOMENCLATURA CORRECTA (después de migración):
+ * - Group: Contenedor con presupuesto máximo (antes "Event")
+ * - GroupEvent: Gasto único con quien paga y quien debe (antes "Expense")
+ * 
+ * ALIASES DE COMPATIBILIDAD (temporal):
+ * - Event = Group (para código legacy)
+ * - Expense = GroupEvent (para código legacy)
  */
 
 // Tipos de monedas soportadas
@@ -32,21 +40,64 @@ export interface User {
   createdAt: Date;
 }
 
-// Interface para gasto único (antes era "evento")
-export interface Expense {
+// ==================== NUEVOS TIPOS (NOMENCLATURA CORRECTA) ====================
+
+/**
+ * Group: Contenedor con presupuesto máximo
+ * Es el equivalente a un "viaje", "proyecto" o "evento grande"
+ * Contiene múltiples GroupEvents (gastos individuales)
+ */
+export interface Group {
   id: string;
-  eventId: string;            // ID del evento al que pertenece
   name: string;
   description?: string;
-  paidBy: string;             // userId de quien pagó
+  createdBy: string;
+  createdAt: Date;
+  updatedAt?: Date;
+  participantIds: string[];   // IDs de participantes del grupo
+  eventIds: string[];         // IDs de eventos/gastos del grupo
+  expenseIds?: string[];      // Alias de eventIds para compatibilidad
+  initialBudget: number;      // Presupuesto máximo del grupo
+  budget?: number;            // Alias para compatibilidad
+  currentSpent?: number;      // Total gastado (calculado)
+  startDate?: Date;
+  endDate?: Date;
+  currency: Currency;
+  color?: string;             // Color para identificar el grupo
+  icon?: string;              // Emoji o icono del grupo
+  isActive: boolean;
+  status: 'active' | 'completed' | 'archived';
+  inviteCode?: string;        // Código para compartir
+  type?: 'project' | 'recurring'; // Tipo de grupo
+  
+  // Propiedades de grupos legacy (Firestore)
+  memberIds?: string[];       // Alias de participantIds (para grupos viejos)
+  totalParticipants?: number; // Contador calculado
+  totalEvents?: number;       // Total de eventos/gastos
+  groupId?: string;           // Si este grupo pertenece a otro (jerarquía)
+}
+
+/**
+ * GroupEvent: Gasto único (evento individual)
+ * Representa una transacción: alguien paga, otros deben
+ * Es lo que el usuario llamará "evento" o "gasto"
+ */
+export interface GroupEvent {
+  id: string;
+  eventId: string;            // ID del grupo al que pertenece (se llama eventId por legacy)
+  groupId?: string;           // Alias de eventId
+  name: string;
+  description?: string;
+  paidBy: string;             // participantId de quien pagó
   amount: number;
   category: ExpenseCategory;
   date: Date;
   currency: Currency;
-  participantIds: string[];   // Participantes que comparten este gasto
+  participantIds: string[];   // Participantes que deben
+  beneficiaries?: string[];   // Alias de participantIds (legacy)
   splitType: SplitType;       // Cómo se divide el gasto
   customSplits?: {            // Solo si splitType es 'custom' o 'amount'
-    [participantId: string]: number; // Monto o porcentaje por participante
+    [participantId: string]: number; // Monto por participante
   };
   percentageSplits?: {        // Solo si splitType es 'percentage'
     [participantId: string]: number; // Porcentaje (0-100) por participante
@@ -63,10 +114,29 @@ export interface Expense {
   updatedAt?: Date;
 }
 
+// ==================== ALIASES DE COMPATIBILIDAD (TEMPORAL) ====================
+// Estos aliases permiten que el código existente siga funcionando
+// mientras migramos gradualmente a la nueva nomenclatura
+
+/**
+ * @deprecated Usar Group en su lugar
+ * Event ahora es alias de Group (contenedor con presupuesto)
+ */
+export type Event = Group;
+
+/**
+ * @deprecated Usar GroupEvent en su lugar
+ * Expense ahora es alias de GroupEvent (gasto único)
+ */
+export type Expense = GroupEvent;
+
+// ==================== PARTICIPANTES ====================
+
 // Interface para participante
 export interface Participant {
   id: string;
-  eventId: string;
+  eventId: string;            // ID del grupo (se llama eventId por legacy)
+  groupId?: string;           // Alias de eventId (para nueva nomenclatura)
   userId?: string;            // Opcional, puede ser invitado sin cuenta
   name: string;
   email?: string;
@@ -75,29 +145,6 @@ export interface Participant {
   currentBalance: number;     // Saldo actual después de gastos
   joinedAt: Date;
   isAnonymous?: boolean;      // Si se unió sin registrarse
-}
-
-// Interface para evento (antes era "grupo" - contenedor con presupuesto)
-export interface Event {
-  id: string;
-  name: string;
-  description?: string;
-  createdBy: string;
-  createdAt: Date;
-  updatedAt?: Date;
-  participantIds: string[];   // IDs de participantes del evento
-  expenseIds: string[];       // IDs de gastos del evento
-  initialBudget: number;      // Presupuesto inicial
-  budget?: number;            // Alias para compatibilidad
-  currentSpent?: number;      // Total gastado (calculado)
-  startDate?: Date;
-  endDate?: Date;
-  currency: Currency;
-  color?: string;             // Color para identificar el evento
-  icon?: string;              // Emoji o icono del evento
-  isActive: boolean;
-  status: 'active' | 'completed' | 'archived';
-  inviteCode?: string;        // Código para compartir
 }
 
 // Interface para item individual de un gasto
@@ -137,15 +184,21 @@ export interface Settlement {
 }
 
 // Props de navegación (React Navigation)
+// NOTA: Manteniendo nombres actuales para no romper navegación existente
+// TODO: Migrar gradualmente a la nueva nomenclatura
 export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
   MainTabs: undefined;
-  CreateEvent: { eventId?: string; mode?: 'create' | 'edit' } | undefined;
-  EventDetail: { eventId: string; eventName?: string }; // Lista de gastos del evento
+  
+  // Grupos (contenedores con presupuesto)
+  CreateEvent: { eventId?: string; mode?: 'create' | 'edit' } | undefined; // Crea GRUPO
+  EventDetail: { eventId: string; eventName?: string }; // Detalle de GRUPO con lista de eventos/gastos
+  
+  // Eventos/Gastos individuales
   AddExpense: { 
-    eventId: string; 
-    expenseId?: string; 
+    eventId: string;          // groupId en realidad
+    expenseId?: string;       // groupEventId en realidad
     mode?: 'create' | 'edit';
     prefilledData?: {
       amount?: number;
@@ -155,11 +208,13 @@ export type RootStackParamList = {
       splitType?: SplitType;
     };
   };
-  ExpenseDetail: { expenseId: string; eventId: string }; // Detalle de un gasto específico
-  Summary: { eventId: string };
-  JoinEvent: { inviteCode: string };
-  JoinGroup: { inviteCode?: string };
-  // TEMPORAL: Mantener compatibilidad durante migración
+  ExpenseDetail: { expenseId: string; eventId: string }; // Detalle de evento/gasto individual
+  
+  Summary: { eventId: string }; // Resumen del grupo
+  JoinEvent: { inviteCode: string }; // Unirse a grupo
+  JoinGroup: { inviteCode?: string }; // Alias
+  
+  // LEGACY: Mantener compatibilidad
   CreateGroup: { groupId?: string; mode?: 'create' | 'edit' } | undefined;
   GroupEvents: { groupId: string; groupName: string; groupIcon?: string; groupColor?: string };
   Chat: { eventId?: string; groupId?: string; title: string };

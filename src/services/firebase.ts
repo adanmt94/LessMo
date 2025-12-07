@@ -234,7 +234,9 @@ export const signInWithGoogleToken = async (idToken: string): Promise<User> => {
   }
 };
 
-// ==================== EVENTOS ====================
+// ==================== GRUPOS (CONTENEDORES CON PRESUPUESTO) ====================
+// NOTA: En Firestore se llaman "events" pero son GRUPOS/CONTENEDORES
+// TODO: Migrar colección de "events" a "groups" en Firestore
 
 /**
  * Generar código de invitación único
@@ -249,7 +251,9 @@ export const generateInviteCode = (): string => {
 };
 
 /**
- * Crear nuevo evento
+ * Crear nuevo grupo (contenedor con presupuesto)
+ * NOTA: La función se llama createEvent pero crea un GRUPO
+ * Un grupo contiene múltiples eventos/gastos individuales
  */
 export const createEvent = async (
   name: string,
@@ -537,10 +541,16 @@ export const deleteParticipant = async (participantId: string): Promise<void> =>
   }
 };
 
-// ==================== GASTOS ====================
+// ==================== EVENTOS/GASTOS INDIVIDUALES ====================
+// NOTA: En Firestore se llaman "expenses" y son correctos
+// Son gastos individuales donde alguien paga y otros deben
 
 /**
- * Crear nuevo gasto
+ * Crear nuevo evento/gasto individual
+ * Un evento tiene:
+ *   - paidBy: quien pagó
+ *   - participantIds: quienes deben (beneficiaries)
+ *   - splitType: cómo se divide
  */
 export const createExpense = async (
   eventId: string,
@@ -1715,15 +1725,101 @@ export const uploadReceiptPhoto = async (uri: string, expenseId: string): Promis
 };
 
 // ====================================================================
-// 🔄 ALIASES PARA NUEVO MODELO
+// 🔄 MIGRACIÓN DEL MODELO - ALIASES Y FUNCIONES NUEVAS
 // ====================================================================
-// NUEVO MODELO:
-//   - EVENTO (Event) = Contenedor con presupuesto (antes "Group")
-//   - GASTO (Expense) = Transacción única (antes "Event")
+//
+// NOMENCLATURA CORRECTA (después de migración):
+//   - Group: Contenedor con presupuesto máximo
+//   - GroupEvent: Gasto único (alguien paga, otros deben)
+//
+// NOMENCLATURA LEGACY (temporal):
+//   - Event: Alias de Group
+//   - Expense: Alias de GroupEvent
+//
+// FIRESTORE:
+//   /groups/{groupId} - Contenedores con presupuesto
+//   /events/{eventId} - Gastos individuales (TODO: migrar a /groupEvents/)
+//
 // ====================================================================
 
-// Aliases para trabajar con el nuevo modelo
-// Los "grupos" ahora son "eventos" (contenedores con presupuesto)
+// ==================== FUNCIONES PRINCIPALES (NOMENCLATURA CORRECTA) ====================
+
+/**
+ * Crear nuevo grupo (contenedor con presupuesto)
+ * @param name - Nombre del grupo
+ * @param budget - Presupuesto máximo del grupo
+ * @param currency - Moneda del grupo
+ * @param userId - ID del creador
+ * @returns ID del grupo creado
+ */
+export const createGroupContainer = createGroup;
+
+/**
+ * Obtener grupos del usuario (ya existe la función, no crear alias)
+ */
+// export const getUserGroupContainers = getUserGroups; // Comentado - función ya existe
+
+/**
+ * Obtener grupo por ID
+ */
+export const getGroupContainer = getGroup;
+
+/**
+ * Actualizar grupo
+ */
+export const updateGroupContainer = updateGroup;
+
+/**
+ * Eliminar grupo
+ */
+export const deleteGroupContainer = deleteGroup;
+
+/**
+ * Obtener grupo por código de invitación
+ */
+export const getGroupByCode = getGroupByInviteCode;
+
+/**
+ * Agregar participante a grupo
+ */
+export const addGroupParticipant = addGroupMember;
+
+/**
+ * Eliminar participante de grupo
+ */
+export const removeGroupParticipant = removeGroupMember;
+
+/**
+ * Crear evento/gasto individual dentro de un grupo
+ * Un evento tiene: quien paga (paidBy) y quienes deben (participantIds)
+ * @param groupId - ID del grupo contenedor
+ * @param name - Nombre del evento/gasto
+ * @param amount - Monto del gasto
+ * @param paidBy - ID del participante que pagó
+ * @param participantIds - IDs de participantes que deben
+ * @returns ID del evento creado
+ */
+export const createGroupEvent = createExpense;
+
+/**
+ * Obtener eventos/gastos de un grupo
+ */
+export const getGroupEvents = getEventExpenses;
+
+/**
+ * Actualizar evento/gasto
+ */
+export const updateGroupEvent = updateExpense;
+
+/**
+ * Eliminar evento/gasto
+ */
+export const deleteGroupEvent = deleteExpense;
+
+// ==================== ALIASES DE COMPATIBILIDAD (LEGACY) ====================
+// Mantener código existente funcionando durante la migración
+
+// "Event" functions → ahora apuntan a Groups (contenedores)
 export const createEventContainer = createGroup;
 export const getUserEventsContainer = getUserGroups;
 export const getEventContainer = getGroup;
@@ -1737,9 +1833,9 @@ export const sendEventContainerMessage = sendGroupMessage;
 export const getEventContainerMessages = getGroupMessages;
 export const subscribeToEventContainerMessages = subscribeToGroupMessages;
 
-// Los "eventos" viejos ahora son "gastos" pero mantenemos las funciones existentes
-// porque ya se llaman createExpense, updateExpense, etc.
+// "Expense" functions → ahora son GroupEvents
 export const getExpensesByEvent = getEventExpenses;
+export const getExpensesByGroup = getEventExpenses;
 
 export default {
   auth,

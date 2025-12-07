@@ -1,5 +1,10 @@
 /**
  * Hook personalizado para manejar gastos y cálculos
+ * 
+ * NOTA IMPORTANTE:
+ * - eventId en este contexto es el ID del GRUPO (contenedor)
+ * - Los "expenses" son eventos/gastos individuales
+ * - Cada expense tiene: paidBy (quien paga) y participantIds (quienes deben)
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -22,6 +27,10 @@ import {
 import { withCache, cache } from '../utils/cache';
 import { logger, LogCategory } from '../utils/logger';
 
+/**
+ * Hook para manejar eventos/gastos de un grupo
+ * @param eventId - ID del grupo (contenedor con presupuesto)
+ */
 export const useExpenses = (eventId: string) => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
