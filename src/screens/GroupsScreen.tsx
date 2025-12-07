@@ -508,9 +508,9 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
         <View style={[styles.header, { backgroundColor: theme.colors.background, shadowColor: theme.colors.text }]}>
         <View style={styles.headerTop}>
           <Text style={[styles.greeting, { color: theme.colors.textSecondary }]}>
-            Hola {userName.split(' ')[0]} 👋
+            {t('groups.hello')} {userName.split(' ')[0]} 👋
           </Text>
-          <Text style={[styles.title, { color: theme.colors.text }]}>Mis Grupos</Text>
+          <Text style={[styles.title, { color: theme.colors.text }]}>{t('groups.title')}</Text>
         </View>
         <View style={styles.headerButtons}>
           <TouchableOpacity

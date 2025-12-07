@@ -87,6 +87,7 @@
   },
   "groups": {
     "title": "Mis Grupos",
+    "hello": "Hola",
     "noGroups": "No tienes grupos creados",
     "loading": "Cargando grupos...",
     "notFound": "No se encontraron grupos",
