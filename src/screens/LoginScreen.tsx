@@ -310,15 +310,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
               autoCorrect={false}
               textContentType="emailAddress"
               returnKeyType="next"
-              blurOnSubmit={false}
-              enablesReturnKeyAutomatically={true}
-              onSubmitEditing={() => {
-                try {
-                  console.log('⌨️ Email submit - moving to password');
-                } catch (error) {
-                  console.error('❌ Error in email submit:', error);
-                }
-              }}
+              editable={!loading && !googleLoading}
             />
 
             <Input
@@ -332,19 +324,8 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
               autoCorrect={false}
               textContentType="password"
               returnKeyType="done"
-              blurOnSubmit={true}
-              enablesReturnKeyAutomatically={true}
-              onSubmitEditing={() => {
-                try {
-                  console.log('⌨️ Password submit - attempting login');
-                  handleDismissKeyboard();
-                  if (email && password) {
-                    handleLogin();
-                  }
-                } catch (error) {
-                  console.error('❌ Error in password submit:', error);
-                }
-              }}
+              editable={!loading && !googleLoading}
+              onSubmitEditing={handleLogin}
             />
 
             <Button
