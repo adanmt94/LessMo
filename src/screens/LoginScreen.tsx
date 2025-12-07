@@ -274,18 +274,17 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   return (
-    <TouchableWithoutFeedback 
-      onPress={handleDismissKeyboard}
-      accessible={false}
-    >
-      <SafeAreaView edges={['top']} style={styles.container}>
+    <SafeAreaView edges={['top']} style={styles.container}>
+      <TouchableWithoutFeedback 
+        onPress={handleDismissKeyboard}
+        accessible={false}
+      >
         <ScrollView
           ref={scrollViewRef}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           keyboardDismissMode="on-drag"
-          automaticallyAdjustKeyboardInsets={false}
           bounces={true}
           scrollEnabled={true}
         >
@@ -430,8 +429,8 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
             </TouchableOpacity>
           </View>
         </ScrollView>
-      </SafeAreaView>
-    </TouchableWithoutFeedback>
+      </TouchableWithoutFeedback>
+    </SafeAreaView>
   );
 };
 

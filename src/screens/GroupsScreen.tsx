@@ -510,7 +510,7 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
           <Text style={[styles.greeting, { color: theme.colors.textSecondary }]}>
             {t('groups.hello')} {userName.split(' ')[0]} 👋
           </Text>
-          <Text style={[styles.title, { color: theme.colors.text }]}>{t('groups.title')}</Text>
+          <Text style={[styles.title, { color: theme.colors.text }]}>Mis Eventos</Text>
         </View>
         <View style={styles.headerButtons}>
           <TouchableOpacity

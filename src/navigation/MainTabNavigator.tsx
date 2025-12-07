@@ -5,7 +5,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { TabParamList } from '../types';
-import { EventsScreen } from '../screens/EventsScreen';
+import { IndividualExpensesScreen } from '../screens/IndividualExpensesScreen';
 import { GroupsScreen } from '../screens/GroupsScreen';
 import { ActivityScreen } from '../screens/ActivityScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
@@ -22,22 +22,22 @@ export const MainTabNavigator: React.FC = () => {
   return (
     <Tab.Navigator>
       <Tab.Screen
-        name="Events"
-        component={EventsScreen}
+        name="Expenses"
+        component={IndividualExpensesScreen}
         options={{
           headerShown: false,
-          tabBarLabel: t('tabs.events'),
+          tabBarLabel: t('tabs.expenses'),
           tabBarIcon: ({ color, focused }) => (
             <EventsIcon color={color} focused={focused} />
           ),
         }}
       />
       <Tab.Screen
-        name="Groups"
+        name="Events"
         component={GroupsScreen}
         options={{
           headerShown: false,
-          tabBarLabel: t('tabs.groups'),
+          tabBarLabel: t('tabs.events'),
           tabBarIcon: ({ color, focused }) => (
             <GroupsIcon color={color} focused={focused} />
           ),

@@ -20,8 +20,8 @@
     "cannotUndo": "This action cannot be undone"
   },
   "tabs": {
+    "expenses": "Expenses",
     "events": "Events",
-    "groups": "Groups",
     "activity": "Activity",
     "settings": "Settings"
   },

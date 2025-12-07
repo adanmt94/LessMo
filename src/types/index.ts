@@ -253,8 +253,8 @@ export type RootStackParamList = {
 };
 
 export type TabParamList = {
+  Expenses: undefined;  // Gastos individuales (sin evento)
   Events: undefined;    // Lista de eventos (antes "grupos")
-  Groups: undefined;    // TEMPORAL: mantener durante migración
   Activity: undefined;
   Settings: undefined;
 };

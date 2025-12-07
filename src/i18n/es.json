@@ -20,8 +20,8 @@
     "cannotUndo": "Esta acción no se puede deshacer"
   },
   "tabs": {
+    "expenses": "Gastos",
     "events": "Eventos",
-    "groups": "Grupos",
     "activity": "Actividad",
     "settings": "Ajustes"
   },

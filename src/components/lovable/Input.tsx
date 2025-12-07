@@ -71,6 +71,7 @@ export const Input: React.FC<InputProps> = ({
           placeholderTextColor={theme.colors.placeholder}
           onFocus={handleFocus}
           onBlur={handleBlur}
+          keyboardShouldPersistTaps="handled"
           {...props}
         />
       </View>
