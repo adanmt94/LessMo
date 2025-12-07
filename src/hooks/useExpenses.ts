@@ -17,6 +17,7 @@ import {
   ParticipantBalance,
   Settlement,
   ExpenseCategory,
+  SplitType,
 } from '../types';
 import { withCache, cache } from '../utils/cache';
 import { logger, LogCategory } from '../utils/logger';
@@ -77,9 +78,10 @@ export const useExpenses = (eventId: string) => {
     amount: number,
     description: string,
     category: ExpenseCategory,
-    beneficiaries: string[],
-    splitType: 'equal' | 'custom' | 'items' = 'equal',
+    participantIds: string[],
+    splitType: SplitType = 'equal',
     customSplits?: { [participantId: string]: number },
+    percentageSplits?: { [participantId: string]: number },
     receiptPhoto?: string
   ): Promise<boolean> => {
     try {
@@ -91,9 +93,10 @@ export const useExpenses = (eventId: string) => {
         amount,
         description,
         category,
-        beneficiaries,
+        participantIds,
         splitType,
         customSplits,
+        percentageSplits,
         receiptPhoto
       );
       logger.info(LogCategory.EXPENSE, 'Gasto creado', { expenseId });
@@ -120,9 +123,10 @@ export const useExpenses = (eventId: string) => {
     amount: number,
     description: string,
     category: ExpenseCategory,
-    beneficiaries: string[],
-    splitType: 'equal' | 'custom' | 'items' = 'equal',
+    participantIds: string[],
+    splitType: SplitType = 'equal',
     customSplits?: { [participantId: string]: number },
+    percentageSplits?: { [participantId: string]: number },
     receiptPhoto?: string
   ): Promise<boolean> => {
     try {
@@ -135,9 +139,10 @@ export const useExpenses = (eventId: string) => {
         amount,
         description,
         category,
-        beneficiaries,
+        participantIds,
         splitType,
         customSplits,
+        percentageSplits,
         receiptPhoto
       );
       logger.info(LogCategory.EXPENSE, 'Gasto actualizado', { expenseId });
@@ -230,13 +235,16 @@ export const useExpenses = (eventId: string) => {
         .filter((e) => e.paidBy === participant.id)
         .reduce((sum, e) => sum + e.amount, 0);
 
-      // Calcular cuánto debe (gastos donde es beneficiario)
+      // Calcular cuánto debe (gastos donde es participante)
       const totalOwed = expenses
-        .filter((e) => e.beneficiaries.includes(participant.id))
+        .filter((e) => e.participantIds.includes(participant.id))
         .reduce((sum, expense) => {
           if (expense.splitType === 'equal') {
-            return sum + expense.amount / expense.beneficiaries.length;
-          } else if (expense.splitType === 'custom' && expense.customSplits) {
+            return sum + expense.amount / expense.participantIds.length;
+          } else if (expense.splitType === 'percentage' && expense.percentageSplits) {
+            const percentage = expense.percentageSplits[participant.id] || 0;
+            return sum + (expense.amount * percentage / 100);
+          } else if ((expense.splitType === 'custom' || expense.splitType === 'amount') && expense.customSplits) {
             return sum + (expense.customSplits[participant.id] || 0);
           }
           return sum;
