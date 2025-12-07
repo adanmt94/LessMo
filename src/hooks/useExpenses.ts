@@ -115,6 +115,17 @@ export const useExpenses = (eventId: string) => {
       cache.invalidatePattern(`participants_${eventId}`);
       await loadData();
       
+      // Actualizar widgets iOS
+      try {
+        const { updateWidgetData } = await import('../services/widgetDataService');
+        const { auth } = await import('../services/firebase');
+        if (auth.currentUser?.uid) {
+          await updateWidgetData(auth.currentUser.uid);
+        }
+      } catch (error) {
+        logger.warn(LogCategory.EXPENSE, 'No se pudo actualizar widget', error);
+      }
+      
       return true;
     } catch (err: any) {
       logger.error(LogCategory.EXPENSE, 'Error al crear gasto', err);
