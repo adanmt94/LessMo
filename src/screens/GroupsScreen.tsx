@@ -206,7 +206,7 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
     
     Alert.alert(
       'Eliminar grupos',
-      `¿Estás seguro de eliminar ${selectedGroups.size} grupo${selectedGroups.size > 1 ? 's' : ''}? Los eventos asociados no se eliminarán.`,
+      `¿Estás seguro de eliminar ${selectedGroups.size} grupo${selectedGroups.size > 1 ? 's' : ''}? Los gastos asociados no se eliminarán.`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -235,7 +235,7 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
     
     Alert.alert(
       'Eliminar grupo',
-      `¿Estás seguro de eliminar "${group.name}"? Los eventos asociados no se eliminarán.`,
+      `¿Estás seguro de eliminar "${group.name}"? Los gastos asociados no se eliminarán.`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -353,7 +353,7 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
           <View style={styles.statContent}>
             <Text style={[styles.statValue, { color: theme.colors.text }]}>{group.eventIds.length}</Text>
             <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
-              {group.eventIds.length === 1 ? 'Evento' : 'Eventos'}
+              {group.eventIds.length === 1 ? 'Gasto' : 'Gastos'}
             </Text>
           </View>
         </View>
@@ -388,7 +388,7 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
             }}
           >
             <Text style={styles.actionIcon}>👀</Text>
-            <Text style={[styles.actionText, { color: theme.colors.primary }]}>Ver Eventos</Text>
+            <Text style={[styles.actionText, { color: theme.colors.primary }]}>Ver Gastos</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -405,7 +405,7 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
             }}
           >
             <Text style={[styles.actionIcon, { color: '#FFFFFF' }]}>+</Text>
-            <Text style={[styles.actionText, { color: '#FFFFFF' }]}>Añadir Evento</Text>
+            <Text style={[styles.actionText, { color: '#FFFFFF' }]}>Añadir Gasto</Text>
           </TouchableOpacity>
         </View>
         
@@ -461,7 +461,7 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
           <Text style={styles.emptyIcon}>👥</Text>
           <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>{t('groups.noGroups')}</Text>
           <Text style={[styles.emptySubtext, { color: theme.colors.textSecondary }]}>
-            Los grupos te permiten organizar múltiples eventos relacionados
+            Los grupos te permiten organizar múltiples gastos relacionados
           </Text>
           <Button
             title="Crear primer grupo"

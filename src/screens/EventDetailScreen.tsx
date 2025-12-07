@@ -229,7 +229,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
       const eventData = await getEvent(eventId);
       setEvent(eventData);
     } catch (error) {
-      Alert.alert('Error', 'No se pudo cargar el evento');
+      Alert.alert('Error', 'No se pudo cargar el grupo');
     }
   };
 
@@ -284,7 +284,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
     
     try {
       if (!event.inviteCode) {
-        Alert.alert('Error', 'Este evento no tiene código de invitación');
+        Alert.alert('Error', 'Este grupo no tiene código de invitación');
         return;
       }
 
@@ -300,7 +300,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
       });
     } catch (error: any) {
       if (error.message !== 'User did not share') {
-        Alert.alert('Error', 'No se pudo compartir el evento');
+        Alert.alert('Error', 'No se pudo compartir el grupo');
       }
     }
   };

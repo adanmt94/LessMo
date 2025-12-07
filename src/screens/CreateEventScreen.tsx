@@ -284,7 +284,7 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
                 <Text style={styles.budgetIcon}>💰</Text>
                 <View style={styles.budgetHeaderText}>
                   <Text style={styles.budgetTitle}>¿Qué presupuesto grupal quieres añadir?</Text>
-                  <Text style={styles.budgetSubtitle}>Define el límite máximo para este evento</Text>
+                  <Text style={styles.budgetSubtitle}>Define el límite máximo para este grupo</Text>
                 </View>
               </View>
               
@@ -372,7 +372,7 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
                     Proyecto/Viaje
                   </Text>
                   <Text style={styles.typeDescription}>
-                    Crea eventos específicos dentro del grupo
+                    Añade gastos específicos dentro del grupo
                   </Text>
                 </TouchableOpacity>
 
