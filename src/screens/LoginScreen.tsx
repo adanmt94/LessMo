@@ -293,7 +293,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
             <View style={styles.logoContainer}>
               <Text style={styles.logo}>💰</Text>
             </View>
-            <Text style={styles.title}>LessMo</Text>
+            <Text style={styles.title}>Les$Mo</Text>
             <Text style={styles.subtitle}>
               Gestiona tus finanzas de forma fácil
             </Text>

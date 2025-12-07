@@ -21,9 +21,9 @@ export interface SpendingAlertsConfig {
 
 const DEFAULT_CONFIG: SpendingAlertsConfig = {
   minAvailableAmount: 100,
-  minAvailableEnabled: false,
+  minAvailableEnabled: true,
   maxSpentAmount: 500,
-  maxSpentEnabled: false,
+  maxSpentEnabled: true,
 };
 
 export const useSpendingAlerts = () => {

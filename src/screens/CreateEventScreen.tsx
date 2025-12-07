@@ -107,7 +107,10 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
       const usersSnapshot = await getDocs(usersQuery);
       
       if (usersSnapshot.empty) {
-        Alert.alert(t('common.error'), 'Usuario no encontrado con ese email');
+        Alert.alert(
+          t('common.error'), 
+          'Usuario no encontrado con ese email. Asegúrate de que el usuario esté registrado en Les$Mo.'
+        );
         return;
       }
       
@@ -117,14 +120,14 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
       
       // Verificar si ya está en la lista
       if (members.some(m => m.id === userId)) {
-        Alert.alert(t('common.error'), 'Este usuario ya es miembro del grupo');
+        Alert.alert(t('common.error'), 'Este usuario ya está en la lista');
         return;
       }
       
       // Si estamos en modo edición, añadir directamente a Firebase
-      if (isEditMode) {
+      if (isEditMode && groupId) {
         const { addGroupMember } = await import('../services/firebase');
-        await addGroupMember(groupId!, userId);
+        await addGroupMember(groupId, userId);
       }
       
       // Añadir a la lista local
@@ -138,7 +141,7 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
       ]);
       
       setNewMemberEmail('');
-      Alert.alert('Éxito', 'Miembro añadido correctamente');
+      Alert.alert('✅ Éxito', isEditMode ? 'Miembro añadido al grupo' : 'Miembro añadido a la lista (se añadirá al crear el grupo)');
     } catch (error: any) {
       console.error('Error añadiendo miembro:', error);
       Alert.alert(t('common.error'), error.message || 'No se pudo añadir el miembro');
@@ -267,7 +270,13 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
         style={styles.keyboardView}
         enabled={Platform.OS === 'ios'}
       >
-        <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
+        <ScrollView 
+          style={styles.content} 
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          nestedScrollEnabled={true}
+          showsVerticalScrollIndicator={false}
+        >
           {/* 💰 PRESUPUESTO GRUPAL - LO MÁS IMPORTANTE */}
           {!isEditMode && (
             <Card style={styles.budgetSection}>
@@ -430,56 +439,54 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
             </View>
           </Card>
 
-          {/* Gestión de participantes (solo en modo edición) */}
-          {isEditMode && (
-            <Card style={styles.section}>
-              <Text style={styles.sectionTitle}>Participantes ({members.length})</Text>
-              <Text style={styles.sectionSubtitle}>
-                Gestiona los miembros del grupo
-              </Text>
+          {/* Gestión de participantes */}
+          <Card style={styles.section}>
+            <Text style={styles.sectionTitle}>Participantes ({members.length})</Text>
+            <Text style={styles.sectionSubtitle}>
+              {isEditMode ? 'Gestiona los miembros del grupo' : 'Añade participantes al grupo (opcional)'}
+            </Text>
+            
+            {/* Añadir nuevo miembro */}
+            <View style={styles.addMemberContainer}>
+              <Input
+                label="Añadir por email"
+                value={newMemberEmail}
+                onChangeText={setNewMemberEmail}
+                placeholder="email@ejemplo.com"
+                autoCapitalize="none"
+                keyboardType="email-address"
+                style={styles.memberInput}
+              />
+              <TouchableOpacity
+                style={styles.addMemberButton}
+                onPress={handleAddMember}
+              >
+                <Text style={styles.addMemberButtonText}>+ Añadir</Text>
+              </TouchableOpacity>
+            </View>
               
-              {/* Añadir nuevo miembro */}
-              <View style={styles.addMemberContainer}>
-                <Input
-                  label="Añadir por email"
-                  value={newMemberEmail}
-                  onChangeText={setNewMemberEmail}
-                  placeholder="email@ejemplo.com"
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  style={styles.memberInput}
-                />
-                <TouchableOpacity
-                  style={styles.addMemberButton}
-                  onPress={handleAddMember}
-                >
-                  <Text style={styles.addMemberButtonText}>+ Añadir</Text>
-                </TouchableOpacity>
-              </View>
-              
-              {/* Lista de miembros */}
-              {members.length > 0 && (
-                <View style={styles.membersList}>
-                  {members.map((member) => (
-                    <View key={member.id} style={styles.memberItem}>
-                      <View style={styles.memberInfo}>
-                        <Text style={styles.memberName}>{member.name}</Text>
-                        {member.email && (
-                          <Text style={styles.memberEmail}>{member.email}</Text>
-                        )}
-                      </View>
-                      <TouchableOpacity
-                        style={styles.removeMemberButton}
-                        onPress={() => handleRemoveMember(member.id, member.name)}
-                      >
-                        <Text style={styles.removeMemberButtonText}>✕</Text>
-                      </TouchableOpacity>
+            {/* Lista de miembros */}
+            {members.length > 0 && (
+              <View style={styles.membersList}>
+                {members.map((member) => (
+                  <View key={member.id} style={styles.memberItem}>
+                    <View style={styles.memberInfo}>
+                      <Text style={styles.memberName}>{member.name}</Text>
+                      {member.email && (
+                        <Text style={styles.memberEmail}>{member.email}</Text>
+                      )}
                     </View>
-                  ))}
-                </View>
-              )}
-            </Card>
-          )}
+                    <TouchableOpacity
+                      style={styles.removeMemberButton}
+                      onPress={() => handleRemoveMember(member.id, member.name)}
+                    >
+                      <Text style={styles.removeMemberButtonText}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
+          </Card>
 
           {/* Preview */}
           <Card style={styles.section}>

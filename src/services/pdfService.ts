@@ -500,7 +500,7 @@ const generatePDFHTML = (
 
   <!-- Footer -->
   <div class="footer">
-    <div class="app-name">LessMo - ${language === 'es' ? 'Gestión de Gastos Compartidos' : 'Shared Expense Management'}</div>
+    <div class="app-name">Les$Mo - ${language === 'es' ? 'Gestión de Gastos Compartidos' : 'Shared Expense Management'}</div>
     <div>${language === 'es' ? 'Documento generado automáticamente' : 'Automatically generated document'}</div>
   </div>
 </body>
