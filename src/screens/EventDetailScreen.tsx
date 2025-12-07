@@ -347,7 +347,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   // Filtrar gastos por búsqueda
   const filteredExpenses = searchQuery.trim()
     ? expenses.filter(e => 
-        e.description.toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
+        (e.description || '').toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
         getParticipantById(e.paidBy)?.name.toLowerCase().includes(searchQuery.toLowerCase().trim())
       )
     : expenses;

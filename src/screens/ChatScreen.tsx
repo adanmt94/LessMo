@@ -210,8 +210,7 @@ export const ChatScreen: React.FC<Props> = ({ navigation, route }) => {
                     text: 'Crear gasto',
                     onPress: () => {
                       navigation.navigate('AddExpense', {
-                        eventId: eventId || undefined,
-                        groupId: groupId || undefined,
+                        eventId: (eventId || groupId) as string,
                         prefilledData: {
                           amount: analysis.total,
                           description: analysis.merchantName || 'Gasto detectado',
@@ -319,8 +318,7 @@ export const ChatScreen: React.FC<Props> = ({ navigation, route }) => {
           text: 'Crear gasto',
           onPress: () => {
             navigation.navigate('AddExpense', {
-              eventId: eventId || undefined,
-              groupId: groupId || undefined,
+              eventId: (eventId || groupId) as string,
               prefilledData: {
                 amount: item.receiptData!.amount,
                 description: item.receiptData!.description,

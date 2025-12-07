@@ -124,11 +124,11 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
     if (isEditMode && expenses.length > 0) {
       const expense = expenses.find(e => e.id === expenseId);
       if (expense) {
-        setDescription(expense.description);
+        setDescription(expense.description || '');
         setAmount(expense.amount.toString());
         setPaidBy(expense.paidBy);
         setCategory(expense.category);
-        setSelectedBeneficiaries(expense.beneficiaries);
+        setSelectedBeneficiaries(expense.beneficiaries || expense.participantIds || []);
         setSplitType(expense.splitType || 'equal');
         setReceiptPhoto(expense.receiptPhoto || null);
         

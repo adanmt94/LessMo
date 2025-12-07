@@ -366,10 +366,10 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
           </View>
           <View style={styles.statContent}>
             <Text style={[styles.statValue, { color: theme.colors.text }]}>
-              {group.totalParticipants || group.memberIds.length}
+              {group.totalParticipants || group.memberIds?.length || group.participantIds?.length || 0}
             </Text>
             <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
-              {(group.totalParticipants || group.memberIds.length) === 1 ? 'Participante' : 'Participantes'}
+              {((group.totalParticipants || group.memberIds?.length || group.participantIds?.length || 0) === 1) ? 'Participante' : 'Participantes'}
             </Text>
           </View>
         </View>

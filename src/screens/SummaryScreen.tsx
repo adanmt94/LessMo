@@ -243,24 +243,26 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
     const owes: Array<{ description: string; amount: number; from: string; category: string }> = [];
 
     expenses.forEach((expense) => {
+      const beneficiaries = expense.beneficiaries || expense.participantIds || [];
+      
       // Gastos que pagó este participante
       if (expense.paidBy === participantId) {
         paid.push({
-          description: expense.description,
+          description: expense.description || '',
           amount: expense.amount,
           category: expense.category,
         });
       }
 
       // Gastos en los que es beneficiario
-      if (expense.beneficiaries.includes(participantId)) {
+      if (beneficiaries.includes(participantId)) {
         const payer = getParticipantById(expense.paidBy);
         let owedAmount = 0;
 
         if (expense.splitType === 'custom' && expense.customSplits) {
           owedAmount = expense.customSplits[participantId] || 0;
         } else {
-          owedAmount = expense.amount / expense.beneficiaries.length;
+          owedAmount = expense.amount / beneficiaries.length;
         }
 
         // Solo agregar si no es el que pagó (para no mostrar que se debe a sí mismo)

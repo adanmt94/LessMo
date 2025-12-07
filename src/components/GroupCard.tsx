@@ -41,7 +41,7 @@ const GroupCardComponent: React.FC<GroupCardProps> = ({
     return GROUP_COLORS[colorName || 'blue'] || '#3B82F6';
   };
 
-  const participantsCount = group.totalParticipants || group.memberIds.length;
+  const participantsCount = group.totalParticipants || group.memberIds?.length || group.participantIds?.length || 0;
 
   return (
     <Card style={style || styles.card}>
@@ -108,7 +108,7 @@ const areEqual = (prevProps: GroupCardProps, nextProps: GroupCardProps) => {
     prevProps.group.icon === nextProps.group.icon &&
     prevProps.group.color === nextProps.group.color &&
     prevProps.group.eventIds.length === nextProps.group.eventIds.length &&
-    prevProps.group.memberIds.length === nextProps.group.memberIds.length &&
+    (prevProps.group.memberIds?.length || 0) === (nextProps.group.memberIds?.length || 0) &&
     prevProps.group.totalParticipants === nextProps.group.totalParticipants
   );
 };

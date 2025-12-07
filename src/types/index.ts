@@ -192,7 +192,7 @@ export type RootStackParamList = {
   MainTabs: undefined;
   
   // Grupos (contenedores con presupuesto)
-  CreateEvent: { eventId?: string; mode?: 'create' | 'edit' } | undefined; // Crea GRUPO
+  CreateEvent: { eventId?: string; groupId?: string; mode?: 'create' | 'edit' } | undefined; // Crea GRUPO (o evento dentro de grupo)
   EventDetail: { eventId: string; eventName?: string }; // Detalle de GRUPO con lista de eventos/gastos
   
   // Eventos/Gastos individuales
