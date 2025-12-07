@@ -1,5 +1,5 @@
 /**
- * CreateEventScreen - Pantalla para crear nuevo evento
+ * CreateEventScreen - Pantalla para crear/editar eventos (contenedores)
  */
 
 import React, { useState, useEffect } from 'react';
@@ -17,470 +17,495 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
-import { RootStackParamList, Currency, VALIDATION } from '../types';
+import { RootStackParamList } from '../types';
 import { Button, Input, Card } from '../components/lovable';
-import { createEvent, addParticipant, getEvent, getEventParticipants } from '../services/firebase';
+import { createGroup } from '../services/firebase';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 
-type CreateEventScreenNavigationProp = StackNavigationProp<RootStackParamList, 'CreateEvent'>;
-type CreateEventScreenRouteProp = RouteProp<RootStackParamList, 'CreateEvent'>;
+type CreateEventScreenNavigationProp = StackNavigationProp<RootStackParamList, 'CreateGroup'>;
+type CreateEventScreenRouteProp = RouteProp<RootStackParamList, 'CreateGroup'>;
 
 interface Props {
   navigation: CreateEventScreenNavigationProp;
   route: CreateEventScreenRouteProp;
 }
 
-interface ParticipantInput {
-  id: string;
-  name: string;
-  budget: string;
-  email?: string;
-}
-
-const CURRENCIES: { value: Currency; label: string }[] = [
-  { value: 'EUR', label: '€ Euro' },
-  { value: 'USD', label: '$ Dólar' },
-  { value: 'GBP', label: '£ Libra' },
-  { value: 'MXN', label: '$ Peso Mexicano' },
-  { value: 'ARS', label: '$ Peso Argentino' },
-  { value: 'COP', label: '$ Peso Colombiano' },
-  { value: 'CLP', label: '$ Peso Chileno' },
-  { value: 'BRL', label: 'R$ Real' },
-];
-
+const GROUP_ICONS = ['👥', '🎉', '✈️', '🏠', '💼', '🎓', '🏋️', '🍕', '🎮', '🎨', '🎵', '📚'];
+const GROUP_COLORS = ['#6366F1', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#3B82F6', '#EF4444', '#14B8A6'];
 export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
   const { user } = useAuth();
   const { theme } = useTheme();
   const { t } = useLanguage();
   const styles = getStyles(theme);
-  const { eventId, mode, groupId } = route.params || {};
-  const isEditMode = mode === 'edit' && eventId;
+  const { groupId, mode } = route.params || {};
+  const isEditMode = mode === 'edit' && groupId;
   
-  const [eventName, setEventName] = useState('');
+  const [groupName, setGroupName] = useState('');
   const [description, setDescription] = useState('');
-  const [groupBudget, setGroupBudget] = useState('');
-  const [currency, setCurrency] = useState<Currency>('EUR');
-  const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
-  const [participants, setParticipants] = useState<ParticipantInput[]>([
-    { id: '1', name: '', budget: '' },
-  ]);
+  const [selectedIcon, setSelectedIcon] = useState('👥');
+  const [selectedColor, setSelectedColor] = useState('#6366F1');
+  const [groupType, setGroupType] = useState<'project' | 'recurring'>('project');
   const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(!!isEditMode);
+  const [loadingData, setLoadingData] = useState(!!isEditMode);
+  const [members, setMembers] = useState<Array<{ id: string; name: string; email?: string }>>([]);
+  const [newMemberEmail, setNewMemberEmail] = useState('');
+  // 💰 PRESUPUESTO GRUPAL (característica principal)
+  const [budget, setBudget] = useState('');
+  const [currency, setCurrency] = useState<'EUR' | 'USD' | 'GBP'>('EUR');
 
-  // Cargar datos del evento si estamos en modo edición
+  // Cargar datos del grupo si estamos en modo edición
   useEffect(() => {
     if (isEditMode) {
-      loadEventData();
+      loadGroupData();
     }
-  }, [eventId, mode]);
+  }, [isEditMode, groupId]);
 
-  const loadEventData = async () => {
+  const loadGroupData = async () => {
     try {
-      setInitialLoading(true);
-      const [eventData, participantsData] = await Promise.all([
-        getEvent(eventId!),
-        getEventParticipants(eventId!)
-      ]);
-
-      if (eventData) {
-        setEventName(eventData.name);
-        setDescription(eventData.description || '');
-        setGroupBudget(eventData.initialBudget.toString());
-        setCurrency(eventData.currency);
-        
-        // Cargar participantes existentes
-        if (participantsData.length > 0) {
-          setParticipants(
-            participantsData.map(p => ({
-              id: p.id,
-              name: p.name,
-              budget: p.individualBudget.toString(),
-              email: p.email
-            }))
-          );
-        }
+      setLoadingData(true);
+      const { getGroup, getUserInfo } = await import('../services/firebase');
+      const group = await getGroup(groupId!);
+      
+      setGroupName(group.name || '');
+      setDescription(group.description || '');
+      setSelectedIcon(group.icon || '👥');
+      setSelectedColor(group.color || '#6366F1');
+      
+      // Cargar información de los miembros
+      if (group.memberIds && group.memberIds.length > 0) {
+        const membersInfo = await Promise.all(
+          group.memberIds.map((memberId: string) => getUserInfo(memberId))
+        );
+        setMembers(membersInfo.filter((m): m is { id: string; name: string; email?: string } => m !== null));
       }
     } catch (error: any) {
-      Alert.alert(t('common.error'), t('createEvent.errorLoadingEvent'));
+      Alert.alert(t('common.error'), error.message || t('createGroup.errorLoading'));
       navigation.goBack();
     } finally {
-      setInitialLoading(false);
+      setLoadingData(false);
     }
   };
 
-  const addParticipantField = () => {
-    if (participants.length >= VALIDATION.MAX_PARTICIPANTS) {
-      Alert.alert(t('createEvent.maxParticipantsReached'), t('createEvent.maxParticipantsMessage', { max: VALIDATION.MAX_PARTICIPANTS }));
+  const handleAddMember = async () => {
+    if (!newMemberEmail.trim()) {
+      Alert.alert(t('common.error'), 'Por favor ingresa un email');
       return;
     }
-    
-    setParticipants([
-      ...participants,
-      { id: `temp-${Date.now()}`, name: '', budget: '' },
-    ]);
+
+    try {
+      const { collection, query, where, getDocs } = await import('firebase/firestore');
+      const { db } = await import('../services/firebase');
+      
+      // Buscar usuario por email
+      const usersQuery = query(
+        collection(db, 'users'),
+        where('email', '==', newMemberEmail.trim().toLowerCase())
+      );
+      
+      const usersSnapshot = await getDocs(usersQuery);
+      
+      if (usersSnapshot.empty) {
+        Alert.alert(t('common.error'), 'Usuario no encontrado con ese email');
+        return;
+      }
+      
+      const userData = usersSnapshot.docs[0];
+      const userId = userData.id;
+      const userInfo = userData.data();
+      
+      // Verificar si ya está en la lista
+      if (members.some(m => m.id === userId)) {
+        Alert.alert(t('common.error'), 'Este usuario ya es miembro del grupo');
+        return;
+      }
+      
+      // Si estamos en modo edición, añadir directamente a Firebase
+      if (isEditMode) {
+        const { addGroupMember } = await import('../services/firebase');
+        await addGroupMember(groupId!, userId);
+      }
+      
+      // Añadir a la lista local
+      setMembers([
+        ...members,
+        {
+          id: userId,
+          name: userInfo.name || userInfo.displayName || userInfo.email?.split('@')[0] || 'Usuario',
+          email: userInfo.email
+        }
+      ]);
+      
+      setNewMemberEmail('');
+      Alert.alert('Éxito', 'Miembro añadido correctamente');
+    } catch (error: any) {
+      console.error('Error añadiendo miembro:', error);
+      Alert.alert(t('common.error'), error.message || 'No se pudo añadir el miembro');
+    }
   };
 
-  const removeParticipantField = async (id: string) => {
-    if (participants.length === 1) {
-      Alert.alert(t('common.error'), t('createEvent.minParticipantError'));
+  const handleRemoveMember = async (memberId: string, memberName: string) => {
+    const { getGroup } = await import('../services/firebase');
+    const group = await getGroup(groupId!);
+    
+    // No permitir eliminar al creador
+    if (group.createdBy === memberId) {
+      Alert.alert(t('common.error'), 'No puedes eliminar al creador del grupo');
       return;
     }
     
-    // Si estamos en modo edición y el ID no es temporal (Date.now()), eliminar de Firebase
-    if (isEditMode && !id.startsWith('temp-')) {
-      Alert.alert(
-        t('common.deleteConfirmTitle'),
-        t('createEvent.deleteParticipantConfirm'),
-        [
-          {
-            text: t('common.cancel'),
-            style: 'cancel'
-          },
-          {
-            text: t('common.delete'),
-            style: 'destructive',
-            onPress: async () => {
-              try {
-                const { deleteParticipant } = await import('../services/firebase');
-                await deleteParticipant(id);
-                setParticipants(participants.filter((p) => p.id !== id));
-                Alert.alert(t('common.success'), t('createEvent.participantDeleted'));
-              } catch (error: any) {
-                Alert.alert(t('common.error'), error.message);
+    Alert.alert(
+      'Eliminar miembro',
+      `¿Estás seguro de eliminar a ${memberName} del grupo?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              if (isEditMode) {
+                const { removeGroupMember } = await import('../services/firebase');
+                await removeGroupMember(groupId!, memberId);
               }
+              
+              setMembers(members.filter(m => m.id !== memberId));
+              Alert.alert('Éxito', 'Miembro eliminado correctamente');
+            } catch (error: any) {
+              Alert.alert(t('common.error'), error.message || 'No se pudo eliminar el miembro');
             }
           }
-        ]
-      );
-    } else {
-      // Si es un participante nuevo (aún no guardado), solo quitarlo del estado
-      setParticipants(participants.filter((p) => p.id !== id));
-    }
-  };
-
-  const updateParticipant = (id: string, field: keyof ParticipantInput, value: string) => {
-    setParticipants(
-      participants.map((p) => (p.id === id ? { ...p, [field]: value } : p))
-    );
-  };
-
-  const handleCreateEvent = async () => {
-    
-    
-    // Validaciones
-    if (!eventName.trim()) {
-      Alert.alert(t('common.error'), t('createEvent.nameRequired'));
-      return;
-    }
-
-    if (eventName.length > VALIDATION.MAX_EVENT_NAME_LENGTH) {
-      Alert.alert(t('common.error'), t('createEvent.nameTooLong', { max: VALIDATION.MAX_EVENT_NAME_LENGTH }));
-      return;
-    }
-
-    // Filtrar participantes válidos (solo nombre es obligatorio)
-    const validParticipants = participants.filter(
-      (p) => p.name.trim()
-    );
-
-    if (validParticipants.length === 0) {
-      Alert.alert(t('common.error'), t('createEvent.noParticipants'));
-      return;
-    }
-
-    // Validar presupuestos (solo si están definidos)
-    for (const p of validParticipants) {
-      if (p.budget.trim()) {
-        const budget = parseFloat(p.budget);
-        if (isNaN(budget) || budget < VALIDATION.MIN_AMOUNT || budget > VALIDATION.MAX_AMOUNT) {
-          Alert.alert(
-            t('common.error'),
-            t('createEvent.budgetRange', { min: VALIDATION.MIN_AMOUNT, max: VALIDATION.MAX_AMOUNT })
-          );
-          return;
         }
-      }
+      ]
+    );
+  };
+
+  const handleCreateGroup = async () => {
+    // Validaciones
+    if (!groupName.trim()) {
+      Alert.alert(t('common.error'), t('createGroup.nameRequired'));
+      return;
+    }
+
+    if (groupName.length > 50) {
+      Alert.alert(t('common.error'), t('createGroup.nameTooLong'));
+      return;
     }
 
     setLoading(true);
 
     try {
-      
-      
-      // Calcular presupuesto total (usar presupuesto grupal o suma de individuales)
-      let totalBudget = 0;
-      if (groupBudget.trim()) {
-        totalBudget = parseFloat(groupBudget);
+      if (isEditMode) {
+        // Actualizar grupo existente
+        const { updateGroup } = await import('../services/firebase');
+        await updateGroup(
+          groupId!,
+          groupName,
+          description,
+          selectedColor,
+          selectedIcon
+        );
+
+        Alert.alert(
+          t('common.success'),
+          t('createGroup.groupUpdated'),
+          [
+            {
+              text: 'OK',
+              onPress: () => navigation.goBack(),
+            },
+          ]
+        );
       } else {
-        totalBudget = validParticipants.reduce(
-          (sum, p) => sum + (p.budget.trim() ? parseFloat(p.budget) : 0),
-          0
+        // Crear nuevo grupo
+        const budgetNumber = budget.trim() ? parseFloat(budget) : undefined;
+        
+        const newGroupId = await createGroup(
+          groupName,
+          user!.uid,
+          description,
+          selectedColor,
+          selectedIcon,
+          groupType, // Pasar el tipo seleccionado
+          budgetNumber, // Presupuesto
+          currency // Moneda
+        );
+
+        Alert.alert(
+          t('common.success'),
+          t('createGroup.groupCreated'),
+          [
+            {
+              text: 'OK',
+              onPress: () => navigation.navigate('MainTabs', { screen: 'Groups' } as any),
+            },
+          ]
         );
       }
-
-      
-
-      // Crear evento
-      
-      const eventId = await createEvent(
-        eventName,
-        totalBudget,
-        currency,
-        user!.uid,
-        description,
-        groupId // Asociar con grupo si viene desde un grupo
-      );
-
-      
-
-      // Calcular presupuesto individual por defecto
-      const groupBudgetNum = groupBudget.trim() ? parseFloat(groupBudget) : 0;
-      const defaultIndividualBudget = groupBudgetNum > 0 
-        ? groupBudgetNum / validParticipants.length 
-        : 0;
-      
-
-      // Agregar participantes
-      for (const participant of validParticipants) {
-        // Si el participante tiene presupuesto individual, usarlo
-        // Si no, usar el presupuesto grupal dividido equitativamente
-        const budget = participant.budget.trim() 
-          ? parseFloat(participant.budget) 
-          : defaultIndividualBudget;
-        
-        // Determinar si este participante es el usuario actual
-        let participantUserId: string | undefined = undefined;
-        let participantEmail = participant.email;
-        
-        // Normalizar strings para comparación
-        const normalizeString = (str: string) => 
-          str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-        
-        const participantNameNormalized = normalizeString(participant.name);
-        const userEmailPrefix = user?.email?.split('@')[0]?.toLowerCase() || '';
-        
-        // Estrategia 1: Email coincide exactamente
-        if (participant.email && user?.email && 
-            participant.email.toLowerCase() === user.email.toLowerCase()) {
-          participantUserId = user.uid;
-          console.log(`✅ Participante ${participant.name} vinculado por email exacto`);
-        }
-        // Estrategia 2: Nombre del participante contiene el prefijo del email del usuario
-        else if (user && userEmailPrefix && participantNameNormalized.includes(userEmailPrefix)) {
-          participantUserId = user.uid;
-          participantEmail = user.email || undefined; // Asignar el email del usuario
-          console.log(`✅ Participante ${participant.name} vinculado por coincidencia de nombre con email`);
-        }
-        // Estrategia 3: El nombre del participante coincide con nombre similar al email
-        else if (user && userEmailPrefix.includes(participantNameNormalized) && participantNameNormalized.length >= 3) {
-          participantUserId = user.uid;
-          participantEmail = user.email || undefined; // Asignar el email del usuario
-          console.log(`✅ Participante ${participant.name} vinculado por nombre contenido en email`);
-        }
-        
-        const participantId = await addParticipant(
-          eventId,
-          participant.name,
-          budget,
-          participantEmail,
-          participantUserId
-        );
-        
-      }
-
-      Alert.alert(t('common.success'), t('createEvent.eventCreated'), [
-        {
-          text: 'OK',
-          onPress: () => {
-            // Usar replace para evitar volver a CreateEvent
-            navigation.replace('EventDetail', { eventId });
-          },
-        },
-      ]);
     } catch (error: any) {
-      Alert.alert(t('common.error'), error.message || t('createEvent.errorCreating'));
+      Alert.alert(t('common.error'), error.message || (isEditMode ? t('createGroup.errorUpdating') : t('createGroup.errorCreating')));
     } finally {
       setLoading(false);
     }
   };
 
-  if (initialLoading) {
+  if (loadingData) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.surface }]}>
-        <View style={styles.loadingContainer}>
-          <Text style={{ color: theme.colors.text }}>{t('createEvent.loading')}</Text>
+      <SafeAreaView style={styles.container}>
+        <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
+          <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>{t('createGroup.loading')}</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.surface }]}>
+    <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.keyboardView}
         enabled={Platform.OS === 'ios'}
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="always"
-          showsVerticalScrollIndicator={false}
-          nestedScrollEnabled={true}
-        >
-          <Text style={[styles.title, { color: theme.colors.text }]}>
-            {isEditMode ? t('createEvent.editTitle') : t('createEvent.title')}
-          </Text>
+        <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
+          {/* 💰 PRESUPUESTO GRUPAL - LO MÁS IMPORTANTE */}
+          {!isEditMode && (
+            <Card style={styles.budgetSection}>
+              <View style={styles.budgetHeader}>
+                <Text style={styles.budgetIcon}>💰</Text>
+                <View style={styles.budgetHeaderText}>
+                  <Text style={styles.budgetTitle}>¿Qué presupuesto grupal quieres añadir?</Text>
+                  <Text style={styles.budgetSubtitle}>Define el límite máximo para este evento</Text>
+                </View>
+              </View>
+              
+              <View style={styles.budgetInputContainer}>
+                <View style={styles.currencySelector}>
+                  {(['EUR', 'USD', 'GBP'] as const).map((curr) => (
+                    <TouchableOpacity
+                      key={curr}
+                      style={[
+                        styles.currencyButton,
+                        currency === curr && styles.currencyButtonSelected,
+                      ]}
+                      onPress={() => setCurrency(curr)}
+                    >
+                      <Text style={[
+                        styles.currencyText,
+                        currency === curr && styles.currencyTextSelected,
+                      ]}>
+                        {curr === 'EUR' ? '€' : curr === 'USD' ? '$' : '£'}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                
+                <Input
+                  label="Presupuesto máximo"
+                  value={budget}
+                  onChangeText={setBudget}
+                  placeholder="Ej: 1000 (Puede quedar en blanco)"
+                  keyboardType="numeric"
+                  style={styles.budgetInput}
+                />
+              </View>
+              
+              <Text style={styles.budgetHelp}>
+                💡 Puedes dejarlo en blanco si aún no lo sabes. Podrás editarlo después.
+              </Text>
+            </Card>
+          )}
 
+          {/* Información básica */}
           <Card style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('createEvent.eventInfo')}</Text>
-
+            <Text style={styles.sectionTitle}>{t('createGroup.groupInfo')}</Text>
+            
             <Input
-              label={t('createEvent.eventNameLabel')}
-              placeholder={t('createEvent.eventNamePlaceholder')}
-              value={eventName}
-              onChangeText={setEventName}
-              maxLength={VALIDATION.MAX_EVENT_NAME_LENGTH}
-              autoCapitalize="words"
-              autoCorrect={true}
-              editable={!isEditMode}
+              label={t('createGroup.groupNameLabel')}
+              value={groupName}
+              onChangeText={setGroupName}
+              placeholder={t('createGroup.groupNamePlaceholder')}
+              maxLength={50}
             />
 
             <Input
-              label={t('createEvent.descriptionLabel')}
-              placeholder={t('createEvent.descriptionPlaceholder')}
+              label={t('createGroup.descriptionLabel')}
               value={description}
               onChangeText={setDescription}
+              placeholder="Describe el grupo..."
               multiline
-              editable={!isEditMode}
               numberOfLines={3}
-              maxLength={VALIDATION.MAX_DESCRIPTION_LENGTH}
-              autoCapitalize="sentences"
-              autoCorrect={true}
+              maxLength={200}
             />
+          </Card>
 
-            <Input
-              label={t('createEvent.groupBudgetLabel')}
-              placeholder={t('createEvent.groupBudgetPlaceholder')}
-              value={groupBudget}
-              onChangeText={setGroupBudget}
-              keyboardType="decimal-pad"
-              editable={!isEditMode}
-            />
-
-            <Text style={styles.label}>{t('createEvent.currencyLabel')}</Text>
-            <TouchableOpacity
-              style={styles.currencySelector}
-              onPress={() => !isEditMode && setShowCurrencyPicker(!showCurrencyPicker)}
-              disabled={!!isEditMode}
-            >
-              <Text style={styles.currencyText}>
-                {CURRENCIES.find((c) => c.value === currency)?.label}
+          {/* Tipo de grupo */}
+          {!isEditMode && (
+            <Card style={styles.section}>
+              <Text style={styles.sectionTitle}>Tipo de grupo</Text>
+              <Text style={styles.sectionSubtitle}>
+                Elige cómo organizar los gastos
               </Text>
-              <Text style={styles.currencyArrow}>▼</Text>
-            </TouchableOpacity>
-
-            {showCurrencyPicker && (
-              <View style={styles.currencyPicker}>
-                {CURRENCIES.map((curr) => (
-                  <TouchableOpacity
-                    key={curr.value}
-                    style={styles.currencyOption}
-                    onPress={() => {
-                      setCurrency(curr.value);
-                      setShowCurrencyPicker(false);
-                    }}
-                  >
-                    <Text
-                      style={[
-                        styles.currencyOptionText,
-                        currency === curr.value && styles.currencyOptionSelected,
-                      ]}
-                    >
-                      {curr.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-          </Card>
-
-          <Card style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>{t('createEvent.participantsTitle')}</Text>
-              <TouchableOpacity onPress={addParticipantField}>
-                <Text style={styles.addButton}>{t('createEvent.addParticipant')}</Text>
-              </TouchableOpacity>
-            </View>
-
-            {participants.map((participant, index) => (
-              <View key={participant.id} style={styles.participantItem}>
-                <View style={styles.participantHeader}>
-                  <Text style={styles.participantNumber}>
-                    {t('event.participantName')} {index + 1}
+              
+              <View style={styles.typeContainer}>
+                <TouchableOpacity
+                  style={[
+                    styles.typeButton,
+                    groupType === 'project' && styles.typeButtonSelected,
+                  ]}
+                  onPress={() => setGroupType('project')}
+                >
+                  <Text style={styles.typeIcon}>📅</Text>
+                  <Text style={[
+                    styles.typeTitle,
+                    groupType === 'project' && styles.typeTitleSelected
+                  ]}>
+                    Proyecto/Viaje
                   </Text>
-                  {participants.length > 1 && (
-                    <TouchableOpacity
-                      onPress={() => removeParticipantField(participant.id)}
-                    >
-                      <Text style={styles.removeButton}>✕</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
+                  <Text style={styles.typeDescription}>
+                    Crea eventos específicos dentro del grupo
+                  </Text>
+                </TouchableOpacity>
 
-                <Input
-                  label={`${t('event.participantName')} *`}
-                  placeholder={t('createEvent.participantNamePlaceholder')}
-                  value={participant.name}
-                  onChangeText={(text) =>
-                    updateParticipant(participant.id, 'name', text)
-                  }
-                  autoCapitalize="words"
-                  autoCorrect={true}
-                  textContentType="name"
-                />
-
-                <Input
-                  label={t('createEvent.participantBudgetPlaceholder')}
-                  placeholder={t('createEvent.groupBudgetPlaceholder')}
-                  value={participant.budget}
-                  onChangeText={(text) =>
-                    updateParticipant(participant.id, 'budget', text)
-                  }
-                  keyboardType="decimal-pad"
-                  autoCorrect={false}
-                />
-
-                <Input
-                  label="Email (opcional)"
-                  placeholder="email@ejemplo.com"
-                  value={participant.email}
-                  onChangeText={(text) =>
-                    updateParticipant(participant.id, 'email', text)
-                  }
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  textContentType="emailAddress"
-                />
+                <TouchableOpacity
+                  style={[
+                    styles.typeButton,
+                    groupType === 'recurring' && styles.typeButtonSelected,
+                  ]}
+                  onPress={() => setGroupType('recurring')}
+                >
+                  <Text style={styles.typeIcon}>🏠</Text>
+                  <Text style={[
+                    styles.typeTitle,
+                    groupType === 'recurring' && styles.typeTitleSelected
+                  ]}>
+                    Gastos Recurrentes
+                  </Text>
+                  <Text style={styles.typeDescription}>
+                    Añade gastos directamente (piso, pareja...)
+                  </Text>
+                </TouchableOpacity>
               </View>
-            ))}
+            </Card>
+          )}
+
+          {/* Selección de icono */}
+          <Card style={styles.section}>
+            <Text style={styles.sectionTitle}>{t('createGroup.groupIcon')}</Text>
+            <View style={styles.iconGrid}>
+              {GROUP_ICONS.map((icon) => (
+                <TouchableOpacity
+                  key={icon}
+                  style={[
+                    styles.iconButton,
+                    selectedIcon === icon && styles.iconButtonSelected,
+                  ]}
+                  onPress={() => setSelectedIcon(icon)}
+                >
+                  <Text style={styles.iconText}>{icon}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </Card>
 
-          <Button
-            title={isEditMode ? t('createEvent.updateButton') : t('createEvent.createButton')}
-            onPress={handleCreateEvent}
-            loading={loading}
-            fullWidth
-            size="large"
-          />
-          
+          {/* Selección de color */}
+          <Card style={styles.section}>
+            <Text style={styles.sectionTitle}>{t('createGroup.groupColor')}</Text>
+            <View style={styles.colorGrid}>
+              {GROUP_COLORS.map((color) => (
+                <TouchableOpacity
+                  key={color}
+                  style={[
+                    styles.colorButton,
+                    { backgroundColor: color },
+                    selectedColor === color && styles.colorButtonSelected,
+                  ]}
+                  onPress={() => setSelectedColor(color)}
+                >
+                  {selectedColor === color && (
+                    <Text style={styles.colorCheckmark}>✓</Text>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Card>
+
+          {/* Gestión de participantes (solo en modo edición) */}
           {isEditMode && (
-            <Text style={styles.editModeNote}>
-              💡 En modo edición solo puedes agregar/quitar participantes. Para cambiar el nombre o presupuesto del evento, ve a la pantalla principal.
-            </Text>
+            <Card style={styles.section}>
+              <Text style={styles.sectionTitle}>Participantes ({members.length})</Text>
+              <Text style={styles.sectionSubtitle}>
+                Gestiona los miembros del grupo
+              </Text>
+              
+              {/* Añadir nuevo miembro */}
+              <View style={styles.addMemberContainer}>
+                <Input
+                  label="Añadir por email"
+                  value={newMemberEmail}
+                  onChangeText={setNewMemberEmail}
+                  placeholder="email@ejemplo.com"
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  style={styles.memberInput}
+                />
+                <TouchableOpacity
+                  style={styles.addMemberButton}
+                  onPress={handleAddMember}
+                >
+                  <Text style={styles.addMemberButtonText}>+ Añadir</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {/* Lista de miembros */}
+              {members.length > 0 && (
+                <View style={styles.membersList}>
+                  {members.map((member) => (
+                    <View key={member.id} style={styles.memberItem}>
+                      <View style={styles.memberInfo}>
+                        <Text style={styles.memberName}>{member.name}</Text>
+                        {member.email && (
+                          <Text style={styles.memberEmail}>{member.email}</Text>
+                        )}
+                      </View>
+                      <TouchableOpacity
+                        style={styles.removeMemberButton}
+                        onPress={() => handleRemoveMember(member.id, member.name)}
+                      >
+                        <Text style={styles.removeMemberButtonText}>✕</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </Card>
           )}
+
+          {/* Preview */}
+          <Card style={styles.section}>
+            <Text style={styles.sectionTitle}>{t('createGroup.preview')}</Text>
+            <View style={styles.previewCard}>
+              <View style={[styles.previewIcon, { backgroundColor: selectedColor }]}>
+                <Text style={styles.previewIconText}>{selectedIcon}</Text>
+              </View>
+              <View style={styles.previewInfo}>
+                <Text style={styles.previewName}>{groupName || 'Nombre del grupo'}</Text>
+                <Text style={styles.previewDescription}>
+                  {description || 'Sin descripción'}
+                </Text>
+              </View>
+            </View>
+          </Card>
+
+          {/* Botón de crear */}
+          <Button
+            title={isEditMode ? t('createGroup.updateButton') : t('createGroup.createButton')}
+            onPress={handleCreateGroup}
+            loading={loading}
+            disabled={loading || !groupName.trim()}
+          />
+
+          <View style={styles.spacing} />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -497,131 +522,304 @@ const getStyles = (theme: any) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerBar: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backButtonText: {
+  loadingText: {
     fontSize: 16,
-    color: theme.colors.primary,
-    fontWeight: '600',
   },
   keyboardView: {
     flex: 1,
   },
-  scrollContent: {
-    padding: 20,
-    paddingTop: 8, // Reduce el espacio superior
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: theme.colors.text,
-    marginBottom: 16,
-    marginTop: 0, // Sin margen superior
-  },
-  section: {
-    marginBottom: 20,
-  },
-  sectionHeader: {
+  header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: theme.colors.text,
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.text,
-    marginBottom: 8,
-  },
-  currencySelector: {
-    flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: theme.colors.surface,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: theme.colors.border,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginBottom: 8,
-  },
-  currencyText: {
-    fontSize: 16,
-    color: theme.colors.text,
-  },
-  currencyArrow: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-  },
-  currencyPicker: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    marginBottom: 16,
-    overflow: 'hidden',
-  },
-  currencyOption: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.inputBackground,
-  },
-  currencyOptionText: {
-    fontSize: 16,
-    color: theme.colors.text,
-  },
-  currencyOptionSelected: {
-    color: theme.colors.primary,
-    fontWeight: '600',
-  },
-  addButton: {
-    color: theme.colors.primary,
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  participantItem: {
-    marginBottom: 20,
-    paddingBottom: 20,
+    padding: 16,
+    backgroundColor: theme.colors.card,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
-  participantHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  backButton: {
+    width: 40,
+    height: 40,
     alignItems: 'center',
-    marginBottom: 12,
+    justifyContent: 'center',
   },
-  participantNumber: {
+  backButtonText: {
+    fontSize: 32,
+    color: theme.colors.primary,
+    fontWeight: '300',
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: theme.colors.text,
+  },
+  content: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 16,
+  },
+  section: {
+    marginBottom: 16,
+  },
+  sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: theme.colors.textSecondary,
+    color: theme.colors.text,
+    marginBottom: 16,
   },
-  removeButton: {
-    color: theme.colors.error,
-    fontSize: 20,
+  iconGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  iconButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 12,
+    backgroundColor: theme.colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: theme.colors.surface,
+  },
+  iconButtonSelected: {
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.isDark ? theme.colors.surface : '#EEF2FF',
+  },
+  iconText: {
+    fontSize: 28,
+  },
+  colorGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  colorButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: 'transparent',
+  },
+  colorButtonSelected: {
+    borderColor: theme.colors.text,
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  colorCheckmark: {
+    fontSize: 24,
+    color: theme.colors.card,
+    fontWeight: '700',
+  },
+  previewCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 12,
+  },
+  previewIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  previewIconText: {
+    fontSize: 28,
+  },
+  previewInfo: {
+    flex: 1,
+  },
+  previewName: {
+    fontSize: 18,
     fontWeight: '600',
+    color: theme.colors.text,
+    marginBottom: 4,
   },
-  editModeNote: {
-    marginTop: 16,
+  previewDescription: {
     fontSize: 14,
     color: theme.colors.textSecondary,
+  },
+  spacing: {
+    height: 32,
+  },
+  // Estilos para gestión de participantes
+  addMemberContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 8,
+    marginBottom: 16,
+  },
+  memberInput: {
+    flex: 1,
+  },
+  addMemberButton: {
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  addMemberButtonText: {
+    color: theme.colors.card,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  membersList: {
+    gap: 8,
+  },
+  memberItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  memberInfo: {
+    flex: 1,
+  },
+  memberName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.colors.text,
+    marginBottom: 2,
+  },
+  memberEmail: {
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+  },
+  removeMemberButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: theme.colors.error || '#EF4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removeMemberButtonText: {
+    color: theme.colors.card,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // Estilos para selector de tipo
+  sectionSubtitle: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    marginTop: 4,
+    marginBottom: 16,
+  },
+  typeContainer: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  typeButton: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    alignItems: 'center',
+  },
+  typeButtonSelected: {
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.isDark ? 'rgba(99, 102, 241, 0.1)' : 'rgba(99, 102, 241, 0.05)',
+  },
+  typeIcon: {
+    fontSize: 32,
+    marginBottom: 8,
+  },
+  typeTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.colors.text,
+    marginBottom: 4,
     textAlign: 'center',
-    lineHeight: 20,
+  },
+  typeTitleSelected: {
+    color: theme.colors.primary,
+  },
+  typeDescription: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  // 💰 Estilos para sección de presupuesto
+  budgetSection: {
+    backgroundColor: theme.isDark ? 'rgba(99, 102, 241, 0.1)' : 'rgba(99, 102, 241, 0.05)',
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
+  },
+  budgetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  budgetIcon: {
+    fontSize: 48,
+    marginRight: 16,
+  },
+  budgetHeaderText: {
+    flex: 1,
+  },
+  budgetTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: theme.colors.text,
+    marginBottom: 4,
+  },
+  budgetSubtitle: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+  },
+  budgetInputContainer: {
+    marginBottom: 16,
+  },
+  currencySelector: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  currencyButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    alignItems: 'center',
+  },
+  currencyButtonSelected: {
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primary,
+  },
+  currencyText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: theme.colors.text,
+  },
+  currencyTextSelected: {
+    color: '#FFFFFF',
+  },
+  budgetInput: {
+    fontSize: 18,
+  },
+  budgetHelp: {
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+    fontStyle: 'italic',
+    textAlign: 'center',
   },
 });

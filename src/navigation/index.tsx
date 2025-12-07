@@ -20,7 +20,6 @@ import {
   EventDetailScreen,
   AddExpenseScreen,
   SummaryScreen,
-  CreateGroupScreen,
   GroupEventsScreen,
   JoinEventScreen,
   JoinGroupScreen,
@@ -183,6 +182,7 @@ export const Navigation: React.FC = () => {
               component={MainTabNavigator}
               options={{ headerShown: false }}
             />
+            {/* TODO MIGRACIÓN: CreateEvent debe usar AddExpenseScreen o redirigir correctamente */}
             <Stack.Screen 
               name="CreateEvent" 
               component={CreateEventScreen}
@@ -194,7 +194,7 @@ export const Navigation: React.FC = () => {
             />
             <Stack.Screen 
               name="CreateGroup" 
-              component={CreateGroupScreen}
+              component={CreateEventScreen}
               options={{ 
                 headerShown: true,
                 title: t('createGroup.title'),

@@ -5,15 +5,16 @@
 export { HomeScreen } from './HomeScreen';
 export { LoginScreen } from './LoginScreen';
 export { RegisterScreen } from './RegisterScreen';
-export { CreateEventScreen } from './CreateEventScreen';
+// NOTA MIGRACIÓN: CreateEventScreen ahora es el contenedor (antiguo CreateGroupScreen)
+// La pantalla para crear gastos individuales (antiguo CreateEvent) ahora es AddExpenseScreen
+export { CreateEventScreen } from './CreateEventScreen'; // Contenedor de eventos
 export { EventDetailScreen } from './EventDetailScreen';
-export { AddExpenseScreen } from './AddExpenseScreen';
+export { AddExpenseScreen } from './AddExpenseScreen'; // Crear gastos individuales
 export { SummaryScreen } from './SummaryScreen';
 export { EventsScreen } from './EventsScreen';
 export { GroupsScreen } from './GroupsScreen';
 export { GroupEventsScreen } from './GroupEventsScreen';
 export { SettingsScreen } from './SettingsScreen';
-export { CreateGroupScreen } from './CreateGroupScreen';
 export { JoinEventScreen } from './JoinEventScreen';
 export { JoinGroupScreen } from './JoinGroupScreen';
 export { ChatScreen } from './ChatScreen';
