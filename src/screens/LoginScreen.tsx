@@ -225,28 +225,17 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
     handleGoogleLoginSuccess();
   }, [googleLoading, googleError, isEnabled]);
 
-  const handleDismissKeyboard = () => {
-    try {
-      Keyboard.dismiss();
-    } catch (error) {
-      console.error('❌ Error dismissing keyboard:', error);
-    }
-  };
-
   return (
     <SafeAreaView edges={['top']} style={styles.container}>
       <TouchableWithoutFeedback 
-        onPress={handleDismissKeyboard}
-        accessible={false}
+        onPress={() => Keyboard.dismiss()}
       >
         <ScrollView
           ref={scrollViewRef}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
-          keyboardDismissMode="on-drag"
-          bounces={true}
-          scrollEnabled={true}
+          keyboardDismissMode="interactive"
         >
           <View style={styles.header}>
             <View style={styles.logoContainer}>
@@ -291,10 +280,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
             <Button
               testID="login-button"
               title={t('auth.loginButton')}
-              onPress={() => {
-                handleDismissKeyboard();
-                handleLogin();
-              }}
+              onPress={handleLogin}
               loading={loading}
               fullWidth
               size="large"
@@ -304,10 +290,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
             {isAvailable && isEnrolled && biometricType && (
               <TouchableOpacity
                 style={styles.biometricButton}
-                onPress={() => {
-                  handleDismissKeyboard();
-                  handleBiometricLogin();
-                }}
+                onPress={handleBiometricLogin}
                 disabled={!hasSavedCredentials}
                 activeOpacity={hasSavedCredentials ? 0.7 : 1}
               >
@@ -331,10 +314,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
               <TouchableOpacity
                 testID="google-signin-button"
                 style={styles.socialButton}
-                onPress={() => {
-                  handleDismissKeyboard();
-                  handleGoogleLogin();
-                }}
+                onPress={handleGoogleLogin}
                 disabled={googleLoading}
               >
                 <Text style={styles.googleIcon}>G</Text>

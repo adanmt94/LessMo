@@ -3,7 +3,7 @@
  * Generado con estilo Lovable.dev
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   TextInput,
@@ -27,22 +27,9 @@ export const Input: React.FC<InputProps> = ({
   containerStyle,
   icon,
   style,
-  onFocus,
-  onBlur,
   ...props
 }) => {
-  const [isFocused, setIsFocused] = useState(false);
   const { theme } = useTheme();
-
-  const handleFocus = (e: any) => {
-    setIsFocused(true);
-    onFocus?.(e);
-  };
-
-  const handleBlur = (e: any) => {
-    setIsFocused(false);
-    onBlur?.(e);
-  };
 
   return (
     <View style={[styles.container, containerStyle]}>
@@ -53,14 +40,7 @@ export const Input: React.FC<InputProps> = ({
           styles.inputContainer,
           { 
             backgroundColor: theme.colors.card, 
-            borderColor: error ? theme.colors.error : (isFocused ? theme.colors.primary : theme.colors.border)
-          },
-          isFocused && {
-            shadowColor: theme.colors.primary,
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 4,
-            elevation: 2,
+            borderColor: error ? theme.colors.error : theme.colors.border
           },
         ]}
       >
@@ -69,9 +49,7 @@ export const Input: React.FC<InputProps> = ({
         <TextInput
           style={[styles.input, { color: theme.colors.text }, icon ? styles.inputWithIcon : undefined, style]}
           placeholderTextColor={theme.colors.placeholder}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          keyboardShouldPersistTaps="handled"
+          autoCorrect={false}
           {...props}
         />
       </View>
