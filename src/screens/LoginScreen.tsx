@@ -339,6 +339,16 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
             </View>
 
             <TouchableOpacity
+              testID="forgot-password-link"
+              style={styles.forgotPasswordLink}
+              onPress={() => navigation.navigate('ForgotPassword')}
+            >
+              <Text style={styles.forgotPasswordText}>
+                ¿Olvidaste tu contraseña?
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
               testID="register-link"
               style={styles.registerLink}
               onPress={() => navigation.navigate('Register')}
@@ -476,6 +486,15 @@ const getStyles = (theme: any) => StyleSheet.create({
   biometricTextDisabled: {
     color: theme.colors.textTertiary,
     fontSize: 13,
+  },
+  forgotPasswordLink: {
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  forgotPasswordText: {
+    fontSize: 14,
+    color: theme.colors.primary,
+    fontWeight: '600',
   },
   registerLink: {
     alignItems: 'center',

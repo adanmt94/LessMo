@@ -189,6 +189,7 @@ export interface Settlement {
 export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
+  ForgotPassword: undefined;
   MainTabs: undefined;
   
   // Grupos (contenedores con presupuesto)

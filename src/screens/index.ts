@@ -5,6 +5,7 @@
 export { HomeScreen } from './HomeScreen';
 export { LoginScreen } from './LoginScreen';
 export { RegisterScreen } from './RegisterScreen';
+export { ForgotPasswordScreen } from './ForgotPasswordScreen';
 // NOTA MIGRACIÓN: CreateEventScreen ahora es el contenedor (antiguo CreateGroupScreen)
 // La pantalla para crear gastos individuales (antiguo CreateEvent) ahora es AddExpenseScreen
 export { CreateEventScreen } from './CreateEventScreen'; // Contenedor de eventos

@@ -16,6 +16,7 @@ import { initializeSyncService } from '../services/syncService';
 import {
   LoginScreen,
   RegisterScreen,
+  ForgotPasswordScreen,
   CreateEventScreen,
   EventDetailScreen,
   AddExpenseScreen,
@@ -171,6 +172,11 @@ export const Navigation: React.FC = () => {
             <Stack.Screen 
               name="Register" 
               component={RegisterScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen 
+              name="ForgotPassword" 
+              component={ForgotPasswordScreen}
               options={{ headerShown: false }}
             />
           </>

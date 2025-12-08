@@ -14,7 +14,8 @@ import {
   GoogleAuthProvider,
   OAuthProvider,
   signInWithCredential,
-  signInAnonymously as firebaseSignInAnonymously
+  signInAnonymously as firebaseSignInAnonymously,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { 
   getFirestore, 
@@ -164,6 +165,26 @@ export const signOut = async (): Promise<void> => {
     await firebaseSignOut(auth);
   } catch (error: any) {
     throw new Error(error.message);
+  }
+};
+
+/**
+ * Enviar email de recuperación de contraseña
+ */
+export const resetPassword = async (email: string): Promise<void> => {
+  try {
+    await sendPasswordResetEmail(auth, email, {
+      url: 'https://lessmo-9023f.firebaseapp.com',
+      handleCodeInApp: false,
+    });
+  } catch (error: any) {
+    if (error.code === 'auth/user-not-found') {
+      throw new Error('No existe una cuenta con este email');
+    } else if (error.code === 'auth/invalid-email') {
+      throw new Error('Email inválido');
+    } else {
+      throw new Error('Error al enviar email de recuperación: ' + error.message);
+    }
   }
 };
 
@@ -1843,6 +1864,7 @@ export default {
   registerWithEmail,
   signInWithEmail,
   signOut,
+  resetPassword,
   onAuthChange,
   createEvent,
   getEvent,
