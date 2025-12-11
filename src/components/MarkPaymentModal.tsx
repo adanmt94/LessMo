@@ -72,7 +72,7 @@ export const MarkPaymentModal: React.FC<Props> = ({
     { id: 'paypal', name: 'PayPal', hasLink: true },
     { id: 'venmo', name: 'Venmo', hasLink: true },
     { id: 'apple_pay', name: 'Apple Pay', hasLink: false },
-    { id: 'google_pay', name: 'Google Pay', hasLink: false },
+    { id: 'google_pay', name: 'Google Pay', hasLink: true },
     { id: 'bank_transfer', name: 'Transferencia', hasLink: false },
     { id: 'cash', name: 'Efectivo', hasLink: false },
     { id: 'other', name: 'Otro', hasLink: false },
@@ -293,7 +293,11 @@ export const MarkPaymentModal: React.FC<Props> = ({
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.content} showsVerticalScrollIndicator={true}>
+          <ScrollView 
+            style={styles.content} 
+            contentContainerStyle={{ paddingRight: 24 }}
+            showsVerticalScrollIndicator={true}
+          >
             {/* Info del pago */}
             <View style={[styles.paymentInfo, { backgroundColor: theme.colors.background }]}>
               <Text style={[styles.paymentAmount, { color: theme.colors.primary }]}>
@@ -373,8 +377,8 @@ export const MarkPaymentModal: React.FC<Props> = ({
                         <View style={styles.methodLogoContainer}>
                           <PaymentMethodLogo 
                             method={method.id} 
-                            width={method.id === 'apple_pay' || method.id === 'google_pay' ? 50 : 40} 
-                            height={40} 
+                            width={80} 
+                            height={80} 
                           />
                         </View>
                         <Text
@@ -576,7 +580,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
     marginBottom: 8,
     minHeight: 110,
     justifyContent: 'center',

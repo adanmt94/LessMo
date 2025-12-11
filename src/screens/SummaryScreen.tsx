@@ -57,6 +57,7 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedSettlement, setSelectedSettlement] = useState<any>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [settlementType, setSettlementType] = useState<'traditional' | 'optimized'>('optimized');
 
   const {
     expenses,
@@ -107,17 +108,41 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   const handleMarkPayment = (settlement: any) => {
-    const from = getParticipantById(settlement.from);
-    const to = getParticipantById(settlement.to);
+    console.log('💰 handleMarkPayment llamado con:', settlement);
     
-    if (!from || !to) return;
+    // Manejar tanto IDs (string) como objetos Participant
+    const fromParticipant = typeof settlement.from === 'string' 
+      ? getParticipantById(settlement.from)
+      : settlement.from;
+    const toParticipant = typeof settlement.to === 'string'
+      ? getParticipantById(settlement.to)
+      : settlement.to;
     
-    setSelectedSettlement({
-      ...settlement,
-      fromName: from.name,
-      toName: to.name,
+    console.log('🔍 Participantes encontrados:', { 
+      fromParticipant: fromParticipant ? fromParticipant.name : 'NULL', 
+      toParticipant: toParticipant ? toParticipant.name : 'NULL' 
     });
+    
+    if (!fromParticipant || !toParticipant) {
+      console.log('⚠️ No se encontraron participantes:', { from: settlement.from, to: settlement.to });
+      Alert.alert('Error', 'No se pudieron encontrar los participantes');
+      return;
+    }
+    
+    const settlementData = {
+      ...settlement,
+      from: fromParticipant.id,
+      to: toParticipant.id,
+      fromName: fromParticipant.name,
+      toName: toParticipant.name,
+    };
+    
+    console.log('✅ Seteando settlement y abriendo modal:', settlementData);
+    
+    setSelectedSettlement(settlementData);
     setShowPaymentModal(true);
+    
+    console.log('✅ Modal debería estar abierto ahora');
   };
 
   const handlePaymentMarked = () => {
@@ -501,8 +526,8 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
           })}
         </Card>
 
-        {/* Optimización de Liquidaciones */}
-        {event && participants.length > 0 && expenses.length > 0 && (
+        {/* Optimización de Liquidaciones - COMENTADO, se usa el de abajo con métodos de pago */}
+        {/* {event && participants.length > 0 && expenses.length > 0 && (
           <SettlementOptimizationCard
             optimization={optimizeSettlements(expenses, participants)}
             currentUserId={user?.uid}
@@ -521,7 +546,7 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
               });
             }}
           />
-        )}
+        )} */}
 
         {/* Liquidaciones sugeridas */}
         {settlements.length > 0 && (
@@ -531,98 +556,214 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
               {t('eventSummary.settlementsSubtitle')}
             </Text>
 
-            {settlements.map((settlement, index) => {
-              const fromParticipant = getParticipantById(settlement.from);
-              const toParticipant = getParticipantById(settlement.to);
+            {/* Selector de tipo de liquidación */}
+            <View style={styles.settlementTypeSelector}>
+              <TouchableOpacity
+                style={[
+                  styles.settlementTypeButton,
+                  settlementType === 'traditional' && styles.settlementTypeButtonActive,
+                  { borderColor: theme.colors.border, backgroundColor: settlementType === 'traditional' ? theme.colors.primary : 'transparent' }
+                ]}
+                onPress={() => setSettlementType('traditional')}
+              >
+                <Text style={[
+                  styles.settlementTypeButtonText,
+                  { color: settlementType === 'traditional' ? '#FFFFFF' : theme.colors.text }
+                ]}>
+                  📋 Tradicional
+                </Text>
+              </TouchableOpacity>
               
-              // Buscar si hay un pago asociado a este settlement
-              const relatedPayment = payments.find(p => 
-                p.fromUserId === settlement.from && 
-                p.toUserId === settlement.to &&
-                (p.status === 'pending' || p.status === 'sent_waiting_confirmation')
-              );
-              
-              const paymentStatus = relatedPayment?.status;
-              
-              // Determinar si el usuario actual es el deudor (from) o acreedor (to)
-              // PRIORIDAD: 1. userId, 2. email del participante, 3. match por nombre flexible
-              const userEmail = user?.email?.toLowerCase();
-              const userEmailPrefix = user?.email?.split('@')[0]?.toLowerCase(); // "adanmontero7"
-              const userDisplayName = user?.displayName?.toLowerCase();
-              const userFirstName = user?.displayName?.split(' ')[0]?.toLowerCase();
-              
-              // Normalizar nombres (quitar acentos para comparar)
-              const normalizeString = (str: string) => 
-                str.toLowerCase()
-                  .normalize('NFD')
-                  .replace(/[\u0300-\u036f]/g, ''); // Quita acentos
-              
-              const participantNameNormalized = normalizeString(fromParticipant?.name || '');
-              const toParticipantNameNormalized = normalizeString(toParticipant?.name || '');
-              
-              // Comparar: el prefijo del email contiene el nombre del participante O viceversa
-              const emailMatchesName = userEmailPrefix && (
-                userEmailPrefix.includes(participantNameNormalized) || 
-                participantNameNormalized.includes(userEmailPrefix.substring(0, 4)) // Primeros 4 chars
-              );
-              
-              const emailMatchesToName = userEmailPrefix && (
-                userEmailPrefix.includes(toParticipantNameNormalized) || 
-                toParticipantNameNormalized.includes(userEmailPrefix.substring(0, 4))
-              );
-              
-              const isDebtor = 
-                fromParticipant?.userId === user?.uid || // Por userId
-                (fromParticipant?.email?.toLowerCase() === userEmail) || // Por email directo
-                (fromParticipant?.name.toLowerCase() === userDisplayName) || // Por displayName
-                (fromParticipant?.name.toLowerCase() === userFirstName) || // Por primer nombre
-                emailMatchesName; // Por coincidencia email-nombre
-              
-              const isCreditor = 
-                toParticipant?.userId === user?.uid || 
-                (toParticipant?.email?.toLowerCase() === userEmail) ||
-                (toParticipant?.name.toLowerCase() === userDisplayName) ||
-                (toParticipant?.name.toLowerCase() === userFirstName) ||
-                emailMatchesToName;
-              
-              // Solo mostrar botón si:
-              // 1. El usuario es el deudor (debe pagar)
-              // 2. O el usuario es el acreedor Y hay un pago pendiente de confirmar
-              const shouldShowButton = isDebtor || (isCreditor && paymentStatus === 'sent_waiting_confirmation');
+              <TouchableOpacity
+                style={[
+                  styles.settlementTypeButton,
+                  settlementType === 'optimized' && styles.settlementTypeButtonActive,
+                  { borderColor: theme.colors.border, backgroundColor: settlementType === 'optimized' ? theme.colors.primary : 'transparent' }
+                ]}
+                onPress={() => setSettlementType('optimized')}
+              >
+                <Text style={[
+                  styles.settlementTypeButtonText,
+                  { color: settlementType === 'optimized' ? '#FFFFFF' : theme.colors.text }
+                ]}>
+                  ⚡ Optimizada
+                </Text>
+              </TouchableOpacity>
+            </View>
 
-              return (
-                <View key={index} style={styles.settlementItem}>
-                  <View style={styles.settlementInfo}>
-                    <Text style={styles.settlementText}>
-                      <Text style={styles.settlementName}>{fromParticipant?.name}</Text>
-                      {' → '}
-                      <Text style={styles.settlementName}>{toParticipant?.name}</Text>
+            {/* Mostrar liquidaciones según el tipo seleccionado */}
+            {(() => {
+              const optimizationResult = optimizeSettlements(expenses, participants);
+              const displaySettlements = settlementType === 'optimized' 
+                ? (optimizationResult?.optimized || [])
+                : (optimizationResult?.traditional || settlements);
+
+              console.log('🔍 Display Settlements:', {
+                type: settlementType,
+                count: displaySettlements?.length || 0,
+                optimized: optimizationResult?.optimized?.length || 0,
+                traditional: optimizationResult?.traditional?.length || 0,
+                settlements: displaySettlements
+              });
+
+              if (!displaySettlements || displaySettlements.length === 0) {
+                return (
+                  <View style={styles.emptySettlements}>
+                    <Text style={styles.emptySettlementsText}>
+                      No hay liquidaciones pendientes
                     </Text>
-                    <Text style={styles.settlementAmount}>
-                      {currencySymbol}{settlement.amount.toFixed(2)}
-                    </Text>
-                    {paymentStatus === 'sent_waiting_confirmation' && (
-                      <Text style={styles.paymentStatusBadge}>⏳ Pendiente confirmación</Text>
-                    )}
                   </View>
-                  {shouldShowButton && (
-                    <TouchableOpacity
-                      style={[
-                        styles.payButton,
-                        paymentStatus === 'sent_waiting_confirmation' && styles.payButtonPending
-                      ]}
-                      onPress={() => handleMarkPayment(settlement)}
-                    >
-                      <Text style={styles.payButtonText}>
-                        {paymentStatus === 'sent_waiting_confirmation' && isCreditor
-                          ? '✓ Confirmar' 
-                          : '💰 Realizar Pago'}
+                );
+              }
+
+              return displaySettlements.map((settlement, index) => {
+                // El servicio optimizado retorna objetos Participant, no IDs
+                const fromParticipant = typeof settlement.from === 'string' 
+                  ? getParticipantById(settlement.from)
+                  : settlement.from;
+                const toParticipant = typeof settlement.to === 'string'
+                  ? getParticipantById(settlement.to)
+                  : settlement.to;
+                
+                if (!fromParticipant || !toParticipant) {
+                  console.log('⚠️ Participante no encontrado:', settlement);
+                  return null;
+                }
+
+                // Asegurar que tenemos los IDs
+                const fromId = fromParticipant.id;
+                const toId = toParticipant.id;
+                
+                // Buscar si hay un pago asociado a este settlement
+                const relatedPayment = payments.find(p => 
+                  p.fromUserId === fromId && 
+                  p.toUserId === toId &&
+                  (p.status === 'pending' || p.status === 'sent_waiting_confirmation')
+                );
+                
+                const paymentStatus = relatedPayment?.status;
+                
+                // Determinar si el usuario actual es el deudor (from) o acreedor (to)
+                // PRIORIDAD: 1. userId, 2. email del participante, 3. match por nombre flexible
+                const userEmail = user?.email?.toLowerCase();
+                const userEmailPrefix = user?.email?.split('@')[0]?.toLowerCase();
+                const userDisplayName = user?.displayName?.toLowerCase();
+                const userFirstName = user?.displayName?.split(' ')[0]?.toLowerCase();
+                
+                // Normalizar nombres (quitar acentos para comparar)
+                const normalizeString = (str: string) => 
+                  str.toLowerCase()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '');
+                
+                const participantNameNormalized = normalizeString(fromParticipant?.name || '');
+                const toParticipantNameNormalized = normalizeString(toParticipant?.name || '');
+                
+                // Comparar: el prefijo del email contiene el nombre del participante O viceversa
+                const emailMatchesName = userEmailPrefix && (
+                  userEmailPrefix.includes(participantNameNormalized) || 
+                  participantNameNormalized.includes(userEmailPrefix.substring(0, 4))
+                );
+                
+                const emailMatchesToName = userEmailPrefix && (
+                  userEmailPrefix.includes(toParticipantNameNormalized) || 
+                  toParticipantNameNormalized.includes(userEmailPrefix.substring(0, 4))
+                );
+                
+                // Verificar si el usuario actual es el deudor o acreedor
+                const isDebtor = 
+                  fromParticipant?.userId === user?.uid ||
+                  fromParticipant?.email?.toLowerCase() === userEmail ||
+                  fromParticipant?.name.toLowerCase() === userDisplayName ||
+                  fromParticipant?.name.toLowerCase() === userFirstName ||
+                  emailMatchesName;
+                
+                const isCreditor = 
+                  toParticipant?.userId === user?.uid || 
+                  toParticipant?.email?.toLowerCase() === userEmail ||
+                  toParticipant?.name.toLowerCase() === userDisplayName ||
+                  toParticipant?.name.toLowerCase() === userFirstName ||
+                  emailMatchesToName;
+                
+                // Log para debugging
+                console.log(`💰 Settlement ${index} (${settlementType}):`, {
+                  from: fromParticipant.name,
+                  fromId: fromParticipant.id,
+                  to: toParticipant.name,
+                  toId: toParticipant.id,
+                  amount: settlement.amount,
+                  isDebtor,
+                  isCreditor,
+                  userId: user?.uid,
+                  userEmail,
+                  fromEmail: fromParticipant.email,
+                  toEmail: toParticipant.email
+                });
+                
+                // Determinar si el botón debe mostrarse y ser clickeable
+                const canPay = isDebtor || (isCreditor && paymentStatus === 'sent_waiting_confirmation');
+                const buttonText = paymentStatus === 'sent_waiting_confirmation' && isCreditor
+                  ? '✓ Confirmar' 
+                  : '💰 Realizar Pago';
+
+                console.log(`🔘 Botón para settlement ${index}:`, { canPay, isDebtor, isCreditor, buttonText });
+
+                return (
+                  <View key={`settlement-${settlementType}-${index}`} style={styles.settlementItem}>
+                    <View style={styles.settlementInfo}>
+                      <Text style={styles.settlementText}>
+                        <Text style={styles.settlementName}>{fromParticipant.name}</Text>
+                        {' → '}
+                        <Text style={styles.settlementName}>{toParticipant.name}</Text>
                       </Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              );
-            })}
+                      <Text style={styles.settlementAmount}>
+                        {currencySymbol}{settlement.amount.toFixed(2)}
+                      </Text>
+                      {paymentStatus === 'sent_waiting_confirmation' && (
+                        <Text style={styles.paymentStatusBadge}>⏳ Pendiente confirmación</Text>
+                      )}
+                    </View>
+                    
+                    {/* Botón SOLO si eres deudor, badge si eres acreedor */}
+                    {isDebtor ? (
+                      <TouchableOpacity
+                        style={[
+                          styles.payButton,
+                          { backgroundColor: theme.colors.primary }
+                        ]}
+                        onPress={() => {
+                          console.log('🔘 Botón presionado:', { isDebtor, settlement });
+                          handleMarkPayment(settlement);
+                        }}
+                      >
+                        <Text style={[styles.payButtonText, { color: '#FFFFFF' }]}>
+                          💰 Realizar Pago
+                        </Text>
+                      </TouchableOpacity>
+                    ) : isCreditor && paymentStatus === 'sent_waiting_confirmation' ? (
+                      <TouchableOpacity
+                        style={[
+                          styles.payButton,
+                          { backgroundColor: theme.colors.success || '#10B981' }
+                        ]}
+                        onPress={() => {
+                          console.log('🔘 Confirmar pago presionado:', { isCreditor, settlement });
+                          handleMarkPayment(settlement);
+                        }}
+                      >
+                        <Text style={[styles.payButtonText, { color: '#FFFFFF' }]}>
+                          ✓ Confirmar
+                        </Text>
+                      </TouchableOpacity>
+                    ) : isCreditor ? (
+                      <View style={styles.creditorBadge}>
+                        <Text style={styles.creditorBadgeText}>✅ Te deben</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                );
+              });
+            })()}
           </Card>
         )}
         </ViewShot>
@@ -864,6 +1005,15 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 8,
     marginBottom: 8,
   },
+  emptySettlements: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  emptySettlementsText: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+  },
   settlementInfo: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -899,11 +1049,31 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  payButtonDisabled: {
+    backgroundColor: theme.colors.border,
+    opacity: 0.5,
+  },
+  payButtonTextDisabled: {
+    color: theme.colors.textSecondary,
+  },
   paymentStatusBadge: {
     fontSize: 11,
     color: theme.colors.warning || '#F59E0B',
     fontWeight: '600',
     marginTop: 4,
+  },
+  creditorBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: (theme.colors.success || '#10B981') + '20',
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  creditorBadgeText: {
+    fontSize: 13,
+    color: theme.colors.success || '#10B981',
+    fontWeight: '700',
   },
   exportButtons: {
     flexDirection: 'row',
@@ -1026,5 +1196,35 @@ const getStyles = (theme: any) => StyleSheet.create({
     textAlign: 'center',
     letterSpacing: 0.3,
     lineHeight: 16,
+  },
+  settlementTypeSelector: {
+    flexDirection: 'row',
+    padding: 16,
+    paddingBottom: 8,
+    gap: 12,
+  },
+  settlementTypeButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.surface,
+    borderWidth: 2,
+    borderColor: theme.colors.border,
+  },
+  settlementTypeButtonActive: {
+    backgroundColor: theme.colors.primary + '15',
+    borderColor: theme.colors.primary,
+  },
+  settlementTypeButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+  },
+  settlementTypeButtonTextActive: {
+    color: theme.colors.primary,
+    fontWeight: '700',
   },
 });

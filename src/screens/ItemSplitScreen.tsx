@@ -56,7 +56,7 @@ export function ItemSplitScreen({
     setItems(prevItems =>
       prevItems.map(item => {
         if (item.id === itemId) {
-          const isAssigned = item.assignedTo.includes(participantId);
+          const isAssigned = item.assignedTo?.includes(participantId) || false;
           const newAssignedTo = isAssigned
             ? item.assignedTo.filter(id => id !== participantId)
             : [...item.assignedTo, participantId];
@@ -96,7 +96,7 @@ export function ItemSplitScreen({
 
   const getTotalByParticipant = (participantId: string): number => {
     return items.reduce((total, item) => {
-      if (item.assignedTo.includes(participantId)) {
+      if (item.assignedTo?.includes(participantId)) {
         return total + item.price / item.assignedTo.length;
       }
       return total;
@@ -294,7 +294,7 @@ export function ItemSplitScreen({
 
               <View style={styles.participantsList}>
                 {participants.map(participant => {
-                  const isActive = item.assignedTo.includes(participant.id);
+                  const isActive = item.assignedTo?.includes(participant.id) || false;
                   return (
                     <TouchableOpacity
                       key={participant.id}

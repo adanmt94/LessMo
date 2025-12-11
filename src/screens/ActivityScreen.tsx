@@ -139,7 +139,7 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
         }
       }
 
-      // Cargar grupos recientes (sin índice compuesto)
+      // Cargar eventos recientes (sin índice compuesto)
       const groupsQuery = query(
         collection(db, 'groups'),
         where('memberIds', 'array-contains', user.uid),

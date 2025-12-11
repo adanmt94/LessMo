@@ -60,7 +60,7 @@ const EventCardComponent: React.FC<EventCardProps> = ({
           <View style={styles.detail}>
             <Text style={styles.detailLabel}>Participantes</Text>
             <Text style={styles.detailValue}>
-              👥 {event.participantIds.length}
+              👥 {event.participantIds?.length || 0}
             </Text>
           </View>
           
@@ -84,7 +84,7 @@ const EventCardComponent: React.FC<EventCardProps> = ({
           </View>
         </View>
 
-        {/* Badge de grupo si corresponde */}
+        {/* Badge de evento si corresponde */}
         {showGroupBadge && groupName && (
           <View style={styles.metaRow}>
             <View style={styles.groupBadgeInline}>
@@ -100,7 +100,7 @@ const EventCardComponent: React.FC<EventCardProps> = ({
           </View>
         )}
 
-        {/* Código de invitación si no hay grupo */}
+        {/* Código de invitación si no hay evento */}
         {!showGroupBadge && event.inviteCode && (
           <View style={styles.inviteCodeContainer}>
             <Text style={styles.inviteCodeLabel}>Código:</Text>
@@ -120,7 +120,7 @@ const areEqual = (prevProps: EventCardProps, nextProps: EventCardProps) => {
     prevProps.event.description === nextProps.event.description &&
     prevProps.event.status === nextProps.event.status &&
     prevProps.event.initialBudget === nextProps.event.initialBudget &&
-    prevProps.event.participantIds.length === nextProps.event.participantIds.length &&
+    (prevProps.event.participantIds?.length || 0) === (nextProps.event.participantIds?.length || 0) &&
     prevProps.event.inviteCode === nextProps.event.inviteCode &&
     prevProps.showGroupBadge === nextProps.showGroupBadge &&
     prevProps.groupName === nextProps.groupName

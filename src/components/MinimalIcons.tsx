@@ -23,7 +23,7 @@ export const CalendarIcon: React.FC<IconProps> = ({ size = 20, color = '#6366F1'
   </View>
 );
 
-// 👥 PEOPLE ICON (Participantes, grupos)
+// 👥 PEOPLE ICON (Participantes, eventos)
 export const PeopleIcon: React.FC<IconProps> = ({ size = 20, color = '#6366F1', focused = true }) => (
   <View style={[styles.container, { width: size, height: size }]}>
     <View style={[styles.circleOutline, styles.circleLeft, { 

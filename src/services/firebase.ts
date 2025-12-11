@@ -255,8 +255,8 @@ export const signInWithGoogleToken = async (idToken: string): Promise<User> => {
   }
 };
 
-// ==================== GRUPOS (CONTENEDORES CON PRESUPUESTO) ====================
-// NOTA: En Firestore se llaman "events" pero son GRUPOS/CONTENEDORES
+// ==================== EVENTOS (CONTENEDORES CON PRESUPUESTO) ====================
+// NOTA: En Firestore se llaman "events" pero son EVENTOS/CONTENEDORES
 // TODO: Migrar colección de "events" a "groups" en Firestore
 
 /**
@@ -272,9 +272,9 @@ export const generateInviteCode = (): string => {
 };
 
 /**
- * Crear nuevo grupo (contenedor con presupuesto)
- * NOTA: La función se llama createEvent pero crea un GRUPO
- * Un grupo contiene múltiples eventos/gastos individuales
+ * Crear nuevo evento (contenedor con presupuesto)
+ * NOTA: La función se llama createEvent pero crea un EVENTO
+ * Un evento contiene múltiples eventos/gastos individuales
  */
 export const createEvent = async (
   name: string,
@@ -311,7 +311,7 @@ export const createEvent = async (
     
     const docRef = await addDoc(collection(db, 'events'), eventData);
     
-    // Si el evento pertenece a un grupo, actualizar el array eventIds del grupo
+    // Si el evento pertenece a un evento, actualizar el array eventIds del evento
     if (groupId) {
       try {
         const groupRef = doc(db, 'groups', groupId);
@@ -667,6 +667,10 @@ const updateBalancesAfterExpense = async (
     // El balance representa el saldo disponible de su presupuesto individual
     
     if (splitType === 'equal') {
+      if (!participantIds || participantIds.length === 0) {
+        console.error('[FIREBASE] No hay participantes para dividir el gasto');
+        return;
+      }
       const splitAmount = amount / participantIds.length;
       
       for (const participantId of participantIds) {
@@ -755,7 +759,7 @@ export const updateExpense = async (
     await revertBalanceChanges(
       originalExpense.paidBy,
       originalExpense.amount,
-      originalExpense.participantIds,
+      originalExpense.participantIds || [],
       originalExpense.splitType,
       originalExpense.customSplits,
       originalExpense.percentageSplits
@@ -808,6 +812,10 @@ const revertBalanceChanges = async (
     const batch = writeBatch(db);
     
     if (splitType === 'equal') {
+      if (!participantIds || participantIds.length === 0) {
+        console.error('[FIREBASE] No hay participantes para revertir el gasto');
+        return;
+      }
       const splitAmount = amount / participantIds.length;
       
       for (const participantId of participantIds) {
@@ -875,10 +883,15 @@ export const getEventExpenses = async (eventId: string): Promise<Expense[]> => {
     );
     
     const querySnapshot = await getDocs(q);
-    const expenses = querySnapshot.docs.map(doc => ({ 
-      id: doc.id, 
-      ...doc.data() 
-    } as Expense));
+    const expenses = querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      return { 
+        id: doc.id, 
+        ...data,
+        // Normalizar participantIds para evitar errores
+        participantIds: data.participantIds || data.beneficiaries || [],
+      } as Expense;
+    });
     
     // Ordenar en memoria para evitar índice compuesto
     expenses.sort((a, b) => {
@@ -960,10 +973,10 @@ export const deleteExpense = async (expenseId: string): Promise<void> => {
   }
 };
 
-// ==================== GRUPOS ====================
+// ==================== EVENTOS ====================
 
 /**
- * Crear nuevo grupo
+ * Crear nuevo evento
  */
 export const createGroup = async (
   name: string,
@@ -985,7 +998,7 @@ export const createGroup = async (
       createdAt: new Date(),
       memberIds: [createdBy],
       eventIds: [],
-      type: type || 'project', // Por defecto 'project' (compatible con grupos antiguos)
+      type: type || 'project', // Por defecto 'project' (compatible con eventos antiguos)
       currency: currency || 'EUR', // Moneda por defecto
     };
     
@@ -1005,7 +1018,7 @@ export const createGroup = async (
     }
     
     const docRef = await addDoc(collection(db, 'groups'), groupData);
-    console.log('✅ Grupo creado:', docRef.id, 'tipo:', type || 'project', 'código:', inviteCode);
+    console.log('✅ Evento creado:', docRef.id, 'tipo:', type || 'project', 'código:', inviteCode);
     
     // Si es tipo 'recurring', crear evento "General" automáticamente
     if (type === 'recurring') {
@@ -1015,18 +1028,18 @@ export const createGroup = async (
           0, // Sin presupuesto inicial
           'EUR', // Currency
           createdBy, // userId
-          'Gastos generales del grupo', // Descripción
+          'Gastos generales del evento', // Descripción
           docRef.id // groupId
         );
         
-        // Actualizar grupo con defaultEventId
+        // Actualizar evento con defaultEventId
         await updateDoc(doc(db, 'groups', docRef.id), {
           defaultEventId,
           eventIds: [defaultEventId]
         });
       } catch (error) {
         console.error('⚠️ Error creando evento General:', error);
-        // No fallar la creación del grupo por esto
+        // No fallar la creación del evento por esto
       }
     }
     
@@ -1038,7 +1051,7 @@ export const createGroup = async (
 };
 
 /**
- * Obtener grupos del usuario
+ * Obtener eventos del usuario
  */
 export const getUserGroups = async (userId: string): Promise<any[]> => {
   try {
@@ -1056,7 +1069,7 @@ export const getUserGroups = async (userId: string): Promise<any[]> => {
       let eventIds = groupData.eventIds || [];
       let memberIds = groupData.memberIds || [];
       
-      // Si no hay eventIds guardados, buscar eventos que pertenezcan a este grupo
+      // Si no hay eventIds guardados, buscar eventos que pertenezcan a este evento
       if (eventIds.length === 0) {
         try {
           const eventsQuery = query(
@@ -1066,14 +1079,14 @@ export const getUserGroups = async (userId: string): Promise<any[]> => {
           const eventsSnapshot = await getDocs(eventsQuery);
           eventIds = eventsSnapshot.docs.map(doc => doc.id);
           
-          // Actualizar el grupo con los eventIds encontrados (migración automática)
+          // Actualizar el evento con los eventIds encontrados (migración automática)
           if (eventIds.length > 0) {
             await updateDoc(doc(db, 'groups', groupId), {
               eventIds: eventIds
             }).catch(err => console.error('⚠️ No se pudo actualizar eventIds:', err));
           }
         } catch (error) {
-          console.error('⚠️ Error buscando eventos del grupo:', error);
+          console.error('⚠️ Error buscando eventos del evento:', error);
         }
       }
       
@@ -1095,21 +1108,21 @@ export const getUserGroups = async (userId: string): Promise<any[]> => {
     console.error('❌ Error loading groups:', error);
     // Si es error de permisos, retornar array vacío en lugar de lanzar error
     if (error.code === 'permission-denied' || error.message?.includes('permission')) {
-      console.log('⚠️ Sin permisos para leer grupos, retornando lista vacía');
+      console.log('⚠️ Sin permisos para leer eventos, retornando lista vacía');
       return [];
     }
-    throw new Error(error.message || 'No se pudieron cargar los grupos');
+    throw new Error(error.message || 'No se pudieron cargar los eventos');
   }
 };
 
 /**
- * Obtener un grupo por ID
+ * Obtener un evento por ID
  */
 export const getGroup = async (groupId: string): Promise<any> => {
   try {
     const groupDoc = await getDoc(doc(db, 'groups', groupId));
     if (!groupDoc.exists()) {
-      throw new Error('Grupo no encontrado');
+      throw new Error('Evento no encontrado');
     }
     return {
       id: groupDoc.id,
@@ -1117,12 +1130,12 @@ export const getGroup = async (groupId: string): Promise<any> => {
     };
   } catch (error: any) {
     console.error('❌ Error loading group:', error);
-    throw new Error(error.message || 'No se pudo cargar el grupo');
+    throw new Error(error.message || 'No se pudo cargar el evento');
   }
 };
 
 /**
- * Actualizar un grupo
+ * Actualizar un evento
  */
 export const updateGroup = async (
   groupId: string,
@@ -1148,28 +1161,28 @@ export const updateGroup = async (
     }
 
     await updateDoc(doc(db, 'groups', groupId), groupData);
-    console.log('✅ Grupo actualizado:', groupId);
+    console.log('✅ Evento actualizado:', groupId);
   } catch (error: any) {
     console.error('❌ Error updating group:', error);
-    throw new Error(error.message || 'No se pudo actualizar el grupo');
+    throw new Error(error.message || 'No se pudo actualizar el evento');
   }
 };
 
 /**
- * Eliminar un grupo
+ * Eliminar un evento
  */
 export const deleteGroup = async (groupId: string): Promise<void> => {
   try {
     await deleteDoc(doc(db, 'groups', groupId));
-    console.log('✅ Grupo eliminado:', groupId);
+    console.log('✅ Evento eliminado:', groupId);
   } catch (error: any) {
     console.error('❌ Error deleting group:', error);
-    throw new Error(error.message || 'No se pudo eliminar el grupo');
+    throw new Error(error.message || 'No se pudo eliminar el evento');
   }
 };
 
 /**
- * Buscar grupo por código de invitación
+ * Buscar evento por código de invitación
  */
 export const getGroupByInviteCode = async (inviteCode: string): Promise<any | null> => {
   try {
@@ -1190,13 +1203,13 @@ export const getGroupByInviteCode = async (inviteCode: string): Promise<any | nu
       ...groupDoc.data()
     };
   } catch (error: any) {
-    console.error('❌ Error buscando grupo por código:', error);
-    throw new Error(error.message || 'No se pudo buscar el grupo');
+    console.error('❌ Error buscando evento por código:', error);
+    throw new Error(error.message || 'No se pudo buscar el evento');
   }
 };
 
 /**
- * Agregar miembro a un grupo
+ * Agregar miembro a un evento
  */
 export const addGroupMember = async (groupId: string, userId: string): Promise<void> => {
   try {
@@ -1204,7 +1217,7 @@ export const addGroupMember = async (groupId: string, userId: string): Promise<v
     const groupDoc = await getDoc(groupRef);
     
     if (!groupDoc.exists()) {
-      throw new Error('Grupo no encontrado');
+      throw new Error('Evento no encontrado');
     }
     
     const groupData = groupDoc.data();
@@ -1212,7 +1225,7 @@ export const addGroupMember = async (groupId: string, userId: string): Promise<v
     
     // Verificar si ya es miembro
     if (currentMembers.includes(userId)) {
-      console.log('⚠️ El usuario ya es miembro del grupo');
+      console.log('⚠️ El usuario ya es miembro del evento');
       return;
     }
     
@@ -1223,7 +1236,7 @@ export const addGroupMember = async (groupId: string, userId: string): Promise<v
     });
   } catch (error: any) {
     console.error('❌ Error agregando miembro:', error);
-    throw new Error(error.message || 'No se pudo agregar al grupo');
+    throw new Error(error.message || 'No se pudo agregar al evento');
   }
 };
 
@@ -1249,7 +1262,7 @@ export const getUserInfo = async (userId: string): Promise<{ id: string; name: s
 };
 
 /**
- * Eliminar miembro de un grupo
+ * Eliminar miembro de un evento
  */
 export const removeGroupMember = async (groupId: string, userId: string): Promise<void> => {
   try {
@@ -1257,7 +1270,7 @@ export const removeGroupMember = async (groupId: string, userId: string): Promis
     const groupDoc = await getDoc(groupRef);
     
     if (!groupDoc.exists()) {
-      throw new Error('Grupo no encontrado');
+      throw new Error('Evento no encontrado');
     }
     
     const groupData = groupDoc.data();
@@ -1265,13 +1278,13 @@ export const removeGroupMember = async (groupId: string, userId: string): Promis
     
     // Verificar si es miembro
     if (!currentMembers.includes(userId)) {
-      console.log('⚠️ El usuario no es miembro del grupo');
+      console.log('⚠️ El usuario no es miembro del evento');
       return;
     }
     
     // No permitir eliminar al creador
     if (groupData.createdBy === userId) {
-      throw new Error('No puedes eliminarte como creador del grupo');
+      throw new Error('No puedes eliminarte como creador del evento');
     }
     
     // Eliminar userId del array de memberIds
@@ -1280,10 +1293,10 @@ export const removeGroupMember = async (groupId: string, userId: string): Promis
       updatedAt: serverTimestamp()
     });
     
-    console.log('✅ Miembro eliminado del grupo:', userId);
+    console.log('✅ Miembro eliminado del evento:', userId);
   } catch (error: any) {
     console.error('❌ Error eliminando miembro:', error);
-    throw new Error(error.message || 'No se pudo eliminar del grupo');
+    throw new Error(error.message || 'No se pudo eliminar del evento');
   }
 };
 
@@ -1319,12 +1332,12 @@ export const getUserEventsByStatus = async (
     
     console.log('📝 Eventos creados por usuario:', userEvents.length);
     
-    // 2. Obtener grupos donde el usuario es miembro
+    // 2. Obtener eventos donde el usuario es miembro
     const userGroups = await getUserGroups(userId);
     const groupIds = userGroups.map(g => g.id);
-    console.log('👥 Grupos del usuario:', groupIds.length, groupIds);
+    console.log('👥 Eventos del usuario:', groupIds.length, groupIds);
     
-    // 3. Obtener eventos de esos grupos
+    // 3. Obtener eventos de esos eventos
     let groupEvents: Event[] = [];
     if (groupIds.length > 0) {
       // Firestore tiene límite de 10 elementos en 'in', así que hacemos consultas por lotes
@@ -1362,7 +1375,7 @@ export const getUserEventsByStatus = async (
       allEventsMap.set(event.id, event);
     });
     
-    // Luego agregar eventos de grupos (no sobrescribir si ya existe)
+    // Luego agregar eventos de eventos (no sobrescribir si ya existe)
     groupEvents.forEach(event => {
       if (!allEventsMap.has(event.id)) {
         allEventsMap.set(event.id, event);
@@ -1543,7 +1556,7 @@ export const subscribeToEventMessages = (
 };
 
 /**
- * Enviar mensaje en un grupo
+ * Enviar mensaje en un evento
  */
 export const sendGroupMessage = async (
   groupId: string,
@@ -1573,16 +1586,16 @@ export const sendGroupMessage = async (
     // Usar subcolección groups/{groupId}/messages
     const messagesRef = collection(db, 'groups', groupId, 'messages');
     const docRef = await addDoc(messagesRef, messageData);
-    console.log('✅ Mensaje de grupo enviado:', docRef.id);
+    console.log('✅ Mensaje de evento enviado:', docRef.id);
     return docRef.id;
   } catch (error: any) {
-    console.error('❌ Error enviando mensaje de grupo:', error);
+    console.error('❌ Error enviando mensaje de evento:', error);
     throw new Error(error.message || 'No se pudo enviar el mensaje');
   }
 };
 
 /**
- * Obtener mensajes de un grupo
+ * Obtener mensajes de un evento
  */
 export const getGroupMessages = async (groupId: string): Promise<any[]> => {
   try {
@@ -1596,13 +1609,13 @@ export const getGroupMessages = async (groupId: string): Promise<any[]> => {
       ...doc.data()
     }));
   } catch (error: any) {
-    console.error('❌ Error cargando mensajes de grupo:', error);
+    console.error('❌ Error cargando mensajes de evento:', error);
     return [];
   }
 };
 
 /**
- * Suscribirse a mensajes de un grupo en tiempo real
+ * Suscribirse a mensajes de un evento en tiempo real
  */
 export const subscribeToGroupMessages = (
   groupId: string,
@@ -1622,13 +1635,13 @@ export const subscribeToGroupMessages = (
 };
 
 /**
- * Sincronizar estadísticas de un grupo (migración/actualización manual)
+ * Sincronizar estadísticas de un evento (migración/actualización manual)
  */
 export const syncGroupStats = async (groupId: string): Promise<void> => {
   try {
-    console.log('🔄 Sincronizando estadísticas del grupo:', groupId);
+    console.log('🔄 Sincronizando estadísticas del evento:', groupId);
     
-    // Buscar todos los eventos del grupo
+    // Buscar todos los eventos del evento
     const eventsQuery = query(
       collection(db, 'events'),
       where('groupId', '==', groupId)
@@ -1636,7 +1649,7 @@ export const syncGroupStats = async (groupId: string): Promise<void> => {
     const eventsSnapshot = await getDocs(eventsQuery);
     const eventIds = eventsSnapshot.docs.map(doc => doc.id);
     
-    // Buscar todos los miembros únicos del grupo
+    // Buscar todos los miembros únicos del evento
     const memberIdsSet = new Set<string>();
     for (const eventDoc of eventsSnapshot.docs) {
       const eventData = eventDoc.data();
@@ -1660,7 +1673,7 @@ export const syncGroupStats = async (groupId: string): Promise<void> => {
     
     const memberIds = Array.from(memberIdsSet);
     
-    // Actualizar el grupo con las estadísticas correctas
+    // Actualizar el evento con las estadísticas correctas
     await updateDoc(doc(db, 'groups', groupId), {
       eventIds: eventIds,
       memberIds: memberIds
@@ -1672,8 +1685,8 @@ export const syncGroupStats = async (groupId: string): Promise<void> => {
       miembros: memberIds.length 
     });
   } catch (error: any) {
-    console.error('❌ Error sincronizando estadísticas del grupo:', error);
-    throw new Error('Error al sincronizar estadísticas del grupo');
+    console.error('❌ Error sincronizando estadísticas del evento:', error);
+    throw new Error('Error al sincronizar estadísticas del evento');
   }
 };
 
@@ -1766,54 +1779,54 @@ export const uploadReceiptPhoto = async (uri: string, expenseId: string): Promis
 // ==================== FUNCIONES PRINCIPALES (NOMENCLATURA CORRECTA) ====================
 
 /**
- * Crear nuevo grupo (contenedor con presupuesto)
- * @param name - Nombre del grupo
- * @param budget - Presupuesto máximo del grupo
- * @param currency - Moneda del grupo
+ * Crear nuevo evento (contenedor con presupuesto)
+ * @param name - Nombre del evento
+ * @param budget - Presupuesto máximo del evento
+ * @param currency - Moneda del evento
  * @param userId - ID del creador
- * @returns ID del grupo creado
+ * @returns ID del evento creado
  */
 export const createGroupContainer = createGroup;
 
 /**
- * Obtener grupos del usuario (ya existe la función, no crear alias)
+ * Obtener eventos del usuario (ya existe la función, no crear alias)
  */
 // export const getUserGroupContainers = getUserGroups; // Comentado - función ya existe
 
 /**
- * Obtener grupo por ID
+ * Obtener evento por ID
  */
 export const getGroupContainer = getGroup;
 
 /**
- * Actualizar grupo
+ * Actualizar evento
  */
 export const updateGroupContainer = updateGroup;
 
 /**
- * Eliminar grupo
+ * Eliminar evento
  */
 export const deleteGroupContainer = deleteGroup;
 
 /**
- * Obtener grupo por código de invitación
+ * Obtener evento por código de invitación
  */
 export const getGroupByCode = getGroupByInviteCode;
 
 /**
- * Agregar participante a grupo
+ * Agregar participante a evento
  */
 export const addGroupParticipant = addGroupMember;
 
 /**
- * Eliminar participante de grupo
+ * Eliminar participante de evento
  */
 export const removeGroupParticipant = removeGroupMember;
 
 /**
- * Crear evento/gasto individual dentro de un grupo
+ * Crear evento/gasto individual dentro de un evento
  * Un evento tiene: quien paga (paidBy) y quienes deben (participantIds)
- * @param groupId - ID del grupo contenedor
+ * @param groupId - ID del evento contenedor
  * @param name - Nombre del evento/gasto
  * @param amount - Monto del gasto
  * @param paidBy - ID del participante que pagó
@@ -1823,7 +1836,7 @@ export const removeGroupParticipant = removeGroupMember;
 export const createGroupEvent = createExpense;
 
 /**
- * Obtener eventos/gastos de un grupo
+ * Obtener eventos/gastos de un evento
  */
 export const getGroupEvents = getEventExpenses;
 

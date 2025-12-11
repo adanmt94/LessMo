@@ -45,7 +45,7 @@ export default {
       eas: {
         projectId: "6efb7e40-76ab-461f-8c48-691488aef80c"
       },
-      firebaseApiKey: process.env.FIREBASE_API_KEY || 'AIzaSyD1NN6qPdBXgRFXiFBhPI8RbJfBQP3slmQ',
+      firebaseApiKey: process.env.FIREBASE_API_KEY || 'AIzaSyDfqzWAP896weun6oafS1KraH4ZIdk_ll4',
       firebaseAuthDomain: process.env.FIREBASE_AUTH_DOMAIN || 'lessmo-9023f.firebaseapp.com',
       firebaseProjectId: process.env.FIREBASE_PROJECT_ID || 'lessmo-9023f',
       firebaseStorageBucket: process.env.FIREBASE_STORAGE_BUCKET || 'lessmo-9023f.appspot.com',

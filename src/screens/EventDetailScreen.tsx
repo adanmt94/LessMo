@@ -13,6 +13,7 @@ import {
   RefreshControl,
   Alert,
   Share,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -55,6 +56,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [userPhotos, setUserPhotos] = useState<{[userId: string]: string}>({});
+  const [editParticipantsModalVisible, setEditParticipantsModalVisible] = useState(false);
   
   const {
     expenses,
@@ -229,7 +231,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
       const eventData = await getEvent(eventId);
       setEvent(eventData);
     } catch (error) {
-      Alert.alert('Error', 'No se pudo cargar el grupo');
+      Alert.alert('Error', 'No se pudo cargar el evento');
     }
   };
 
@@ -284,7 +286,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
     
     try {
       if (!event.inviteCode) {
-        Alert.alert('Error', 'Este grupo no tiene código de invitación');
+        Alert.alert('Error', 'Este evento no tiene código de invitación');
         return;
       }
 
@@ -300,7 +302,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
       });
     } catch (error: any) {
       if (error.message !== 'User did not share') {
-        Alert.alert('Error', 'No se pudo compartir el grupo');
+        Alert.alert('Error', 'No se pudo compartir el evento');
       }
     }
   };
@@ -353,16 +355,12 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
     : expenses;
 
   const renderExpenses = () => (
-    <View style={styles.tabContent}>
+    <View style={[styles.tabContent, { position: 'relative' }]}>
       {expenses.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyIcon}>💳</Text>
           <Text style={styles.emptyText}>{t('eventDetail.noExpenses')}</Text>
-          <Button
-            title={t('expense.add')}
-            onPress={() => navigation.navigate('AddExpense', { eventId })}
-            style={styles.emptyButton}
-          />
+          <Text style={styles.emptySubtext}>Añade tu primer gasto para comenzar</Text>
         </View>
       ) : filteredExpenses.length === 0 ? (
         <View style={styles.emptyState}>
@@ -373,6 +371,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
       ) : (
         <ScrollView
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          contentContainerStyle={{ paddingBottom: 80 }}
         >
           {filteredExpenses.map((expense) => {
             const participant = getParticipantById(expense.paidBy);
@@ -399,16 +398,16 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
           })}
         </ScrollView>
       )}
+      
+      {/* Botón flotante SIEMPRE visible */}
+      <TouchableOpacity
+        style={styles.floatingAddButton}
+        onPress={() => navigation.navigate('AddExpense', { eventId })}
+      >
+        <Text style={styles.floatingAddButtonText}>+ Añadir Gasto</Text>
+      </TouchableOpacity>
     </View>
   );
-
-  const handleEditParticipants = () => {
-    
-    navigation.navigate('CreateEvent', { 
-      eventId,
-      mode: 'edit'
-    });
-  };
 
   const renderParticipants = () => {
     // Calcular balances de participantes basado en gastos
@@ -419,7 +418,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
         <View style={styles.editParticipantsContainer}>
           <Button
             title={t('eventDetail.editParticipants')}
-            onPress={handleEditParticipants}
+            onPress={() => setEditParticipantsModalVisible(true)}
             variant="outline"
             fullWidth
           />
@@ -526,7 +525,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
               
               Alert.alert(
                 `${efficiency.badge} Análisis Completo`,
-                `📊 Eficiencia del grupo: ${efficiency.level} (${efficiency.score}/100)\n\n` +
+                `📊 Eficiencia del evento: ${efficiency.level} (${efficiency.score}/100)\n\n` +
                 `${comparison.message}\n\n` +
                 `💡 Consejos:\n${efficiency.tips.map(tip => `• ${tip}`).join('\n')}`,
                 [{ text: 'Entendido' }]
@@ -707,6 +706,83 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
           <Text style={[styles.actionButtonText, { color: '#EF4444' }]}>{t('common.delete')}</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Modal para Editar Participantes */}
+      <Modal
+        visible={editParticipantsModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setEditParticipantsModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.colors.card }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: theme.colors.border }]}>
+              <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
+                ✏️ Editar Participantes
+              </Text>
+              <TouchableOpacity
+                onPress={() => setEditParticipantsModalVisible(false)}
+                style={styles.modalCloseButton}
+              >
+                <Text style={[styles.modalCloseText, { color: theme.colors.text }]}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalBody}>
+              <Text style={[styles.modalDescription, { color: theme.colors.textSecondary }]}>
+                Para agregar o quitar participantes del evento, ve a la pantalla de edición completa.
+              </Text>
+              
+              <Text style={[styles.modalSectionTitle, { color: theme.colors.text }]}>
+                Participantes Actuales ({participants.length})
+              </Text>
+              
+              {participants.map((participant) => (
+                <View key={participant.id} style={[styles.modalParticipantItem, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+                  <View style={[styles.modalParticipantAvatar, { backgroundColor: theme.colors.primary + '20' }]}>
+                    <Text style={[styles.modalParticipantAvatarText, { color: theme.colors.primary }]}>
+                      {participant.name.charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                  <View style={styles.modalParticipantInfo}>
+                    <Text style={[styles.modalParticipantName, { color: theme.colors.text }]}>
+                      {participant.name}
+                    </Text>
+                    {participant.email && (
+                      <Text style={[styles.modalParticipantEmail, { color: theme.colors.textSecondary }]}>
+                        {participant.email}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+
+            <View style={[styles.modalFooter, { borderTopColor: theme.colors.border }]}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonSecondary, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+                onPress={() => setEditParticipantsModalVisible(false)}
+              >
+                <Text style={[styles.modalButtonText, { color: theme.colors.text }]}>
+                  Cancelar
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonPrimary, { backgroundColor: theme.colors.primary }]}
+                onPress={() => {
+                  setEditParticipantsModalVisible(false);
+                  handleEditEvent();
+                }}
+              >
+                <Text style={[styles.modalButtonText, { color: '#FFFFFF' }]}>
+                  Ir a Editar
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -982,5 +1058,130 @@ const getStyles = (theme: any) => StyleSheet.create({
   clearButtonText: {
     fontSize: 18,
     color: theme.colors.textSecondary,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  modalCloseButton: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCloseText: {
+    fontSize: 24,
+    fontWeight: '300',
+  },
+  modalBody: {
+    padding: 20,
+  },
+  modalDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  modalSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  modalParticipantItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+  },
+  modalParticipantAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  modalParticipantAvatarText: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  modalParticipantInfo: {
+    flex: 1,
+  },
+  modalParticipantName: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  modalParticipantEmail: {
+    fontSize: 13,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    padding: 20,
+    gap: 12,
+    borderTopWidth: 1,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalButtonSecondary: {
+    borderWidth: 2,
+  },
+  floatingAddButton: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    backgroundColor: theme.colors.primary,
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  floatingAddButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  modalButtonPrimary: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

@@ -20,7 +20,7 @@ export const EventsIcon: React.FC<TabIconProps> = ({ focused, color }) => (
   </View>
 );
 
-// 👥 GRUPOS - Dos círculos superpuestos
+// 👥 EVENTOS - Dos círculos superpuestos
 export const GroupsIcon: React.FC<TabIconProps> = ({ focused, color }) => (
   <View style={styles.iconContainer}>
     <View style={[styles.circleLeft, { 
@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
     top: 10,
   },
   
-  // GRUPOS - Círculos superpuestos
+  // EVENTOS - Círculos superpuestos
   circleLeft: {
     width: 14,
     height: 14,

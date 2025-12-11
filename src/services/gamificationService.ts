@@ -445,7 +445,7 @@ function generateFunFacts(
     );
   }
 
-  // Gasto promedio comparado con el grupo
+  // Gasto promedio comparado con el evento
   const allAverages = allExpenses.reduce((acc, exp) => {
     acc[exp.paidBy] = acc[exp.paidBy] || [];
     acc[exp.paidBy].push(exp.amount);
@@ -458,13 +458,13 @@ function generateFunFacts(
   if (averageExpense > groupAverage * 1.2) {
     facts.push(
       es
-        ? `Tus gastos son un 20% más altos que el promedio del grupo`
+        ? `Tus gastos son un 20% más altos que el promedio del evento`
         : `Your expenses are 20% higher than group average`
     );
   } else if (averageExpense < groupAverage * 0.8) {
     facts.push(
       es
-        ? `Tus gastos son un 20% más bajos que el promedio del grupo`
+        ? `Tus gastos son un 20% más bajos que el promedio del evento`
         : `Your expenses are 20% lower than group average`
     );
   }

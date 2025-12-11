@@ -2,7 +2,7 @@
  * Hook personalizado para manejar gastos y cálculos
  * 
  * NOTA IMPORTANTE:
- * - eventId en este contexto es el ID del GRUPO (contenedor)
+ * - eventId en este contexto es el ID del EVENTO (contenedor)
  * - Los "expenses" son eventos/gastos individuales
  * - Cada expense tiene: paidBy (quien paga) y participantIds (quienes deben)
  */
@@ -28,8 +28,8 @@ import { withCache, cache } from '../utils/cache';
 import { logger, LogCategory } from '../utils/logger';
 
 /**
- * Hook para manejar eventos/gastos de un grupo
- * @param eventId - ID del grupo (contenedor con presupuesto)
+ * Hook para manejar eventos/gastos de un evento
+ * @param eventId - ID del evento (contenedor con presupuesto)
  */
 export const useExpenses = (eventId: string) => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -257,9 +257,9 @@ export const useExpenses = (eventId: string) => {
 
       // Calcular cuánto debe (gastos donde es participante)
       const totalOwed = expenses
-        .filter((e) => e.participantIds.includes(participant.id))
+        .filter((e) => e.participantIds?.includes(participant.id))
         .reduce((sum, expense) => {
-          if (expense.splitType === 'equal') {
+          if (expense.splitType === 'equal' && expense.participantIds && expense.participantIds.length > 0) {
             return sum + expense.amount / expense.participantIds.length;
           } else if (expense.splitType === 'percentage' && expense.percentageSplits) {
             const percentage = expense.percentageSplits[participant.id] || 0;

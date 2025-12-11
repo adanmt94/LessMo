@@ -132,7 +132,7 @@ export const AnalyticsEvents = {
   EVENT_JOIN: 'event_join',
   EVENT_SHARE: 'event_share',
   
-  // Grupos
+  // Eventos
   GROUP_CREATE: 'group_create',
   GROUP_VIEW: 'group_view',
   GROUP_EDIT: 'group_edit',

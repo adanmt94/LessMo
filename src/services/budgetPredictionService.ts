@@ -226,32 +226,47 @@ export function compareWithSimilarEvents(
   
   // Promedios estimados por persona por día
   const averagePerPersonPerDay = 80; // 80€ por persona por día (promedio europeo)
-  const participantsCount = event.participantIds.length;
+  const participantsCount = event.participantIds?.length || 1;
   
   const estimatedAverage = averagePerPersonPerDay * participantsCount * daysCount;
+  
+  // Proteger contra división por cero
+  if (estimatedAverage === 0 || isNaN(estimatedAverage) || !isFinite(estimatedAverage)) {
+    return {
+      isAboveAverage: false,
+      averageSpending: 0,
+      percentageDifference: 0,
+      message: 'No hay suficientes datos para comparar con otros eventos',
+    };
+  }
   
   const isAboveAverage = totalSpent > estimatedAverage;
   const percentageDifference = ((totalSpent - estimatedAverage) / estimatedAverage) * 100;
   
+  // Validar percentageDifference
+  const validPercentage = isNaN(percentageDifference) || !isFinite(percentageDifference) 
+    ? 0 
+    : percentageDifference;
+  
   let message: string;
-  if (Math.abs(percentageDifference) < 10) {
+  if (Math.abs(validPercentage) < 10) {
     message = 'Tu gasto está dentro del promedio esperado';
   } else if (isAboveAverage) {
-    message = `Gastas ${Math.abs(percentageDifference).toFixed(0)}% más que grupos similares`;
+    message = `Gastas ${Math.abs(validPercentage).toFixed(0)}% más que eventos similares`;
   } else {
-    message = `Gastas ${Math.abs(percentageDifference).toFixed(0)}% menos que grupos similares ¡Bien hecho!`;
+    message = `Gastas ${Math.abs(validPercentage).toFixed(0)}% menos que eventos similares ¡Bien hecho!`;
   }
   
   return {
     isAboveAverage,
     averageSpending: estimatedAverage,
-    percentageDifference,
+    percentageDifference: validPercentage,
     message,
   };
 }
 
 /**
- * Calcula eficiencia del grupo (qué tan bien administran el presupuesto)
+ * Calcula eficiencia del evento (qué tan bien administran el presupuesto)
  */
 export function calculateGroupEfficiency(
   event: Event,

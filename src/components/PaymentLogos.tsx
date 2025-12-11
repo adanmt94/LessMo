@@ -195,13 +195,45 @@ export const OtherPaymentLogo: React.FC<LogoProps> = ({ width = 40, height = 40 
   </Svg>
 );
 
-// Componente selector de logo
+// Componente selector de logo - AHORA USA PNG DE ALTA CALIDAD
+import { Image, StyleSheet } from 'react-native';
+
+const logoMap: { [key: string]: any } = {
+  paypal: require('../../assets/payment-methods/paypal.png'),
+  bizum: require('../../assets/payment-methods/bizum.png'),
+  venmo: require('../../assets/payment-methods/venmo.png'),
+  apple_pay: require('../../assets/payment-methods/apple-pay.png'),
+  google_pay: require('../../assets/payment-methods/google-pay.png'),
+  card: require('../../assets/payment-methods/card.png'),
+  cash: require('../../assets/payment-methods/cash.png'),
+  bank_transfer: require('../../assets/payment-methods/bank_transfer.png'),
+  other: require('../../assets/payment-methods/other.png'),
+};
+
 export const PaymentMethodLogo: React.FC<{ method: string } & LogoProps> = ({ 
   method, 
   width = 40, 
   height = 40 
 }) => {
-  switch (method.toLowerCase()) {
+  const methodKey = method.toLowerCase();
+  const logoSource = logoMap[methodKey];
+  
+  console.log(`🎨 PaymentMethodLogo: ${method}, has PNG: ${!!logoSource}`);
+  
+  if (logoSource) {
+    return (
+      <View style={{ width, height }}>
+        <Image
+          source={logoSource}
+          style={{ width: '100%', height: '100%' }}
+          resizeMode="contain"
+        />
+      </View>
+    );
+  }
+  
+  // Fallback a SVG si no hay PNG (aunque ahora tenemos todos)
+  switch (methodKey) {
     case 'bizum':
       return <BizumLogo width={width} height={height} />;
     case 'paypal':

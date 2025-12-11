@@ -1,5 +1,5 @@
 /**
- * GroupCard - Componente memoizado para tarjeta de grupo
+ * GroupCard - Componente memoizado para tarjeta de evento
  * Optimizado para listas con React.memo
  */
 

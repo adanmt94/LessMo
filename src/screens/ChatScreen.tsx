@@ -1,5 +1,5 @@
 /**
- * ChatScreen - Pantalla de chat para eventos y grupos
+ * ChatScreen - Pantalla de chat para eventos y eventos
  */
 
 import React, { useState, useEffect, useRef } from 'react';

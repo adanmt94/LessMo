@@ -86,6 +86,12 @@ export const useAuth = () => {
       logger.info(LogCategory.AUTH, 'Sesión iniciada exitosamente');
       return true;
     } catch (err: any) {
+      // Log detallado del error para debugging
+      console.error('❌ [LOGIN] Error completo:', {
+        code: err.code,
+        message: err.message,
+        fullError: err
+      });
       const appError = ErrorHandler.handle(err, LogCategory.AUTH, false);
       setError(appError.message);
       return false;

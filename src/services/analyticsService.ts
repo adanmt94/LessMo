@@ -321,7 +321,7 @@ export function getParticipantStats(expenses: Expense[], participants: Participa
   try {
     return participants.map(participant => {
       const paidExpenses = expenses.filter(e => e.paidBy === participant.id);
-      const involvedExpenses = expenses.filter(e => e.beneficiaries.includes(participant.id));
+      const involvedExpenses = expenses.filter(e => (e.beneficiaries || e.participantIds || []).includes(participant.id));
 
       const totalPaid = paidExpenses.reduce((sum, e) => sum + e.amount, 0);
       const totalOwed = involvedExpenses.reduce((sum, e) => {

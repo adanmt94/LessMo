@@ -63,7 +63,7 @@
   },
   "home": {
     "title": "Mis Eventos",
-    "groupEvents": "Eventos del Grupo",
+    "groupEvents": "Eventos del Evento",
     "noEvents": "No hay eventos aún",
     "createFirst": "Crea tu primer evento",
     "createEvent": "Crear Evento",
@@ -86,11 +86,11 @@
     "joinEvent": "Unirse a evento"
   },
   "groups": {
-    "title": "Mis Grupos",
+    "title": "Mis Eventos",
     "hello": "Hola",
-    "noGroups": "No tienes grupos creados",
-    "loading": "Cargando grupos...",
-    "notFound": "No se encontraron grupos",
+    "noGroups": "No tienes eventos creados",
+    "loading": "Cargando eventos...",
+    "notFound": "No se encontraron eventos",
     "events": "Eventos",
     "members": "Miembros",
     "activeEvents": "evento(s) activo(s)"
@@ -98,7 +98,7 @@
   "groupEvents": {
     "activeTab": "Activos",
     "pastTab": "Pasados",
-    "searchPlaceholder": "Buscar eventos...",
+    "searchPlaceholder": "Buscar eventos/eventos...",
     "loading": "Cargando eventos...",
     "noActiveEvents": "No hay eventos activos",
     "noPastEvents": "No hay eventos pasados",
@@ -111,7 +111,7 @@
     "code": "Código:",
     "active": "Activo",
     "finished": "Finalizado",
-    "errorLoading": "No se pudieron cargar los eventos del grupo"
+    "errorLoading": "No se pudieron cargar los eventos del evento"
   },
   "eventDetail": {
     "stats": "Estadísticas",
@@ -359,26 +359,26 @@
     "active9PM": "Active (9:00 PM)"
   },
   "createGroup": {
-    "title": "Crear Grupo",
-    "editTitle": "Editar Grupo",
-    "loading": "Cargando grupo...",
-    "groupInfo": "Información del Grupo",
-    "groupNameLabel": "Nombre del grupo *",
+    "title": "Crear Evento",
+    "editTitle": "Editar Evento",
+    "loading": "Cargando evento...",
+    "groupInfo": "Información del Evento",
+    "groupNameLabel": "Nombre del evento *",
     "groupNamePlaceholder": "Ej: Viaje a Italia 2024",
     "descriptionLabel": "Descripción (opcional)",
-    "descriptionPlaceholder": "Describe el grupo...",
-    "groupIcon": "Icono del Grupo",
-    "groupColor": "Color del Grupo",
+    "descriptionPlaceholder": "Describe el evento...",
+    "groupIcon": "Icono del Evento",
+    "groupColor": "Color del Evento",
     "preview": "Vista Previa",
-    "createButton": "Crear grupo",
+    "createButton": "Crear evento",
     "updateButton": "Guardar cambios",
-    "nameRequired": "El nombre del grupo es obligatorio",
+    "nameRequired": "El nombre del evento es obligatorio",
     "nameTooLong": "El nombre debe tener máximo 50 caracteres",
-    "groupCreated": "Grupo creado exitosamente",
-    "groupUpdated": "Grupo actualizado exitosamente",
-    "errorCreating": "No se pudo crear el grupo",
-    "errorUpdating": "No se pudo actualizar el grupo",
-    "errorLoading": "No se pudo cargar el grupo"
+    "groupCreated": "Evento creado exitosamente",
+    "groupUpdated": "Evento actualizado exitosamente",
+    "errorCreating": "No se pudo crear el evento",
+    "errorUpdating": "No se pudo actualizar el evento",
+    "errorLoading": "No se pudo cargar el evento"
   },
   "joinEvent": {
     "title": "Unirse a Evento",
@@ -406,8 +406,8 @@
     "title": "Actividad Reciente",
     "loading": "Cargando actividad...",
     "empty": "Sin actividad reciente",
-    "emptySubtitle": "La actividad de tus eventos y grupos aparecerá aquí",
-    "groupCreated": "Grupo creado"
+    "emptySubtitle": "La actividad de tus eventos y eventos aparecerá aquí",
+    "groupCreated": "Evento creado"
   },
   "eventSummary": {
     "title": "Resumen",
@@ -462,8 +462,8 @@
     "step3Description": "Añade cada gasto y selecciona quién lo pagó y entre quiénes dividir. Les$Mo calcula todo automáticamente.",
     "step4Title": "Ve el Resumen",
     "step4Description": "Consulta quién debe a quién, cuánto se ha gastado y cuánto queda del presupuesto. Todo claro y transparente.",
-    "step5Title": "Comparte con Grupos",
-    "step5Description": "Crea grupos para eventos recurrentes. Ideal para compañeros de piso, grupos de amigos o familias.",
+    "step5Title": "Comparte con Eventos",
+    "step5Description": "Crea eventos para eventos recurrentes. Ideal para compañeros de piso, eventos de amigos o familias.",
     "step6Title": "¡Comencemos!",
     "step6Description": "Estás listo para empezar. Crea tu primer evento o únete a uno existente con un código de invitación."
   },

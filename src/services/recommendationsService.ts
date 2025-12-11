@@ -278,8 +278,8 @@ const analyzeSocialPatterns = (participants: Participant[], expenses: Expense[])
   const recommendations: Recommendation[] = [];
 
   // Shared expenses recommendation
-  const sharedExpenses = expenses.filter(e => e.splitType === 'equal' && e.beneficiaries.length > 1);
-  const individualExpenses = expenses.filter(e => e.beneficiaries.length === 1);
+  const sharedExpenses = expenses.filter(e => e.splitType === 'equal' && (e.beneficiaries || e.participantIds || []).length > 1);
+  const individualExpenses = expenses.filter(e => (e.beneficiaries || e.participantIds || []).length === 1);
 
   if (sharedExpenses.length < individualExpenses.length * 0.3 && participants.length > 2) {
     recommendations.push({

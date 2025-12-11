@@ -79,8 +79,8 @@ const STEPS: StepData[] = [
   },
   {
     emoji: '👥',
-    title: 'Grupos',
-    description: 'Organiza múltiples eventos relacionados en grupos.',
+    title: 'Eventos',
+    description: 'Organiza múltiples eventos relacionados en eventos.',
     features: [
       'Agrupa eventos de piso, viajes, etc.',
       'Personaliza icono y color',

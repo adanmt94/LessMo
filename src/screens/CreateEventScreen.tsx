@@ -24,8 +24,8 @@ import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 
-type CreateEventScreenNavigationProp = StackNavigationProp<RootStackParamList, 'CreateGroup'>;
-type CreateEventScreenRouteProp = RouteProp<RootStackParamList, 'CreateGroup'>;
+type CreateEventScreenNavigationProp = StackNavigationProp<RootStackParamList, 'CreateGroup' | 'CreateEvent'>;
+type CreateEventScreenRouteProp = RouteProp<RootStackParamList, 'CreateGroup'> | RouteProp<RootStackParamList, 'CreateEvent'>;
 
 interface Props {
   navigation: CreateEventScreenNavigationProp;
@@ -50,12 +50,13 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(!!isEditMode);
   const [members, setMembers] = useState<Array<{ id: string; name: string; email?: string }>>([]);
+  const [newMemberName, setNewMemberName] = useState('');
   const [newMemberEmail, setNewMemberEmail] = useState('');
   // 💰 PRESUPUESTO GRUPAL (característica principal)
   const [budget, setBudget] = useState('');
   const [currency, setCurrency] = useState<'EUR' | 'USD' | 'GBP'>('EUR');
 
-  // Cargar datos del grupo si estamos en modo edición
+  // Cargar datos del evento si estamos en modo edición
   useEffect(() => {
     if (isEditMode) {
       loadGroupData();
@@ -89,8 +90,9 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   const handleAddMember = async () => {
-    if (!newMemberEmail.trim()) {
-      Alert.alert(t('common.error'), 'Por favor ingresa un email');
+    // NOMBRE es obligatorio
+    if (!newMemberName.trim()) {
+      Alert.alert(t('common.error'), 'Por favor ingresa un nombre para el participante');
       return;
     }
 
@@ -98,36 +100,44 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
       const { collection, query, where, getDocs } = await import('firebase/firestore');
       const { db } = await import('../services/firebase');
       
-      // Buscar usuario por email
-      const usersQuery = query(
-        collection(db, 'users'),
-        where('email', '==', newMemberEmail.trim().toLowerCase())
-      );
+      let userId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      let userName = newMemberName.trim();
+      let userEmail = newMemberEmail.trim().toLowerCase();
       
-      const usersSnapshot = await getDocs(usersQuery);
-      
-      if (usersSnapshot.empty) {
-        Alert.alert(
-          t('common.error'), 
-          'Usuario no encontrado con ese email. Asegúrate de que el usuario esté registrado en Les$Mo.'
+      // Si hay email, buscar usuario registrado
+      if (userEmail) {
+        const usersQuery = query(
+          collection(db, 'users'),
+          where('email', '==', userEmail)
         );
-        return;
+        
+        const usersSnapshot = await getDocs(usersQuery);
+        
+        if (!usersSnapshot.empty) {
+          // Usuario registrado encontrado
+          const userData = usersSnapshot.docs[0];
+          userId = userData.id;
+          const userInfo = userData.data();
+          userName = userInfo.name || userInfo.displayName || userName;
+          
+          // Verificar si ya está en la lista
+          if (members.some(m => m.id === userId)) {
+            Alert.alert(t('common.error'), 'Este usuario ya está en la lista');
+            return;
+          }
+          
+          // Si estamos en modo edición, añadir directamente a Firebase
+          if (isEditMode && groupId) {
+            const { addGroupMember } = await import('../services/firebase');
+            await addGroupMember(groupId, userId);
+          }
+        }
       }
       
-      const userData = usersSnapshot.docs[0];
-      const userId = userData.id;
-      const userInfo = userData.data();
-      
-      // Verificar si ya está en la lista
-      if (members.some(m => m.id === userId)) {
-        Alert.alert(t('common.error'), 'Este usuario ya está en la lista');
+      // Verificar si ya existe por nombre (para usuarios sin registro)
+      if (members.some(m => m.name.toLowerCase() === userName.toLowerCase())) {
+        Alert.alert(t('common.error'), 'Ya existe un participante con ese nombre');
         return;
-      }
-      
-      // Si estamos en modo edición, añadir directamente a Firebase
-      if (isEditMode && groupId) {
-        const { addGroupMember } = await import('../services/firebase');
-        await addGroupMember(groupId, userId);
       }
       
       // Añadir a la lista local
@@ -135,16 +145,17 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
         ...members,
         {
           id: userId,
-          name: userInfo.name || userInfo.displayName || userInfo.email?.split('@')[0] || 'Usuario',
-          email: userInfo.email
+          name: userName,
+          email: userEmail || undefined
         }
       ]);
       
+      setNewMemberName('');
       setNewMemberEmail('');
-      Alert.alert('✅ Éxito', isEditMode ? 'Miembro añadido al grupo' : 'Miembro añadido a la lista (se añadirá al crear el grupo)');
+      Alert.alert('✅ Éxito', isEditMode ? 'Participante añadido al evento' : 'Participante añadido (se guardará al crear el evento)');
     } catch (error: any) {
-      console.error('Error añadiendo miembro:', error);
-      Alert.alert(t('common.error'), error.message || 'No se pudo añadir el miembro');
+      console.error('Error añadiendo participante:', error);
+      Alert.alert(t('common.error'), error.message || 'No se pudo añadir el participante');
     }
   };
 
@@ -154,13 +165,13 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
     
     // No permitir eliminar al creador
     if (group.createdBy === memberId) {
-      Alert.alert(t('common.error'), 'No puedes eliminar al creador del grupo');
+      Alert.alert(t('common.error'), 'No puedes eliminar al creador del evento');
       return;
     }
     
     Alert.alert(
       'Eliminar miembro',
-      `¿Estás seguro de eliminar a ${memberName} del grupo?`,
+      `¿Estás seguro de eliminar a ${memberName} del evento?`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -200,7 +211,7 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
 
     try {
       if (isEditMode) {
-        // Actualizar grupo existente
+        // Actualizar evento existente
         const { updateGroup } = await import('../services/firebase');
         await updateGroup(
           groupId!,
@@ -221,7 +232,7 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
           ]
         );
       } else {
-        // Crear nuevo grupo
+        // Crear nuevo evento
         const budgetNumber = budget.trim() ? parseFloat(budget) : undefined;
         
         const newGroupId = await createGroup(
@@ -284,7 +295,7 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
                 <Text style={styles.budgetIcon}>💰</Text>
                 <View style={styles.budgetHeaderText}>
                   <Text style={styles.budgetTitle}>¿Qué presupuesto grupal quieres añadir?</Text>
-                  <Text style={styles.budgetSubtitle}>Define el límite máximo para este grupo</Text>
+                  <Text style={styles.budgetSubtitle}>Define el límite máximo para este evento</Text>
                 </View>
               </View>
               
@@ -341,17 +352,17 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
               label={t('createGroup.descriptionLabel')}
               value={description}
               onChangeText={setDescription}
-              placeholder="Describe el grupo..."
+              placeholder="Describe el evento..."
               multiline
               numberOfLines={3}
               maxLength={200}
             />
           </Card>
 
-          {/* Tipo de grupo */}
+          {/* Tipo de evento */}
           {!isEditMode && (
             <Card style={styles.section}>
-              <Text style={styles.sectionTitle}>Tipo de grupo</Text>
+              <Text style={styles.sectionTitle}>Tipo de evento</Text>
               <Text style={styles.sectionSubtitle}>
                 Elige cómo organizar los gastos
               </Text>
@@ -372,7 +383,7 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
                     Proyecto/Viaje
                   </Text>
                   <Text style={styles.typeDescription}>
-                    Añade gastos específicos dentro del grupo
+                    Añade gastos específicos dentro del evento
                   </Text>
                 </TouchableOpacity>
 
@@ -443,20 +454,32 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
           <Card style={styles.section}>
             <Text style={styles.sectionTitle}>Participantes ({members.length})</Text>
             <Text style={styles.sectionSubtitle}>
-              {isEditMode ? 'Gestiona los miembros del grupo' : 'Añade participantes al grupo (opcional)'}
+              {isEditMode ? 'Gestiona los miembros del evento' : 'Añade participantes al evento (opcional)'}
             </Text>
             
             {/* Añadir nuevo miembro */}
-            <View style={styles.addMemberContainer}>
-              <Input
-                label="Añadir por email"
-                value={newMemberEmail}
-                onChangeText={setNewMemberEmail}
-                placeholder="email@ejemplo.com"
-                autoCapitalize="none"
-                keyboardType="email-address"
-                style={styles.memberInput}
-              />
+            <View style={styles.addMemberSection}>
+              <View style={styles.inputRow}>
+                <View style={styles.inputColumn}>
+                  <Input
+                    label="Nombre del participante *"
+                    value={newMemberName}
+                    onChangeText={setNewMemberName}
+                    placeholder="Ej: María"
+                    autoCapitalize="words"
+                  />
+                </View>
+                <View style={styles.inputColumn}>
+                  <Input
+                    label="Email (opcional)"
+                    value={newMemberEmail}
+                    onChangeText={setNewMemberEmail}
+                    placeholder="email@ejemplo.com"
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                  />
+                </View>
+              </View>
               <TouchableOpacity
                 style={styles.addMemberButton}
                 onPress={handleAddMember}
@@ -496,7 +519,7 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
                 <Text style={styles.previewIconText}>{selectedIcon}</Text>
               </View>
               <View style={styles.previewInfo}>
-                <Text style={styles.previewName}>{groupName || 'Nombre del grupo'}</Text>
+                <Text style={styles.previewName}>{groupName || 'Nombre del evento'}</Text>
                 <Text style={styles.previewDescription}>
                   {description || 'Sin descripción'}
                 </Text>
@@ -659,25 +682,27 @@ const getStyles = (theme: any) => StyleSheet.create({
     height: 32,
   },
   // Estilos para gestión de participantes
-  addMemberContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 8,
+  addMemberSection: {
     marginBottom: 16,
   },
-  memberInput: {
+  inputRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+  },
+  inputColumn: {
     flex: 1,
   },
   addMemberButton: {
     backgroundColor: theme.colors.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginBottom: 8,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   addMemberButtonText: {
     color: theme.colors.card,
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
   },
   membersList: {

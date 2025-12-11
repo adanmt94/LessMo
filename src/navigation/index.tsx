@@ -188,13 +188,13 @@ export const Navigation: React.FC = () => {
               component={MainTabNavigator}
               options={{ headerShown: false }}
             />
-            {/* TODO MIGRACIÓN: CreateEvent debe usar AddExpenseScreen o redirigir correctamente */}
+            {/* CreateEvent crea eventos/eventos */}
             <Stack.Screen 
               name="CreateEvent" 
               component={CreateEventScreen}
               options={({ route }) => ({ 
                 headerShown: true,
-                title: route.params?.mode === 'edit' ? t('createEvent.editTitle') : t('createEvent.title'),
+                title: route.params?.mode === 'edit' ? 'Editar Evento' : 'Crear Evento',
                 headerBackTitle: t('common.back')
               })}
             />
@@ -228,7 +228,7 @@ export const Navigation: React.FC = () => {
               component={JoinGroupScreen}
               options={{ 
                 headerShown: true,
-                title: 'Unirse a Grupo',
+                title: 'Unirse a Evento',
                 headerBackTitle: t('common.back')
               }}
             />

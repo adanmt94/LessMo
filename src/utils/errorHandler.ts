@@ -128,6 +128,9 @@ export function getUserFriendlyMessage(errorCode: string, language: 'es' | 'en' 
 export function mapFirebaseError(error: any): string {
   const code = error.code || error.message || '';
   
+  // Log para debugging
+  console.log('🔍 [ERROR-MAPPER] Mapeando error:', { code, message: error.message });
+  
   if (code.includes('permission-denied')) return ErrorType.FIREBASE_PERMISSION;
   if (code.includes('not-found')) return ErrorType.FIREBASE_NOT_FOUND;
   if (code.includes('network')) return ErrorType.FIREBASE_NETWORK;
@@ -135,7 +138,11 @@ export function mapFirebaseError(error: any): string {
   if (code.includes('user-not-found')) return ErrorType.AUTH_USER_NOT_FOUND;
   if (code.includes('wrong-password')) return ErrorType.AUTH_WRONG_PASSWORD;
   if (code.includes('email-already-in-use')) return ErrorType.AUTH_EMAIL_IN_USE;
+  if (code.includes('invalid-credential')) return ErrorType.AUTH_WRONG_PASSWORD;
+  if (code.includes('too-many-requests')) return ErrorType.AUTH_FAILED;
+  if (code.includes('api-key-invalid') || code.includes('invalid-api-key')) return ErrorType.AUTH_FAILED;
   
+  console.warn('⚠️ [ERROR-MAPPER] Error no reconocido, usando UNKNOWN');
   return ErrorType.UNKNOWN;
 }
 

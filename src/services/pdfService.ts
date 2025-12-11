@@ -464,7 +464,7 @@ const generatePDFHTML = (
         ${participants.map(participant => {
           const paid = expenses.filter(e => e.paidBy === participant.id).reduce((sum, e) => sum + e.amount, 0);
           const owes = expenses
-            .filter(e => e.beneficiaries.includes(participant.id))
+            .filter(e => (e.beneficiaries || e.participantIds || []).includes(participant.id))
             .reduce((sum, e) => {
               // Calculate participant's share based on split type
               if (e.splitType === 'equal') {
@@ -528,17 +528,18 @@ const calculateSettlements = (
 
     // Amount owed
     const owes = expenses
-      .filter(e => e.beneficiaries.includes(participant.id))
+      .filter(e => (e.beneficiaries || e.participantIds || []).includes(participant.id))
       .reduce((sum, e) => {
         // Calculate participant's share based on split type
+        const beneficiaries = e.beneficiaries || e.participantIds || [];
         if (e.splitType === 'equal') {
-          return sum + (e.amount / e.beneficiaries.length);
+          return sum + (e.amount / beneficiaries.length);
         } else if (e.splitType === 'custom' && e.customSplits) {
           return sum + (e.customSplits[participant.id] || 0);
         } else if (e.splitType === 'items' && e.items) {
-          const itemShare = e.items.reduce((itemSum, item) => {
-            if (item.assignedTo.includes(participant.id)) {
-              return itemSum + (item.price / item.assignedTo.length);
+          const itemShare = expense.items.reduce((itemSum, item) => {
+            if (item.assignedTo?.includes(participant.id)) {
+              return itemSum + (item.price / (item.assignedTo?.length || 1));
             }
             return itemSum;
           }, 0);

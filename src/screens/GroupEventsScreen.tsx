@@ -1,5 +1,5 @@
 /**
- * GroupEventsScreen - Pantalla de eventos de un grupo específico
+ * GroupEventsScreen - Pantalla de eventos de un evento específico
  */
 
 import React, { useState, useCallback } from 'react';
@@ -98,7 +98,7 @@ export const GroupEventsScreen: React.FC<Props> = ({ navigation, route }) => {
     try {
       setLoading(true);
       const userEvents = await getUserEventsByStatus(user.uid);
-      // Filtrar solo eventos de este grupo
+      // Filtrar solo eventos de este evento
       const groupEvents = userEvents.filter(e => e.groupId === groupId);
       setEvents(groupEvents);
     } catch (error) {
@@ -189,12 +189,12 @@ export const GroupEventsScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const handleShareGroup = async () => {
     try {
-      // Obtener el grupo completo para el código de invitación
+      // Obtener el evento completo para el código de invitación
       const { getGroup } = await import('../services/firebase');
       const groupData = await getGroup(groupId);
       
       if (!groupData || !groupData.inviteCode) {
-        Alert.alert('Error', 'Este grupo no tiene código de invitación');
+        Alert.alert('Error', 'Este evento no tiene código de invitación');
         return;
       }
 
@@ -202,7 +202,7 @@ export const GroupEventsScreen: React.FC<Props> = ({ navigation, route }) => {
       // Crear enlace clicable (https) - formato universal
       const shareLink = `https://lessmo.app/join/${inviteCode}`;
       
-      const message = `🎯 ¡Únete al grupo "${groupName}" ${groupIcon || '👥'}!\n\n📋 ${activeEvents.length} ${t('groups.activeEvents')}\n\n🔗 Enlace: ${shareLink}\n\n📱 O usa el código: ${inviteCode}\n\nDescarga Les$Mo para gestionar gastos compartidos`;
+      const message = `🎯 ¡Únete al evento "${groupName}" ${groupIcon || '👥'}!\n\n📋 ${activeEvents.length} ${t('groups.activeEvents')}\n\n🔗 Enlace: ${shareLink}\n\n📱 O usa el código: ${inviteCode}\n\nDescarga Les$Mo para gestionar gastos compartidos`;
 
       await Share.share({
         message: message,
@@ -211,7 +211,7 @@ export const GroupEventsScreen: React.FC<Props> = ({ navigation, route }) => {
       });
     } catch (error: any) {
       if (error.message !== 'User did not share') {
-        Alert.alert('Error', 'No se pudo compartir el grupo');
+        Alert.alert('Error', 'No se pudo compartir el evento');
       }
     }
   };
@@ -226,7 +226,7 @@ export const GroupEventsScreen: React.FC<Props> = ({ navigation, route }) => {
     );
   }
 
-  // Ocultar evento "General" en grupos recurring
+  // Ocultar evento "General" en eventos recurring
   const visibleEvents = groupType === 'recurring' 
     ? filteredEvents.filter(e => e.name !== 'General')
     : filteredEvents;
@@ -332,7 +332,7 @@ export const GroupEventsScreen: React.FC<Props> = ({ navigation, route }) => {
             <Text style={[styles.actionLabel, { color: theme.colors.primary }]}>Editar</Text>
           </TouchableOpacity>
           
-          {/* Botón principal según tipo de grupo */}
+          {/* Botón principal según tipo de evento */}
           {groupType === 'recurring' && defaultEventId ? (
             <TouchableOpacity
               style={[styles.createButton, { 
@@ -353,7 +353,7 @@ export const GroupEventsScreen: React.FC<Props> = ({ navigation, route }) => {
                 backgroundColor: theme.colors.primary,
                 shadowColor: theme.colors.primary
               }]}
-              onPress={() => navigation.navigate('CreateEvent', { mode: 'create', groupId })}
+              onPress={() => navigation.navigate('AddExpense', { eventId: groupId })}
             >
               <Text style={[styles.actionIcon, { color: '#FFFFFF' }]}>+</Text>
               <Text style={[styles.actionLabel, { color: '#FFFFFF' }]}>Añadir Gasto</Text>
@@ -429,13 +429,13 @@ export const GroupEventsScreen: React.FC<Props> = ({ navigation, route }) => {
           </View>
         ) : displayEvents.length === 0 && !searchQuery.trim() ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>📅</Text>
+            <Text style={styles.emptyIcon}>💳</Text>
             <Text style={styles.emptyText}>
-              {activeTab === 'active' ? t('groupEvents.noActiveEvents') : t('groupEvents.noPastEvents')}
+              {activeTab === 'active' ? 'No hay gastos activos' : 'No hay gastos pasados'}
             </Text>
             <Button
-              title={t('groupEvents.createEvent')}
-              onPress={() => navigation.navigate('CreateEvent', { mode: 'create', groupId })}
+              title="+ Añadir Gasto"
+              onPress={() => navigation.navigate('AddExpense', { eventId: groupId })}
               style={styles.emptyButton}
             />
           </View>
@@ -537,7 +537,7 @@ export const GroupEventsScreen: React.FC<Props> = ({ navigation, route }) => {
                 <View style={styles.footerItem}>
                   <Text style={styles.footerIcon}>👥</Text>
                   <Text style={[styles.footerText, { color: theme.colors.textSecondary }]}>
-                    {event.participantIds.length} {event.participantIds.length === 1 ? 'persona' : 'personas'}
+                    {event.participantIds?.length || 0} {(event.participantIds?.length || 0) === 1 ? 'persona' : 'personas'}
                   </Text>
                 </View>
                 <View style={styles.footerDivider} />

@@ -111,7 +111,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
               </Text>
             </View>
             <Text style={[styles.participantsCount, { color: theme.colors.textSecondary }]}>
-              👥 {item.participantIds.length} {t('home.totalParticipants')}
+              👥 {item.participantIds?.length || 0} {t('home.totalParticipants')}
             </Text>
           </View>
         </Card>

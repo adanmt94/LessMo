@@ -1,5 +1,5 @@
 /**
- * GroupsScreen - Pantalla de grupos
+ * GroupsScreen - Pantalla de eventos
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -84,14 +84,14 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
       
       // Timeout de 30 segundos
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout al cargar grupos')), 30000)
+        setTimeout(() => reject(new Error('Timeout al cargar eventos')), 30000)
       );
       
       const loadPromise = (async () => {
         const userGroups = await getUserGroups(user.uid);
         if (isCancelled) return [];
         
-        // Para cada grupo, calcular el número real de participantes únicos
+        // Para cada evento, calcular el número real de participantes únicos
         const { getEventParticipants } = await import('../services/firebase');
         const groupsWithStats = await Promise.all(userGroups.map(async (group) => {
           if (isCancelled) return group;
@@ -99,7 +99,7 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
           const eventIds = group.eventIds || [];
           const memberIds = group.memberIds || [];
           
-          // Obtener todos los participantes únicos de los eventos del grupo
+          // Obtener todos los participantes únicos de los eventos del evento
           const allParticipantIds = new Set<string>();
           
           // Limitar consultas concurrentes para evitar sobrecarga
@@ -124,7 +124,7 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
             );
           }
           
-          // El conteo real incluye miembros del grupo + participantes de eventos
+          // El conteo real incluye miembros del evento + participantes de eventos
           const uniqueParticipants = new Set([...memberIds, ...Array.from(allParticipantIds)]);
           
           return {
@@ -152,7 +152,7 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
       if (!error.message?.includes('permission') && 
           !error.message?.includes('Missing') &&
           !error.message?.includes('Timeout')) {
-        Alert.alert('Error', 'No se pudieron cargar los grupos');
+        Alert.alert('Error', 'No se pudieron cargar los eventos');
       }
       setGroups([]);
     } finally {
@@ -172,9 +172,18 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
     setRefreshing(false);
   };
 
-  const handleViewGroupEvents = (groupId: string, groupName: string, groupIcon?: string, groupColor?: string) => {
-    // Navegar a pantalla dedicada de eventos del grupo
-    navigation.navigate('GroupEvents', { groupId, groupName, groupIcon, groupColor });
+  const handleViewGroupEvents = async (groupId: string, groupName: string, groupIcon?: string, groupColor?: string) => {
+    // Buscar el evento para ver cuántos eventos tiene
+    const group = groups.find(g => g.id === groupId);
+    
+    // Si el evento tiene exactamente 1 evento, navegar directamente a ese evento
+    if (group && group.eventIds && group.eventIds.length === 1) {
+      const eventId = group.eventIds[0];
+      navigation.navigate('EventDetail', { eventId, eventName: groupName });
+    } else {
+      // Si tiene 0 o múltiples eventos, mostrar la lista de eventos del evento
+      navigation.navigate('GroupEvents', { groupId, groupName, groupIcon, groupColor });
+    }
   };
 
   const handleEditGroup = (groupId: string) => {
@@ -205,8 +214,8 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
     if (selectedGroups.size === 0) return;
     
     Alert.alert(
-      'Eliminar grupos',
-      `¿Estás seguro de eliminar ${selectedGroups.size} grupo${selectedGroups.size > 1 ? 's' : ''}? Los gastos asociados no se eliminarán.`,
+      'Eliminar eventos',
+      `¿Estás seguro de eliminar ${selectedGroups.size} evento${selectedGroups.size > 1 ? 's' : ''}? Los gastos asociados no se eliminarán.`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -217,11 +226,11 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
               const { deleteGroup } = await import('../services/firebase');
               const deletePromises = Array.from(selectedGroups).map(id => deleteGroup(id));
               await Promise.all(deletePromises);
-              Alert.alert('Éxito', `${selectedGroups.size} grupo${selectedGroups.size > 1 ? 's' : ''} eliminado${selectedGroups.size > 1 ? 's' : ''} correctamente`);
+              Alert.alert('Éxito', `${selectedGroups.size} evento${selectedGroups.size > 1 ? 's' : ''} eliminado${selectedGroups.size > 1 ? 's' : ''} correctamente`);
               exitSelectionMode();
               loadGroups();
             } catch (error: any) {
-              Alert.alert('Error', error.message || 'No se pudieron eliminar los grupos');
+              Alert.alert('Error', error.message || 'No se pudieron eliminar los eventos');
             }
           },
         },
@@ -234,7 +243,7 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
     if (!group) return;
     
     Alert.alert(
-      'Eliminar grupo',
+      'Eliminar evento',
       `¿Estás seguro de eliminar "${group.name}"? Los gastos asociados no se eliminarán.`,
       [
         { text: 'Cancelar', style: 'cancel' },
@@ -245,10 +254,10 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
             try {
               const { deleteGroup: deleteGroupFn } = await import('../services/firebase');
               await deleteGroupFn(groupId);
-              Alert.alert('Éxito', 'Grupo eliminado correctamente');
+              Alert.alert('Éxito', 'Evento eliminado correctamente');
               loadGroups();
             } catch (error: any) {
-              Alert.alert('Error', error.message || 'No se pudo eliminar el grupo');
+              Alert.alert('Error', error.message || 'No se pudo eliminar el evento');
             }
           },
         },
@@ -461,10 +470,10 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
           <Text style={styles.emptyIcon}>👥</Text>
           <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>{t('groups.noGroups')}</Text>
           <Text style={[styles.emptySubtext, { color: theme.colors.textSecondary }]}>
-            Los grupos te permiten organizar múltiples gastos relacionados
+            Los eventos te permiten organizar múltiples gastos relacionados
           </Text>
           <Button
-            title="Crear primer grupo"
+            title="Crear primer evento"
             onPress={() => navigation.navigate('CreateGroup', { mode: 'create' })}
             style={styles.emptyButton}
           />
@@ -541,7 +550,7 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
       <View style={[styles.searchContainer, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.border }]}>
         <TextInput
           style={[styles.searchInput, { backgroundColor: theme.colors.background, color: theme.colors.text, borderColor: theme.colors.border }]}
-          placeholder="Buscar grupos..."
+          placeholder="Buscar eventos..."
           placeholderTextColor={theme.colors.textSecondary}
           value={searchQuery}
           onChangeText={setSearchQuery}

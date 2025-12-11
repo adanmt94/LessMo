@@ -77,7 +77,7 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
     loadUserName();
   }, [user]);
 
-  // Manejar filtro de grupo cuando viene de navegación
+  // Manejar filtro de evento cuando viene de navegación
   useFocusEffect(
     useCallback(() => {
       const hasGroupFilter = route?.params?.filterGroupId;
@@ -86,7 +86,7 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
       console.log('🔍 EventsScreen Focus - Group filter:', hasGroupFilter);
       
       if (hasGroupFilter) {
-        console.log('✅ Filtrando eventos del grupo:', hasGroupFilter);
+        console.log('✅ Filtrando eventos del evento:', hasGroupFilter);
         setFilterGroupId(route.params.filterGroupId);
         setIsFromTab(false);
       } else {
@@ -146,7 +146,7 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
       const allEvents = await Promise.race([loadPromise, timeoutPromise]) as Event[];
       setEvents(allEvents);
       
-      // Cargar nombres de grupos para eventos que pertenecen a un grupo
+      // Cargar nombres de eventos para eventos que pertenecen a un evento
       const eventsWithGroup = allEvents.filter(e => e.groupId);
       const groupIds = [...new Set(eventsWithGroup.map(e => e.groupId!))];
       console.log('📁 Total eventos:', allEvents.length);
@@ -161,9 +161,9 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
             const group = await getGroup(groupId);
             if (group) {
               names[groupId] = group.name;
-              console.log('✅ Grupo cargado:', groupId, '→', group.name);
+              console.log('✅ Evento cargado:', groupId, '→', group.name);
             } else {
-              console.warn('⚠️ Grupo no encontrado:', groupId);
+              console.warn('⚠️ Evento no encontrado:', groupId);
             }
           } catch (error) {
             console.error(`❌ Error loading group ${groupId}:`, error);
@@ -171,7 +171,7 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
         })
       );
       
-      console.log('📁 Nombres de grupos cargados:', names);
+      console.log('📁 Nombres de eventos cargados:', names);
       setGroupNames(names);
     } catch (error: any) {
       console.error('❌ Error loading events:', error);
@@ -271,11 +271,11 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
   // Filtrar eventos
   let filteredEvents = events;
   
-  // Si hay un filtro de grupo específico, mostrar solo esos eventos
+  // Si hay un filtro de evento específico, mostrar solo esos eventos
   if (filterGroupId) {
     filteredEvents = events.filter(e => e.groupId === filterGroupId);
   }
-  // Si NO hay filtro de grupo, mostrar TODOS los eventos (individuales + de grupos)
+  // Si NO hay filtro de evento, mostrar TODOS los eventos (individuales + de eventos)
   // La pestaña "Eventos" debe mostrar todos los eventos del usuario
   
   // Aplicar filtro de búsqueda con debounce
@@ -366,12 +366,12 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
             <Text style={styles.eventName} numberOfLines={1}>{event.name}</Text>
             <View style={styles.eventMetaRow}>
               {event.inviteCode && <Text style={styles.eventCode}>#{event.inviteCode}</Text>}
-              {/* Badge de grupo inline */}
+              {/* Badge de evento inline */}
               {event.groupId && (
                 <View style={styles.groupBadgeInline}>
                   <Text style={styles.groupBadgeIconInline}>📁</Text>
                   <Text style={styles.groupBadgeTextInline}>
-                    {groupNames[event.groupId] || 'Grupo'}
+                    {groupNames[event.groupId] || 'Evento'}
                   </Text>
                 </View>
               )}
@@ -440,12 +440,12 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
         </Text>
         <Text style={styles.emptyText}>
           {activeTab === 'active' 
-            ? 'No tienes grupos activos'
-            : 'No tienes grupos pasados'}
+            ? 'No tienes eventos activos'
+            : 'No tienes eventos pasados'}
         </Text>
         {activeTab === 'active' && (
           <Button
-            title="Crear primer grupo"
+            title="Crear primer evento"
             onPress={() => navigation.navigate('CreateEvent', { mode: 'create' })}
             style={styles.emptyButton}
           />
@@ -488,7 +488,7 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
               Hola {userName.split(' ')[0]} 👋
             </Text>
             <Text style={[styles.title, { color: theme.colors.text }]}>
-              {filterGroupId ? 'Gastos del Grupo' : 'Mis Grupos'}
+              {filterGroupId ? 'Gastos del Evento' : 'Mis Eventos'}
             </Text>
           </View>
         </View>

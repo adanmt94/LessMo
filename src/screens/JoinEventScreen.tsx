@@ -179,7 +179,7 @@ export const JoinEventScreen: React.FC<Props> = ({ navigation, route }) => {
       
       Alert.alert(
         'Error', 
-        error.message || 'No se pudo unir al grupo. Verifica que tengas permisos.'
+        error.message || 'No se pudo unir al evento. Verifica que tengas permisos.'
       );
     } finally {
       setLoading(false);
@@ -202,7 +202,7 @@ export const JoinEventScreen: React.FC<Props> = ({ navigation, route }) => {
           </View>
 
           <Text style={styles.instructions}>
-            Ingresa el código de invitación de 6 dígitos para unirte a un grupo
+            Ingresa el código de invitación de 6 dígitos para unirte a un evento
           </Text>
 
           {/* Código de invitación */}

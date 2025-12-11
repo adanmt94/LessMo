@@ -1,5 +1,5 @@
 /**
- * CreateGroupScreen - Pantalla para crear/editar grupos
+ * CreateGroupScreen - Pantalla para crear/editar eventos
  */
 
 import React, { useState, useEffect } from 'react';
@@ -55,7 +55,7 @@ export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
   const [budget, setBudget] = useState('');
   const [currency, setCurrency] = useState<'EUR' | 'USD' | 'GBP'>('EUR');
 
-  // Cargar datos del grupo si estamos en modo edición
+  // Cargar datos del evento si estamos en modo edición
   useEffect(() => {
     if (isEditMode) {
       loadGroupData();
@@ -117,7 +117,7 @@ export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
       
       // Verificar si ya está en la lista
       if (members.some(m => m.id === userId)) {
-        Alert.alert(t('common.error'), 'Este usuario ya es miembro del grupo');
+        Alert.alert(t('common.error'), 'Este usuario ya es miembro del evento');
         return;
       }
       
@@ -151,13 +151,13 @@ export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
     
     // No permitir eliminar al creador
     if (group.createdBy === memberId) {
-      Alert.alert(t('common.error'), 'No puedes eliminar al creador del grupo');
+      Alert.alert(t('common.error'), 'No puedes eliminar al creador del evento');
       return;
     }
     
     Alert.alert(
       'Eliminar miembro',
-      `¿Estás seguro de eliminar a ${memberName} del grupo?`,
+      `¿Estás seguro de eliminar a ${memberName} del evento?`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -197,7 +197,7 @@ export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
 
     try {
       if (isEditMode) {
-        // Actualizar grupo existente
+        // Actualizar evento existente
         const { updateGroup } = await import('../services/firebase');
         await updateGroup(
           groupId!,
@@ -218,7 +218,7 @@ export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
           ]
         );
       } else {
-        // Crear nuevo grupo
+        // Crear nuevo evento
         const budgetNumber = budget.trim() ? parseFloat(budget) : undefined;
         
         const newGroupId = await createGroup(
@@ -332,17 +332,17 @@ export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
               label={t('createGroup.descriptionLabel')}
               value={description}
               onChangeText={setDescription}
-              placeholder="Describe el grupo..."
+              placeholder="Describe el evento..."
               multiline
               numberOfLines={3}
               maxLength={200}
             />
           </Card>
 
-          {/* Tipo de grupo */}
+          {/* Tipo de evento */}
           {!isEditMode && (
             <Card style={styles.section}>
-              <Text style={styles.sectionTitle}>Tipo de grupo</Text>
+              <Text style={styles.sectionTitle}>Tipo de evento</Text>
               <Text style={styles.sectionSubtitle}>
                 Elige cómo organizar los gastos
               </Text>
@@ -363,7 +363,7 @@ export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
                     Proyecto/Viaje
                   </Text>
                   <Text style={styles.typeDescription}>
-                    Crea eventos específicos dentro del grupo
+                    Crea eventos específicos dentro del evento
                   </Text>
                 </TouchableOpacity>
 
@@ -435,7 +435,7 @@ export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
             <Card style={styles.section}>
               <Text style={styles.sectionTitle}>Participantes ({members.length})</Text>
               <Text style={styles.sectionSubtitle}>
-                Gestiona los miembros del grupo
+                Gestiona los miembros del evento
               </Text>
               
               {/* Añadir nuevo miembro */}
@@ -489,7 +489,7 @@ export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
                 <Text style={styles.previewIconText}>{selectedIcon}</Text>
               </View>
               <View style={styles.previewInfo}>
-                <Text style={styles.previewName}>{groupName || 'Nombre del grupo'}</Text>
+                <Text style={styles.previewName}>{groupName || 'Nombre del evento'}</Text>
                 <Text style={styles.previewDescription}>
                   {description || 'Sin descripción'}
                 </Text>

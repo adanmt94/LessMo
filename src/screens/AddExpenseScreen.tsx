@@ -61,7 +61,19 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
   const { t, currentLanguage } = useLanguage();
   const styles = getStyles(theme);
   const isEditMode = mode === 'edit' && expenseId;
-  const { participants, addExpense, editExpense, expenses, getRemainingBalance, getTotalExpenses } = useExpenses(eventId!);
+  const isIndividualExpense = eventId === 'individual';
+  
+  // Para gastos individuales, no necesitamos el hook useExpenses
+  const expenseHookResult = !isIndividualExpense ? useExpenses(eventId!) : { 
+    participants: [], 
+    addExpense: null, 
+    editExpense: null, 
+    expenses: [], 
+    getRemainingBalance: () => 0, 
+    getTotalExpenses: () => 0 
+  };
+  const { participants, addExpense, editExpense, expenses, getRemainingBalance, getTotalExpenses } = expenseHookResult;
+  
   const { notifyNewExpense } = useNotifications();
   const { checkAvailableAmount, checkTotalSpent } = useSpendingAlerts();
   const [eventData, setEventData] = useState<any>(null);
@@ -103,7 +115,20 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
   // Cargar datos del evento y plantillas
   useEffect(() => {
     const loadEventData = async () => {
-      if (!eventId) return;
+      if (!eventId || isIndividualExpense) {
+        // Para gastos individuales, cargar solo plantillas
+        try {
+          const { auth } = await import('../services/firebase');
+          if (auth.currentUser) {
+            const userTemplates = await getAllTemplates(auth.currentUser.uid);
+            setTemplates(userTemplates);
+          }
+        } catch (error) {
+          console.error('Error cargando plantillas:', error);
+        }
+        return;
+      }
+      
       try {
         const { getEvent, auth } = await import('../services/firebase');
         const event = await getEvent(eventId);
@@ -119,7 +144,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
       }
     };
     loadEventData();
-  }, [eventId]);
+  }, [eventId, isIndividualExpense]);
 
   // Cargar datos del gasto en modo edición
   useEffect(() => {
@@ -583,7 +608,29 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
 
       let success: boolean;
       
-      if (isEditMode) {
+      if (isIndividualExpense) {
+        // Crear gasto individual sin evento
+        console.log('💰 Creando gasto individual');
+        try {
+          const { addDoc, collection, auth } = await import('../services/firebase');
+          const { db } = await import('../services/firebase');
+          
+          await addDoc(collection(db, 'expenses'), {
+            paidBy: auth.currentUser?.uid || '',
+            amount: amountNum,
+            description,
+            category,
+            currency: 'EUR', // Default para gastos individuales
+            createdAt: new Date(),
+            splitType: 'equal',
+            receiptPhoto: photoURL
+          });
+          success = true;
+        } catch (error) {
+          console.error('Error creando gasto individual:', error);
+          success = false;
+        }
+      } else if (isEditMode) {
         console.log('📝 Modo edición - Actualizando gasto:', expenseId);
         success = await editExpense(
           expenseId!,
@@ -810,168 +857,186 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
               </Card>
             )}
 
-            <Text style={styles.label}>{t('addExpense.whoPaidLabel')}</Text>
-            {participants.length === 0 ? (
-              <Text style={styles.emptyText}>{t('addExpense.noParticipants')}</Text>
-            ) : (
-              <View style={styles.participantsList}>
-                {participants.map((participant) => (
-                  <TouchableOpacity
-                    key={participant.id}
+            {!isIndividualExpense && (
+              <>
+                <Text style={styles.label}>{t('addExpense.whoPaidLabel')}</Text>
+                {participants.length === 0 ? (
+                  <Text style={styles.emptyText}>{t('addExpense.noParticipants')}</Text>
+                ) : (
+                  <View style={styles.participantsList}>
+                    {participants.map((participant) => (
+                      <TouchableOpacity
+                        key={participant.id}
+                        style={[
+                          styles.participantButton,
+                          paidBy === participant.id && styles.participantButtonActive,
+                        ]}
+                        onPress={() => setPaidBy(participant.id)}
+                      >
+                        <Text
+                          style={[
+                            styles.participantText,
+                            paidBy === participant.id && styles.participantTextActive,
+                          ]}
+                        >
+                          {participant.name}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </>
+            )}
+
+            {!isIndividualExpense && (
+              <>
+                <Text style={styles.label}>¿Cómo quieres dividir el gasto? *</Text>
+                <View style={styles.splitTypeContainer}>
+                  <View style={styles.splitTypeRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.splitTypeButton,
+                    splitType === 'equal' && styles.splitTypeButtonActive,
+                  ]}
+                  onPress={() => setSplitType('equal')}
+                >
+                  <Text style={styles.splitTypeIcon}>⚖️</Text>
+                  <Text
                     style={[
-                      styles.participantButton,
-                      paidBy === participant.id && styles.participantButtonActive,
+                      styles.splitTypeText,
+                      splitType === 'equal' && styles.splitTypeTextActive,
                     ]}
-                    onPress={() => setPaidBy(participant.id)}
                   >
-                    <Text
-                      style={[
-                        styles.participantText,
-                        paidBy === participant.id && styles.participantTextActive,
-                      ]}
-                    >
-                      {participant.name}
+                    Partes iguales
+                  </Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[
+                    styles.splitTypeButton,
+                    splitType === 'percentage' && styles.splitTypeButtonActive,
+                  ]}
+                  onPress={() => setSplitType('percentage')}
+                >
+                  <Text style={styles.splitTypeIcon}>📊</Text>
+                  <Text
+                    style={[
+                      styles.splitTypeText,
+                      splitType === 'percentage' && styles.splitTypeTextActive,
+                    ]}
+                  >
+                    Porcentaje
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.splitTypeRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.splitTypeButton,
+                    splitType === 'amount' && styles.splitTypeButtonActive,
+                  ]}
+                  onPress={() => setSplitType('amount')}
+                >
+                  <Text style={styles.splitTypeIcon}>💰</Text>
+                  <Text
+                    style={[
+                      styles.splitTypeText,
+                      splitType === 'amount' && styles.splitTypeTextActive,
+                    ]}
+                  >
+                    Cantidad fija
+                  </Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[
+                    styles.splitTypeButton,
+                    splitType === 'custom' && styles.splitTypeButtonActive,
+                  ]}
+                  onPress={() => setSplitType('custom')}
+                >
+                  <Text style={styles.splitTypeIcon}>🎯</Text>
+                  <Text
+                    style={[
+                      styles.splitTypeText,
+                      splitType === 'custom' && styles.splitTypeTextActive,
+                    ]}
+                  >
+                    Personalizado
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.splitTypeRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.splitTypeButton,
+                    splitType === 'items' && styles.splitTypeButtonActive,
+                  ]}
+                  onPress={() => setSplitType('items')}
+                >
+                  <Text style={styles.splitTypeIcon}>🧾</Text>
+                  <Text
+                    style={[
+                      styles.splitTypeText,
+                      splitType === 'items' && styles.splitTypeTextActive,
+                    ]}
+                  >
+                    Por items
+                  </Text>
+                </TouchableOpacity>
+                <View style={styles.splitTypeButtonPlaceholder} />
+              </View>
+                </View>
+
+                <Text style={styles.label}>
+                  {t('addExpense.beneficiariesTitle')} * 
+                  {splitType === 'equal' && ' (A partes iguales)'}
+                  {splitType === 'percentage' && ' (Por porcentaje)'}
+                  {splitType === 'amount' && ' (Cantidad fija por persona)'}
+                  {splitType === 'custom' && ' (Personalizado)'}
+                  {splitType === 'items' && ' (Por items)'}
+                </Text>
+                
+                {splitType === 'percentage' && amount && (
+                  <View style={styles.customSummary}>
+                    <Text style={styles.customSummaryText}>
+                      💡 La suma de porcentajes debe ser 100%
                     </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-
-            <Text style={styles.label}>¿Cómo quieres dividir el gasto? *</Text>
-            <View style={styles.splitTypeContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.splitTypeButton,
-                  splitType === 'equal' && styles.splitTypeButtonActive,
-                ]}
-                onPress={() => setSplitType('equal')}
-              >
-                <Text
-                  style={[
-                    styles.splitTypeText,
-                    splitType === 'equal' && styles.splitTypeTextActive,
-                  ]}
-                >
-                  ⚖️ A partes iguales
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[
-                  styles.splitTypeButton,
-                  splitType === 'percentage' && styles.splitTypeButtonActive,
-                ]}
-                onPress={() => setSplitType('percentage')}
-              >
-                <Text
-                  style={[
-                    styles.splitTypeText,
-                    splitType === 'percentage' && styles.splitTypeTextActive,
-                  ]}
-                >
-                  📊 Cada uno un %
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[
-                  styles.splitTypeButton,
-                  splitType === 'amount' && styles.splitTypeButtonActive,
-                ]}
-                onPress={() => setSplitType('amount')}
-              >
-                <Text
-                  style={[
-                    styles.splitTypeText,
-                    splitType === 'amount' && styles.splitTypeTextActive,
-                  ]}
-                >
-                  💰 Cantidad fija
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[
-                  styles.splitTypeButton,
-                  splitType === 'custom' && styles.splitTypeButtonActive,
-                ]}
-                onPress={() => setSplitType('custom')}
-              >
-                <Text
-                  style={[
-                    styles.splitTypeText,
-                    splitType === 'custom' && styles.splitTypeTextActive,
-                  ]}
-                >
-                  🎯 Personalizado
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[
-                  styles.splitTypeButton,
-                  splitType === 'items' && styles.splitTypeButtonActive,
-                ]}
-                onPress={() => setSplitType('items')}
-              >
-                <Text
-                  style={[
-                    styles.splitTypeText,
-                    splitType === 'items' && styles.splitTypeTextActive,
-                  ]}
-                >
-                  🧾 Por items
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.label}>
-              {t('addExpense.beneficiariesTitle')} * 
-              {splitType === 'equal' && ' (A partes iguales)'}
-              {splitType === 'percentage' && ' (Por porcentaje)'}
-              {splitType === 'amount' && ' (Cantidad fija por persona)'}
-              {splitType === 'custom' && ' (Personalizado)'}
-              {splitType === 'items' && ' (Por items)'}
-            </Text>
-            
-            {splitType === 'percentage' && amount && (
-              <View style={styles.customSummary}>
-                <Text style={styles.customSummaryText}>
-                  💡 La suma de porcentajes debe ser 100%
-                </Text>
-                <Text style={styles.customSummaryText}>
-                  Suma actual: {
-                    selectedBeneficiaries.reduce((sum, id) => {
-                      return sum + parseFloat(percentageSplits[id] || '0');
-                    }, 0).toFixed(1)
-                  }%
-                </Text>
-              </View>
-            )}
-            
-            {(splitType === 'custom' || splitType === 'amount') && amount && (
-              <View style={styles.customSummary}>
-                <Text style={styles.customSummaryText}>
-                  Total a dividir: €{parseFloat(amount || '0').toFixed(2)}
-                </Text>
-                <Text style={styles.customSummaryText}>
-                  Suma actual: €{
-                    selectedBeneficiaries.reduce((sum, id) => {
-                      return sum + parseFloat(customSplits[id] || '0');
-                    }, 0).toFixed(2)
-                  }
-                </Text>
-              </View>
-            )}
-            
-            {participants.length === 0 ? (
-              <Text style={styles.emptyText}>{t('addExpense.noParticipantsAvailable')}</Text>
-            ) : (
-              <View style={styles.beneficiariesList}>
-                {splitType === 'equal' ? (
-                  // Modo equitativo: checkboxes simples
-                  participants.map((participant) => (
-                    <TouchableOpacity
+                    <Text style={styles.customSummaryText}>
+                      Suma actual: {
+                        selectedBeneficiaries.reduce((sum, id) => {
+                          return sum + parseFloat(percentageSplits[id] || '0');
+                        }, 0).toFixed(1)
+                      }%
+                    </Text>
+                  </View>
+                )}
+                
+                {(splitType === 'custom' || splitType === 'amount') && amount && (
+                  <View style={styles.customSummary}>
+                    <Text style={styles.customSummaryText}>
+                      Total a dividir: €{parseFloat(amount || '0').toFixed(2)}
+                    </Text>
+                    <Text style={styles.customSummaryText}>
+                      Suma actual: €{
+                        selectedBeneficiaries.reduce((sum, id) => {
+                          return sum + parseFloat(customSplits[id] || '0');
+                        }, 0).toFixed(2)
+                      }
+                    </Text>
+                  </View>
+                )}
+                
+                {participants.length === 0 ? (
+                  <Text style={styles.emptyText}>{t('addExpense.noParticipantsAvailable')}</Text>
+                ) : (
+                  <View style={styles.beneficiariesList}>
+                    {splitType === 'equal' ? (
+                      // Modo equitativo: checkboxes simples
+                      participants.map((participant) => (
+                        <TouchableOpacity
                       key={participant.id}
                       style={[
                         styles.beneficiaryButton,
@@ -991,98 +1056,100 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
                           <Text style={styles.checkmark}>✓</Text>
                         )}
                       </View>
-                      <Text style={styles.beneficiaryText}>{participant.name}</Text>
-                    </TouchableOpacity>
-                  ))
-                ) : splitType === 'percentage' ? (
-                  // Modo porcentaje: inputs de porcentaje
-                  participants.map((participant) => (
-                    <View key={participant.id} style={styles.customBeneficiaryRow}>
-                      <TouchableOpacity
-                        style={[
-                          styles.customBeneficiaryButton,
-                          selectedBeneficiaries.includes(participant.id) &&
-                            styles.customBeneficiaryButtonActive,
-                        ]}
-                        onPress={() => toggleBeneficiary(participant.id)}
-                      >
-                        <View
-                          style={[
-                            styles.checkbox,
-                            selectedBeneficiaries.includes(participant.id) &&
-                              styles.checkboxActive,
-                          ]}
-                        >
+                          <Text style={styles.beneficiaryText}>{participant.name}</Text>
+                        </TouchableOpacity>
+                      ))
+                    ) : splitType === 'percentage' ? (
+                      // Modo porcentaje: inputs de porcentaje
+                      participants.map((participant) => (
+                        <View key={participant.id} style={styles.customBeneficiaryRow}>
+                          <TouchableOpacity
+                            style={[
+                              styles.customBeneficiaryButton,
+                              selectedBeneficiaries.includes(participant.id) &&
+                                styles.customBeneficiaryButtonActive,
+                            ]}
+                            onPress={() => toggleBeneficiary(participant.id)}
+                          >
+                            <View
+                              style={[
+                                styles.checkbox,
+                                selectedBeneficiaries.includes(participant.id) &&
+                                  styles.checkboxActive,
+                              ]}
+                            >
+                              {selectedBeneficiaries.includes(participant.id) && (
+                                <Text style={styles.checkmark}>✓</Text>
+                              )}
+                            </View>
+                            <Text style={styles.customBeneficiaryName}>{participant.name}</Text>
+                          </TouchableOpacity>
+                          
                           {selectedBeneficiaries.includes(participant.id) && (
-                            <Text style={styles.checkmark}>✓</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', width: 90 }}>
+                              <Input
+                                placeholder="0"
+                                value={percentageSplits[participant.id] || ''}
+                                onChangeText={(text) => {
+                                  setPercentageSplits({
+                                    ...percentageSplits,
+                                    [participant.id]: text
+                                  });
+                                }}
+                                keyboardType="decimal-pad"
+                                style={[styles.customAmountInput, { width: 70 }]}
+                              />
+                              <Text style={{ marginLeft: 4, color: theme.colors.text }}>%</Text>
+                            </View>
                           )}
                         </View>
-                        <Text style={styles.customBeneficiaryName}>{participant.name}</Text>
-                      </TouchableOpacity>
-                      
-                      {selectedBeneficiaries.includes(participant.id) && (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', width: 90 }}>
-                          <Input
-                            placeholder="0"
-                            value={percentageSplits[participant.id] || ''}
-                            onChangeText={(text) => {
-                              setPercentageSplits({
-                                ...percentageSplits,
-                                [participant.id]: text
-                              });
-                            }}
-                            keyboardType="decimal-pad"
-                            style={[styles.customAmountInput, { width: 70 }]}
-                          />
-                          <Text style={{ marginLeft: 4, color: theme.colors.text }}>%</Text>
-                        </View>
-                      )}
-                    </View>
-                  ))
-                ) : (
-                  // Modo personalizado/amount: inputs de monto
-                  participants.map((participant) => (
-                    <View key={participant.id} style={styles.customBeneficiaryRow}>
-                      <TouchableOpacity
-                        style={[
-                          styles.customBeneficiaryButton,
-                          selectedBeneficiaries.includes(participant.id) &&
-                            styles.customBeneficiaryButtonActive,
-                        ]}
-                        onPress={() => toggleBeneficiary(participant.id)}
-                      >
-                        <View
-                          style={[
-                            styles.checkbox,
-                            selectedBeneficiaries.includes(participant.id) &&
-                              styles.checkboxActive,
-                          ]}
-                        >
+                      ))
+                    ) : (
+                      // Modo personalizado/amount: inputs de monto
+                      participants.map((participant) => (
+                        <View key={participant.id} style={styles.customBeneficiaryRow}>
+                          <TouchableOpacity
+                            style={[
+                              styles.customBeneficiaryButton,
+                              selectedBeneficiaries.includes(participant.id) &&
+                                styles.customBeneficiaryButtonActive,
+                            ]}
+                            onPress={() => toggleBeneficiary(participant.id)}
+                          >
+                            <View
+                              style={[
+                                styles.checkbox,
+                                selectedBeneficiaries.includes(participant.id) &&
+                                  styles.checkboxActive,
+                              ]}
+                            >
+                              {selectedBeneficiaries.includes(participant.id) && (
+                                <Text style={styles.checkmark}>✓</Text>
+                              )}
+                            </View>
+                            <Text style={styles.customBeneficiaryName}>{participant.name}</Text>
+                          </TouchableOpacity>
+                          
                           {selectedBeneficiaries.includes(participant.id) && (
-                            <Text style={styles.checkmark}>✓</Text>
+                            <Input
+                              placeholder="0.00"
+                              value={customSplits[participant.id] || ''}
+                              onChangeText={(text) => {
+                                setCustomSplits({
+                                  ...customSplits,
+                                  [participant.id]: text
+                                });
+                              }}
+                              keyboardType="decimal-pad"
+                              style={styles.customAmountInput}
+                            />
                           )}
                         </View>
-                        <Text style={styles.customBeneficiaryName}>{participant.name}</Text>
-                      </TouchableOpacity>
-                      
-                      {selectedBeneficiaries.includes(participant.id) && (
-                        <Input
-                          placeholder="0.00"
-                          value={customSplits[participant.id] || ''}
-                          onChangeText={(text) => {
-                            setCustomSplits({
-                              ...customSplits,
-                              [participant.id]: text
-                            });
-                          }}
-                          keyboardType="decimal-pad"
-                          style={styles.customAmountInput}
-                        />
-                      )}
-                    </View>
-                  ))
+                      ))
+                    )}
+                  </View>
                 )}
-              </View>
+              </>
             )}
           </Card>
 
@@ -1486,30 +1553,46 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontWeight: '500',
   },
   splitTypeContainer: {
-    flexDirection: 'row',
     gap: 12,
     marginBottom: 16,
   },
+  splitTypeRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
   splitTypeButton: {
     flex: 1,
-    padding: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
     borderRadius: 12,
     backgroundColor: theme.colors.inputBackground,
     borderWidth: 2,
     borderColor: theme.colors.border,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 80,
+  },
+  splitTypeButtonPlaceholder: {
+    flex: 1,
+    opacity: 0,
   },
   splitTypeButtonActive: {
     backgroundColor: theme.colors.primaryLight,
     borderColor: theme.colors.primary,
   },
+  splitTypeIcon: {
+    fontSize: 28,
+    marginBottom: 6,
+  },
   splitTypeText: {
-    fontSize: 15,
+    fontSize: 13,
     color: theme.colors.textSecondary,
     fontWeight: '600',
+    textAlign: 'center',
   },
   splitTypeTextActive: {
     color: theme.colors.primary,
+    fontWeight: '700',
   },
   customBeneficiaryRow: {
     marginBottom: 12,

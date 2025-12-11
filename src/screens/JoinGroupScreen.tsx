@@ -1,5 +1,5 @@
 /**
- * JoinGroupScreen - Pantalla para unirse a un grupo mediante código de invitación
+ * JoinGroupScreen - Pantalla para unirse a un evento mediante código de invitación
  */
 
 import React, { useState, useEffect } from 'react';
@@ -58,11 +58,11 @@ export const JoinGroupScreen: React.FC<Props> = ({ navigation, route }) => {
       if (group) {
         setGroupFound(group);
       } else {
-        Alert.alert(t('common.error'), 'Código de grupo inválido');
+        Alert.alert(t('common.error'), 'Código de evento inválido');
         setGroupFound(null);
       }
     } catch (error: any) {
-      Alert.alert(t('common.error'), error.message || 'Error al buscar el grupo');
+      Alert.alert(t('common.error'), error.message || 'Error al buscar el evento');
       setGroupFound(null);
     } finally {
       setSearching(false);
@@ -88,7 +88,7 @@ export const JoinGroupScreen: React.FC<Props> = ({ navigation, route }) => {
       if (currentMembers.includes(user.uid)) {
         Alert.alert(
           'Ya eres miembro',
-          `Ya perteneces al grupo "${groupFound.name}"`,
+          `Ya perteneces al evento "${groupFound.name}"`,
           [
             {
               text: 'OK',
@@ -105,12 +105,12 @@ export const JoinGroupScreen: React.FC<Props> = ({ navigation, route }) => {
         return;
       }
 
-      // Agregar usuario al grupo
+      // Agregar usuario al evento
       await addGroupMember(groupFound.id, user.uid);
 
       Alert.alert(
         t('common.success'),
-        `Te has unido al grupo "${groupFound.name}"`,
+        `Te has unido al evento "${groupFound.name}"`,
         [
           {
             text: 'OK',
@@ -127,7 +127,7 @@ export const JoinGroupScreen: React.FC<Props> = ({ navigation, route }) => {
       
       Alert.alert(
         'Error', 
-        error.message || 'No se pudo unir al grupo. Verifica que tengas permisos.'
+        error.message || 'No se pudo unir al evento. Verifica que tengas permisos.'
       );
     } finally {
       setLoading(false);
@@ -145,9 +145,9 @@ export const JoinGroupScreen: React.FC<Props> = ({ navigation, route }) => {
             <Text style={styles.icon}>👥</Text>
           </View>
 
-          <Text style={styles.title}>Unirse a Grupo</Text>
+          <Text style={styles.title}>Unirse a Evento</Text>
           <Text style={styles.instructions}>
-            Ingresa el código de invitación de 6 dígitos para unirte a un grupo
+            Ingresa el código de invitación de 6 dígitos para unirte a un evento
           </Text>
 
           {/* Código de invitación */}
@@ -171,17 +171,17 @@ export const JoinGroupScreen: React.FC<Props> = ({ navigation, route }) => {
             {searching && (
               <View style={styles.searchingContainer}>
                 <ActivityIndicator color={theme.colors.primary} />
-                <Text style={styles.searchingText}>Buscando grupo...</Text>
+                <Text style={styles.searchingText}>Buscando evento...</Text>
               </View>
             )}
           </Card>
 
-          {/* Grupo encontrado */}
+          {/* Evento encontrado */}
           {groupFound && !searching && (
             <Card style={styles.groupFoundCard}>
               <View style={styles.groupFoundHeader}>
                 <Text style={styles.groupFoundIcon}>✓</Text>
-                <Text style={styles.groupFoundTitle}>¡Grupo encontrado!</Text>
+                <Text style={styles.groupFoundTitle}>¡Evento encontrado!</Text>
               </View>
               
               <View style={styles.groupInfo}>
@@ -207,7 +207,7 @@ export const JoinGroupScreen: React.FC<Props> = ({ navigation, route }) => {
               </View>
 
               <Button
-                title="Unirse al Grupo"
+                title="Unirse al Evento"
                 onPress={handleJoinGroup}
                 loading={loading}
               />
@@ -219,7 +219,7 @@ export const JoinGroupScreen: React.FC<Props> = ({ navigation, route }) => {
             <Card style={styles.notFoundCard}>
               <Text style={styles.notFoundIcon}>❌</Text>
               <Text style={styles.notFoundText}>
-                No se encontró ningún grupo con ese código
+                No se encontró ningún evento con ese código
               </Text>
               <Text style={styles.notFoundHint}>
                 Verifica que el código sea correcto

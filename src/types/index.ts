@@ -54,27 +54,27 @@ export interface Group {
   createdBy: string;
   createdAt: Date;
   updatedAt?: Date;
-  participantIds: string[];   // IDs de participantes del grupo
-  eventIds: string[];         // IDs de eventos/gastos del grupo
+  participantIds: string[];   // IDs de participantes del evento
+  eventIds: string[];         // IDs de eventos/gastos del evento
   expenseIds?: string[];      // Alias de eventIds para compatibilidad
-  initialBudget: number;      // Presupuesto máximo del grupo
+  initialBudget: number;      // Presupuesto máximo del evento
   budget?: number;            // Alias para compatibilidad
   currentSpent?: number;      // Total gastado (calculado)
   startDate?: Date;
   endDate?: Date;
   currency: Currency;
-  color?: string;             // Color para identificar el grupo
-  icon?: string;              // Emoji o icono del grupo
+  color?: string;             // Color para identificar el evento
+  icon?: string;              // Emoji o icono del evento
   isActive: boolean;
   status: 'active' | 'completed' | 'archived';
   inviteCode?: string;        // Código para compartir
-  type?: 'project' | 'recurring'; // Tipo de grupo
+  type?: 'project' | 'recurring'; // Tipo de evento
   
-  // Propiedades de grupos legacy (Firestore)
-  memberIds?: string[];       // Alias de participantIds (para grupos viejos)
+  // Propiedades de eventos legacy (Firestore)
+  memberIds?: string[];       // Alias de participantIds (para eventos viejos)
   totalParticipants?: number; // Contador calculado
   totalEvents?: number;       // Total de eventos/gastos
-  groupId?: string;           // Si este grupo pertenece a otro (jerarquía)
+  groupId?: string;           // Si este evento pertenece a otro (jerarquía)
 }
 
 /**
@@ -84,7 +84,7 @@ export interface Group {
  */
 export interface GroupEvent {
   id: string;
-  eventId: string;            // ID del grupo al que pertenece (se llama eventId por legacy)
+  eventId: string;            // ID del evento al que pertenece (se llama eventId por legacy)
   groupId?: string;           // Alias de eventId
   name: string;
   description?: string;
@@ -93,7 +93,7 @@ export interface GroupEvent {
   category: ExpenseCategory;
   date: Date;
   currency: Currency;
-  participantIds: string[];   // Participantes que deben
+  participantIds?: string[];  // Participantes que deben (opcional por compatibilidad con datos antiguos)
   beneficiaries?: string[];   // Alias de participantIds (legacy)
   splitType: SplitType;       // Cómo se divide el gasto
   customSplits?: {            // Solo si splitType es 'custom' o 'amount'
@@ -135,7 +135,7 @@ export type Expense = GroupEvent;
 // Interface para participante
 export interface Participant {
   id: string;
-  eventId: string;            // ID del grupo (se llama eventId por legacy)
+  eventId: string;            // ID del evento (se llama eventId por legacy)
   groupId?: string;           // Alias de eventId (para nueva nomenclatura)
   userId?: string;            // Opcional, puede ser invitado sin cuenta
   name: string;
@@ -153,7 +153,7 @@ export interface ExpenseItem {
   name: string;
   price: number;
   quantity?: number;
-  assignedTo: string[];       // participantIds que comparten este item
+  assignedTo?: string[];      // participantIds que comparten este item (opcional por compatibilidad)
   sharedEqually: boolean;     // true = división equitativa, false = custom
 }
 
@@ -192,9 +192,9 @@ export type RootStackParamList = {
   ForgotPassword: undefined;
   MainTabs: undefined;
   
-  // Grupos (contenedores con presupuesto)
-  CreateEvent: { eventId?: string; groupId?: string; mode?: 'create' | 'edit' } | undefined; // Crea GRUPO (o evento dentro de grupo)
-  EventDetail: { eventId: string; eventName?: string }; // Detalle de GRUPO con lista de eventos/gastos
+  // Eventos (contenedores con presupuesto)
+  CreateEvent: { eventId?: string; groupId?: string; mode?: 'create' | 'edit' } | undefined; // Crea EVENTO (o evento dentro de evento)
+  EventDetail: { eventId: string; eventName?: string }; // Detalle de EVENTO con lista de eventos/gastos
   
   // Eventos/Gastos individuales
   AddExpense: { 
@@ -211,8 +211,8 @@ export type RootStackParamList = {
   };
   ExpenseDetail: { expenseId: string; eventId: string }; // Detalle de evento/gasto individual
   
-  Summary: { eventId: string }; // Resumen del grupo
-  JoinEvent: { inviteCode: string }; // Unirse a grupo
+  Summary: { eventId: string }; // Resumen del evento
+  JoinEvent: { inviteCode: string }; // Unirse a evento
   JoinGroup: { inviteCode?: string }; // Alias
   
   // LEGACY: Mantener compatibilidad
@@ -255,7 +255,7 @@ export type RootStackParamList = {
 
 export type TabParamList = {
   Expenses: undefined;  // Gastos individuales (sin evento)
-  Events: undefined;    // Lista de eventos (antes "grupos")
+  Events: undefined;    // Lista de eventos (antes "eventos")
   Activity: undefined;
   Settings: undefined;
 };

@@ -401,22 +401,47 @@ export function generatePaymentLink(
   note?: string
 ): string | null {
   try {
+    const noteParam = note ? encodeURIComponent(note) : '';
+    
     switch (method) {
       case 'bizum':
-        // Bizum no tiene deep links públicos, retornar null
+        // Bizum no tiene deep links públicos, se usa manualmente
         return null;
       
       case 'paypal':
-        // PayPal.me link
+        // PayPal.me link - funciona en web y app
         const paypalUser = recipient.replace('@', '');
-        const paypalNote = note ? `&note=${encodeURIComponent(note)}` : '';
+        const paypalNote = note ? `&note=${noteParam}` : '';
         return `https://paypal.me/${paypalUser}/${amount}${paypalNote}`;
       
       case 'venmo':
-        // Venmo deep link
+        // Venmo deep link - abre la app directamente
         const venmoUser = recipient.replace('@', '');
-        const venmoNote = note ? `&note=${encodeURIComponent(note)}` : '';
+        const venmoNote = note ? `&note=${noteParam}` : '';
         return `venmo://paycharge?txn=pay&recipients=${venmoUser}&amount=${amount}${venmoNote}`;
+      
+      case 'apple_pay':
+        // Apple Pay se usa a través de contactos o apps que lo soporten
+        // No tiene deep link directo universal
+        return null;
+      
+      case 'google_pay':
+        // Google Pay deep link para enviar dinero
+        // Formato: gpay://upi/pay?pa=recipient&am=amount&tn=note
+        const gpayNote = note ? `&tn=${noteParam}` : '';
+        return `https://pay.google.com/gp/v/send?amount=${amount}${gpayNote}`;
+      
+      case 'bank_transfer':
+        // Transferencia bancaria es manual, no tiene deep link
+        return null;
+      
+      case 'cash':
+        // Efectivo es manual, no tiene deep link
+        return null;
+      
+      case 'other':
+        // Método genérico, no tiene deep link
+        return null;
       
       default:
         return null;

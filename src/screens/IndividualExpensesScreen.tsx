@@ -14,16 +14,21 @@ import {
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../hooks/useAuth';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../services/firebase';
-import { Expense } from '../types';
+import { Expense, RootStackParamList } from '../types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
+type NavigationProp = StackNavigationProp<RootStackParamList>;
+
 export const IndividualExpensesScreen: React.FC = () => {
+  const navigation = useNavigation<NavigationProp>();
   const { theme } = useTheme();
   const { t } = useLanguage();
   const { user } = useAuth();
@@ -160,6 +165,7 @@ export const IndividualExpensesScreen: React.FC = () => {
         contentContainerStyle={[
           styles.listContent,
           expenses.length === 0 && styles.listContentEmpty,
+          { paddingBottom: 100 }
         ]}
         ListEmptyComponent={renderEmptyState}
         refreshControl={
@@ -172,6 +178,21 @@ export const IndividualExpensesScreen: React.FC = () => {
         }
         showsVerticalScrollIndicator={false}
       />
+      
+      {/* Botón flotante para añadir gasto individual */}
+      <TouchableOpacity
+        style={styles.floatingButton}
+        onPress={() => {
+          // Navegar a AddExpense SIN eventId para crear gasto individual
+          navigation.navigate('AddExpense', { 
+            eventId: 'individual',
+            mode: 'create'
+          });
+        }}
+      >
+        <Text style={styles.floatingButtonIcon}>+</Text>
+        <Text style={styles.floatingButtonText}>Añadir Gasto</Text>
+      </TouchableOpacity>
     </SafeAreaView>
   );
 };
@@ -306,5 +327,33 @@ const getStyles = (theme: any) => StyleSheet.create({
     color: theme.colors.textTertiary,
     textAlign: 'center',
     fontStyle: 'italic',
+  },
+  floatingButton: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    backgroundColor: theme.colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  floatingButtonIcon: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginRight: 8,
+  },
+  floatingButtonText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });

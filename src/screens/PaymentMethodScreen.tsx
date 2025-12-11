@@ -17,6 +17,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList, CurrencySymbols } from '../types';
 import { Button, Card } from '../components/lovable';
+import { PaymentMethodIcon } from '../components/PaymentMethodIcon';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import {
@@ -25,7 +26,6 @@ import {
   processPayment,
   getAvailablePaymentProviders,
   getPaymentProviderName,
-  getPaymentProviderIcon,
 } from '../services/payments';
 
 type PaymentMethodScreenNavigationProp = StackNavigationProp<RootStackParamList, 'PaymentMethod'>;
@@ -186,15 +186,16 @@ export const PaymentMethodScreen: React.FC<Props> = ({ navigation, route }) => {
                 style={[
                   styles.providerCard,
                   selectedProvider === provider && styles.providerCardSelected,
+                  { backgroundColor: theme.colors.surface }
                 ]}
                 onPress={() => setSelectedProvider(provider)}
                 activeOpacity={0.7}
               >
                 <View style={styles.providerContent}>
-                  <Text style={styles.providerIcon}>
-                    {getPaymentProviderIcon(provider)}
-                  </Text>
-                  <Text style={styles.providerName}>
+                  <View style={[styles.providerIconContainer, { backgroundColor: theme.colors.background }]}>
+                    <PaymentMethodIcon provider={provider} size={56} />
+                  </View>
+                  <Text style={[styles.providerName, { color: theme.colors.text }]}>
                     {getPaymentProviderName(provider)}
                   </Text>
                 </View>
@@ -346,14 +347,21 @@ const getStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
     flex: 1,
   },
-  providerIcon: {
-    fontSize: 32,
-    marginRight: 12,
+  providerIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+    overflow: 'hidden',
+    padding: 4,
   },
   providerName: {
     fontSize: 16,
     fontWeight: '600',
     color: theme.colors.text,
+    flex: 1,
   },
   providerRadio: {
     width: 24,
