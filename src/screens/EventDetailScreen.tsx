@@ -35,6 +35,8 @@ import {
   compareWithSimilarEvents,
   calculateGroupEfficiency 
 } from '../services/budgetPredictionService';
+import { shareEvent, generateEventDeepLink } from '../services/deepLinkService';
+import { useAuth } from '../hooks/useAuth';
 
 type EventDetailScreenNavigationProp = StackNavigationProp<RootStackParamList, 'EventDetail'>;
 type EventDetailScreenRouteProp = RouteProp<RootStackParamList, 'EventDetail'>;
@@ -50,6 +52,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   const { eventId } = route.params;
   const { theme } = useTheme();
   const { t } = useLanguage();
+  const { user } = useAuth();
   const styles = getStyles(theme);
   const [event, setEvent] = useState<Event | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('expenses');
@@ -282,26 +285,35 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   const handleShareEvent = async () => {
-    if (!event) return;
+    if (!event || !user) return;
     
     try {
-      if (!event.inviteCode) {
-        Alert.alert('Error', 'Este evento no tiene código de invitación');
-        return;
-      }
-
-      // Crear enlace clicable (https) - formato universal
-      const shareLink = `https://lessmo.app/join/${event.inviteCode}`;
+      const userName = user.displayName || user.email?.split('@')[0] || 'Usuario';
       
-      const message = `🎉 ¡Únete a "${event.name}"!\n\n💰 Presupuesto: ${event.initialBudget} ${CurrencySymbols[event.currency]}\n\n🔗 Enlace: ${shareLink}\n\n📱 O usa el código: ${event.inviteCode}\n\nDescarga Les$Mo para gestionar gastos compartidos`;
-
-      await Share.share({
-        message: message,
-        title: `Invitación a ${event.name}`,
-        url: shareLink, // iOS usa esto para enlaces clicables
+      const success = await shareEvent({
+        eventId: event.id,
+        eventName: event.name,
+        creatorName: userName,
       });
+      
+      if (!success) {
+        // Fallback: usar Share API nativa
+        const deepLink = generateEventDeepLink({
+          eventId: event.id,
+          eventName: event.name,
+          creatorName: userName,
+        });
+        
+        const message = `🎉 ¡Únete a "${event.name}"!\n\n💰 Presupuesto: ${event.initialBudget} ${CurrencySymbols[event.currency]}\n\n👤 Creado por: ${userName}\n\n🔗 ${deepLink}\n\nDescarga LessMo para gestionar gastos compartidos`;
+
+        await Share.share({
+          message: message,
+          title: `Invitación a ${event.name}`,
+        });
+      }
     } catch (error: any) {
       if (error.message !== 'User did not share') {
+        console.error('Error sharing event:', error);
         Alert.alert('Error', 'No se pudo compartir el evento');
       }
     }
@@ -775,7 +787,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
                   handleEditEvent();
                 }}
               >
-                <Text style={[styles.modalButtonText, { color: '#FFFFFF' }]}>
+                <Text style={[styles.modalButtonText, { color: theme.colors.card }]}>
                   Ir a Editar
                 </Text>
               </TouchableOpacity>
@@ -1169,7 +1181,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     elevation: 8,
   },
   floatingAddButtonText: {
-    color: '#FFFFFF',
+    color: theme.colors.card,
     fontSize: 18,
     fontWeight: '700',
   },

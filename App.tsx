@@ -6,6 +6,7 @@
 import 'react-native-gesture-handler';
 import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
+import { Text as RNText, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
@@ -18,6 +19,11 @@ import { BiometricLockScreen } from './src/screens/BiometricLockScreen';
 import { globalEmitter, GlobalEvents } from './src/utils/globalEvents';
 import { isBiometricUserCurrent } from './src/services/biometricAuthService';
 import { auth } from './src/services/firebase';
+import { initDeepLinkListener, DeepLinkConfig } from './src/services/deepLinkService';
+import { initSentry, ErrorBoundary } from './src/services/sentryService';
+
+// Inicializar Sentry PRIMERO (antes de cualquier otro código)
+initSentry();
 
 console.log('🚀 [APP] Iniciando aplicación LessMo...');
 
@@ -124,9 +130,17 @@ export default function App() {
     globalEmitter.on(GlobalEvents.LANGUAGE_CHANGED, handleForceRemount);
     globalEmitter.on(GlobalEvents.CURRENCY_CHANGED, handleForceRemount);
 
+    // Configurar deep linking para invitaciones a eventos
+    const cleanupDeepLink = initDeepLinkListener((config: DeepLinkConfig) => {
+      console.log('🔗 Deep link recibido:', config);
+      // Emitir evento global para navegar a la pantalla de unirse al evento
+      globalEmitter.emit('EVENT_INVITE_RECEIVED', config);
+    });
+
     return () => {
       globalEmitter.off(GlobalEvents.LANGUAGE_CHANGED, handleForceRemount);
       globalEmitter.off(GlobalEvents.CURRENCY_CHANGED, handleForceRemount);
+      cleanupDeepLink();
     };
   }, []);
 
@@ -143,13 +157,42 @@ export default function App() {
 
   try {
     return (
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <SafeAreaProvider>
-          <ThemeProvider>
-            <AppContent appKey={appKey} />
-          </ThemeProvider>
-        </SafeAreaProvider>
-      </GestureHandlerRootView>
+      <ErrorBoundary
+        fallback={(errorData) => (
+          <SafeAreaProvider>
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: '#f5f5f5' }}>
+              <StatusBar style="auto" />
+              <RNText style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 12, color: '#ef4444' }}>
+                ⚠️ Error
+              </RNText>
+              <RNText style={{ fontSize: 16, color: '#666', textAlign: 'center', marginBottom: 20 }}>
+                La aplicación ha encontrado un error inesperado
+              </RNText>
+              <TouchableOpacity
+                onPress={() => errorData.resetError()}
+                style={{
+                  backgroundColor: '#6366F1',
+                  paddingHorizontal: 24,
+                  paddingVertical: 12,
+                  borderRadius: 8,
+                }}
+              >
+                <RNText style={{ color: '#fff', fontWeight: '600' }}>
+                  Reintentar
+                </RNText>
+              </TouchableOpacity>
+            </View>
+          </SafeAreaProvider>
+        )}
+      >
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <SafeAreaProvider>
+            <ThemeProvider>
+              <AppContent appKey={appKey} />
+            </ThemeProvider>
+          </SafeAreaProvider>
+        </GestureHandlerRootView>
+      </ErrorBoundary>
     );
   } catch (err) {
     console.error('❌ Error crítico en App:', err);

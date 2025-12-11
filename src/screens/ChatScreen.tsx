@@ -458,7 +458,7 @@ export const ChatScreen: React.FC<Props> = ({ navigation, route }) => {
             </TouchableOpacity>
             {analyzingReceipt && (
               <View style={styles.analyzingOverlay}>
-                <ActivityIndicator color="#FFFFFF" size="large" />
+                <ActivityIndicator color={theme.colors.card} size="large" />
                 <Text style={styles.analyzingText}>🔍 Analizando recibo...</Text>
               </View>
             )}
@@ -563,7 +563,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontSize: 15,
   },
   ownMessageText: {
-    color: '#FFFFFF',
+    color: theme.colors.card,
   },
   otherMessageText: {
     color: theme.colors.text,
@@ -642,7 +642,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
   },
   removeImageText: {
-    color: '#FFFFFF',
+    color: theme.colors.card,
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -658,7 +658,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     gap: 12,
   },
   analyzingText: {
-    color: '#FFFFFF',
+    color: theme.colors.card,
     fontSize: 14,
     fontWeight: '600',
   },

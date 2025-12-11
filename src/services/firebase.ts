@@ -922,48 +922,31 @@ export const updateExpenseSimple = async (expenseId: string, updates: Partial<Ex
 };
 
 /**
- * Eliminar gasto
+ * Eliminar gasto con reversión completa de balances
  */
 export const deleteExpense = async (expenseId: string): Promise<void> => {
   try {
-    // Obtener el gasto antes de eliminarlo para revertir balances
+    // 1. Obtener el gasto antes de eliminarlo
     const expenseDoc = await getDoc(doc(db, 'expenses', expenseId));
     
     if (!expenseDoc.exists()) {
       throw new Error('Gasto no encontrado');
     }
 
-    const expense = expenseDoc.data();
-    const eventId = expense.eventId;
-    const paidBy = expense.paidBy;
-    const splits = expense.splits || [];
+    const expense = expenseDoc.data() as Expense;
 
-    // Revertir balances de participantes
-    const participants = await getEventParticipants(eventId);
-    
-    for (const participant of participants) {
-      const split = splits.find((s: any) => s.participantId === participant.id);
-      
-      if (!split) continue;
+    // 2. Revertir los cambios de balance que causó este gasto
+    // La función revertBalanceChanges SUMA los montos que se habían RESTADO
+    await revertBalanceChanges(
+      expense.paidBy,
+      expense.amount,
+      expense.participantIds || [],
+      expense.splitType,
+      expense.customSplits,
+      expense.percentageSplits
+    );
 
-      let balanceChange = 0;
-      
-      // Si este participante pagó, revertir (restar lo que pagó)
-      if (participant.id === paidBy) {
-        balanceChange -= expense.amount;
-      }
-      
-      // Si este participante debe, revertir (sumar lo que debía)
-      balanceChange += split.amount;
-
-      // Actualizar balance
-      const newBalance = participant.currentBalance - balanceChange;
-      await updateDoc(doc(db, 'participants', participant.id), {
-        currentBalance: newBalance,
-      });
-    }
-
-    // Eliminar el gasto
+    // 3. Eliminar el gasto de Firestore
     await deleteDoc(doc(db, 'expenses', expenseId));
     
     console.log('✅ Gasto eliminado y balances revertidos correctamente');

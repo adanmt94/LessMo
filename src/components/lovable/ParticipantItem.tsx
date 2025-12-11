@@ -219,7 +219,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     justifyContent: 'center',
   },
   avatarText: {
-    color: '#FFFFFF',
+    color: theme.colors.card,
     fontSize: 24,
     fontWeight: '800',
     textShadowColor: 'rgba(0, 0, 0, 0.2)',

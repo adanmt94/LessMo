@@ -512,7 +512,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     backgroundColor: theme.colors.error || '#EF4444',
   },
   actionButtonText: {
-    color: '#FFFFFF',
+    color: theme.colors.card,
     fontSize: 14,
     fontWeight: '600',
   },

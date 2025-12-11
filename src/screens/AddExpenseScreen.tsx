@@ -1441,7 +1441,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   photoButtonTextPrimary: {
     fontSize: 13,
-    color: '#FFFFFF',
+    color: theme.colors.card,
     fontWeight: '700',
     letterSpacing: 0.3,
   },
@@ -1483,7 +1483,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   analyzingText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: theme.colors.card,
   },
   removePhotoButton: {
     flexDirection: 'row',
@@ -1507,7 +1507,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   removePhotoText: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: theme.colors.card,
     letterSpacing: 0.3,
   },
   receiptSection: {

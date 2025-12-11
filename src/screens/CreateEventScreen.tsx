@@ -843,7 +843,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     color: theme.colors.text,
   },
   currencyTextSelected: {
-    color: '#FFFFFF',
+    color: theme.colors.card,
   },
   budgetInput: {
     fontSize: 18,

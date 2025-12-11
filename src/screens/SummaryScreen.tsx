@@ -736,7 +736,7 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
                           handleMarkPayment(settlement);
                         }}
                       >
-                        <Text style={[styles.payButtonText, { color: '#FFFFFF' }]}>
+                        <Text style={[styles.payButtonText, { color: theme.colors.card }]}>
                           💰 Realizar Pago
                         </Text>
                       </TouchableOpacity>
@@ -751,7 +751,7 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
                           handleMarkPayment(settlement);
                         }}
                       >
-                        <Text style={[styles.payButtonText, { color: '#FFFFFF' }]}>
+                        <Text style={[styles.payButtonText, { color: theme.colors.card }]}>
                           ✓ Confirmar
                         </Text>
                       </TouchableOpacity>
@@ -802,9 +802,9 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
             disabled={exporting}
           >
             <View style={[styles.shareIconContainer, { backgroundColor: 'rgba(255,255,255,0.25)' }]}>
-              <Text style={[styles.shareIcon, { color: '#FFFFFF' }]}>📄</Text>
+              <Text style={[styles.shareIcon, { color: theme.colors.card }]}>📄</Text>
             </View>
-            <Text style={[styles.shareButtonText, { color: '#FFFFFF', fontWeight: '800', fontSize: 14 }]} numberOfLines={1}>
+            <Text style={[styles.shareButtonText, { color: theme.colors.card, fontWeight: '800', fontSize: 14 }]} numberOfLines={1}>
               PDF
             </Text>
           </TouchableOpacity>
@@ -1045,7 +1045,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     backgroundColor: theme.colors.success || '#10B981',
   },
   payButtonText: {
-    color: '#FFFFFF',
+    color: theme.colors.card,
     fontSize: 14,
     fontWeight: '600',
   },

@@ -648,7 +648,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     elevation: 3,
   },
   backButtonText: {
-    color: '#FFFFFF',
+    color: theme.colors.card,
     fontSize: 15,
     fontWeight: '700',
   },
@@ -682,11 +682,11 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   createButtonIcon: {
     fontSize: 22,
-    color: '#FFFFFF',
+    color: theme.colors.card,
     fontWeight: '700',
   },
   createButtonText: {
-    color: '#FFFFFF',
+    color: theme.colors.card,
     fontSize: 16,
     fontWeight: '800',
     letterSpacing: 0.5,
@@ -797,7 +797,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontSize: 10,
   },
   groupBadgeTextInline: {
-    color: '#FFFFFF',
+    color: theme.colors.card,
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 0.3,
@@ -1016,12 +1016,12 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingVertical: 6,
   },
   selectionHeaderButtonText: {
-    color: '#FFFFFF',
+    color: theme.colors.card,
     fontSize: 16,
     fontWeight: '600',
   },
   selectionHeaderTitle: {
-    color: '#FFFFFF',
+    color: theme.colors.card,
     fontSize: 18,
     fontWeight: '700',
   },
@@ -1051,7 +1051,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderColor: theme.colors.primary,
   },
   checkboxCheck: {
-    color: '#FFFFFF',
+    color: theme.colors.card,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -1066,7 +1066,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 100,
   },
   deleteActionText: {
-    color: '#FFFFFF',
+    color: theme.colors.card,
     fontSize: 14,
     fontWeight: '700',
   },

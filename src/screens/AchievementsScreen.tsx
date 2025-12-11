@@ -300,7 +300,7 @@ export function AchievementsScreen({ navigation, route }: Props) {
       borderRadius: 12,
     },
     modalCloseButtonText: {
-      color: '#FFFFFF',
+      color: theme.colors.card,
       fontSize: 16,
       fontWeight: '600',
     },
@@ -343,7 +343,7 @@ export function AchievementsScreen({ navigation, route }: Props) {
     leaderboardRankText: {
       fontSize: 18,
       fontWeight: '800',
-      color: '#FFFFFF',
+      color: theme.colors.card,
     },
     leaderboardInfo: {
       flex: 1,

@@ -344,8 +344,8 @@ export const GroupEventsScreen: React.FC<Props> = ({ navigation, route }) => {
                 mode: 'create'
               })}
             >
-              <Text style={[styles.actionIcon, { color: '#FFFFFF' }]}>+</Text>
-              <Text style={[styles.actionLabel, { color: '#FFFFFF' }]}>Añadir Gasto</Text>
+              <Text style={[styles.actionIcon, { color: theme.colors.card }]}>+</Text>
+              <Text style={[styles.actionLabel, { color: theme.colors.card }]}>Añadir Gasto</Text>
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
@@ -355,8 +355,8 @@ export const GroupEventsScreen: React.FC<Props> = ({ navigation, route }) => {
               }]}
               onPress={() => navigation.navigate('AddExpense', { eventId: groupId })}
             >
-              <Text style={[styles.actionIcon, { color: '#FFFFFF' }]}>+</Text>
-              <Text style={[styles.actionLabel, { color: '#FFFFFF' }]}>Añadir Gasto</Text>
+              <Text style={[styles.actionIcon, { color: theme.colors.card }]}>+</Text>
+              <Text style={[styles.actionLabel, { color: theme.colors.card }]}>Añadir Gasto</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -498,7 +498,7 @@ export const GroupEventsScreen: React.FC<Props> = ({ navigation, route }) => {
                 >
                   {selectionMode && (
                     <View style={[styles.checkbox, isSelected && { backgroundColor: theme.colors.primary }]}>
-                      {isSelected && <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '700' }}>✓</Text>}
+                      {isSelected && <Text style={{ color: theme.colors.card, fontSize: 14, fontWeight: '700' }}>✓</Text>}
                     </View>
                   )}
               <View style={styles.eventHeader}>
@@ -827,7 +827,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   statusTextFloating: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: theme.colors.card,
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
@@ -944,12 +944,12 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingVertical: 4,
   },
   selectionButtonText: {
-    color: '#FFFFFF',
+    color: theme.colors.card,
     fontSize: 16,
     fontWeight: '600',
   },
   selectionCount: {
-    color: '#FFFFFF',
+    color: theme.colors.card,
     fontSize: 16,
     fontWeight: '700',
   },
@@ -983,7 +983,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     marginLeft: 10,
   },
   deleteActionText: {
-    color: '#FFFFFF',
+    color: theme.colors.card,
     fontWeight: '700',
     fontSize: 15,
   },

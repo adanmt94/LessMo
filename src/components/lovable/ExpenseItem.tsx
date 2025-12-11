@@ -255,7 +255,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     marginBottom: 4,
   },
   deleteButtonLabel: {
-    color: '#FFFFFF',
+    color: theme.colors.card,
     fontSize: 12,
     fontWeight: '600',
   },

@@ -196,7 +196,7 @@ export function ItemSplitScreen({
       fontWeight: '500',
     },
     participantChipTextActive: {
-      color: '#FFFFFF',
+      color: theme.colors.card,
       fontWeight: '600',
     },
     summaryCard: {

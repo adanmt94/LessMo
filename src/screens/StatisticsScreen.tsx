@@ -370,7 +370,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     color: theme.colors.textSecondary,
   },
   tabTextActive: {
-    color: '#FFFFFF',
+    color: theme.colors.card,
     fontWeight: '600',
   },
   chartCard: {

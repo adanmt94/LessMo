@@ -348,12 +348,12 @@ const getStyles = (theme: any) => StyleSheet.create({
   floatingButtonIcon: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: theme.colors.card,
     marginRight: 8,
   },
   floatingButtonText: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: theme.colors.card,
   },
 });

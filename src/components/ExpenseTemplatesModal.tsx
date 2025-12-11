@@ -120,7 +120,7 @@ export const ExpenseTemplatesModal: React.FC<Props> = ({
                     {
                       color:
                         selectedCategory === cat.id
-                          ? '#FFFFFF'
+                          ? theme.colors.card
                           : theme.colors.text,
                     },
                   ]}
