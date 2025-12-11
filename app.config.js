@@ -28,7 +28,9 @@ export default {
         googleSignIn: {
           reservedClientId: "com.googleusercontent.apps.364537925711-vtgqi80bk7i7f3ioqo8gilafo7hjj0vc"
         }
-      }
+      },
+      // Apple Pay configuration
+      associatedDomains: ["applinks:lessmo.app"]
     },
     android: {
       adaptiveIcon: {
@@ -58,6 +60,8 @@ export default {
       // Configuración de pagos
       PAYPAL_ME_USERNAME: process.env.PAYPAL_ME_USERNAME,
       STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY,
+      STRIPE_MERCHANT_ID: process.env.STRIPE_MERCHANT_ID || 'merchant.com.lessmo.app',
+      APPLE_MERCHANT_ID: process.env.APPLE_MERCHANT_ID || 'merchant.com.lessmo.app',
       BANK_ACCOUNT_NAME: process.env.BANK_ACCOUNT_NAME,
       BANK_ACCOUNT_NUMBER: process.env.BANK_ACCOUNT_NUMBER,
       BANK_NAME: process.env.BANK_NAME,

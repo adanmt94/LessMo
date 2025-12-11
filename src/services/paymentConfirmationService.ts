@@ -30,7 +30,7 @@ const parseDate = (dateField: any): Date | undefined => {
 
 export type PaymentStatus = 'pending' | 'sent_waiting_confirmation' | 'confirmed' | 'rejected' | 'cancelled';
 
-export type PaymentMethod = 'bizum' | 'paypal' | 'venmo' | 'apple_pay' | 'google_pay' | 'bank_transfer' | 'cash' | 'other';
+export type PaymentMethod = 'bizum' | 'paypal' | 'venmo' | 'apple_pay' | 'google_pay' | 'stripe' | 'bank_transfer' | 'cash' | 'other';
 
 export interface Payment {
   id: string;
@@ -430,6 +430,11 @@ export function generatePaymentLink(
         // Formato: gpay://upi/pay?pa=recipient&am=amount&tn=note
         const gpayNote = note ? `&tn=${noteParam}` : '';
         return `https://pay.google.com/gp/v/send?amount=${amount}${gpayNote}`;
+      
+      case 'stripe':
+        // Stripe se maneja internamente en la app con modal de pago
+        // No tiene deep link externo
+        return null;
       
       case 'bank_transfer':
         // Transferencia bancaria es manual, no tiene deep link

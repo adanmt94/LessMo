@@ -21,9 +21,15 @@ import { isBiometricUserCurrent } from './src/services/biometricAuthService';
 import { auth } from './src/services/firebase';
 import { initDeepLinkListener, DeepLinkConfig } from './src/services/deepLinkService';
 import { initSentry, ErrorBoundary } from './src/services/sentryService';
+import { StripeProvider } from '@stripe/stripe-react-native';
+import { initializeStripe } from './src/services/stripeService';
+import Constants from 'expo-constants';
 
 // Inicializar Sentry PRIMERO (antes de cualquier otro código)
 initSentry();
+
+// Inicializar Stripe
+initializeStripe();
 
 console.log('🚀 [APP] Iniciando aplicación LessMo...');
 
@@ -185,13 +191,19 @@ export default function App() {
           </SafeAreaProvider>
         )}
       >
-        <GestureHandlerRootView style={{ flex: 1 }}>
-          <SafeAreaProvider>
-            <ThemeProvider>
-              <AppContent appKey={appKey} />
-            </ThemeProvider>
-          </SafeAreaProvider>
-        </GestureHandlerRootView>
+        <StripeProvider
+          publishableKey={Constants.expoConfig?.extra?.STRIPE_PUBLISHABLE_KEY || ''}
+          merchantIdentifier={Constants.expoConfig?.extra?.APPLE_MERCHANT_ID || 'merchant.com.lessmo.app'}
+          urlScheme="lessmo"
+        >
+          <GestureHandlerRootView style={{ flex: 1 }}>
+            <SafeAreaProvider>
+              <ThemeProvider>
+                <AppContent appKey={appKey} />
+              </ThemeProvider>
+            </SafeAreaProvider>
+          </GestureHandlerRootView>
+        </StripeProvider>
       </ErrorBoundary>
     );
   } catch (err) {
