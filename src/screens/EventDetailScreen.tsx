@@ -89,7 +89,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   useEffect(() => {
     if (participants.length === 0) return;
 
-    console.log('🚀 Iniciando carga de fotos. Total participantes:', participants.length);
+    
     
     // Primero ejecutar migración
     const migrateAndLoadPhotos = async () => {
@@ -99,9 +99,9 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
         
         let needsReload = false;
         
-        console.log('📋 Estado de participantes:');
+        
         participants.forEach((p, i) => {
-          console.log(`  ${i + 1}. ${p.name}: userId=${p.userId || 'NO'}, email=${p.email || 'NO'}, photo=${p.photoURL || 'NO'}`);
+          
         });
         
         for (const participant of participants) {
@@ -112,7 +112,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
               
               // Estrategia 1: Buscar por email si existe
               if (participant.email) {
-                console.log(`🔍 Buscando usuario para email: ${participant.email}`);
+                
                 const usersQuery = query(
                   collection(db, 'users'),
                   where('email', '==', participant.email.toLowerCase())
@@ -122,7 +122,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
               
               // Estrategia 2: Si no hay email o no se encontró, buscar por nombre
               if (!usersSnapshot || usersSnapshot.empty) {
-                console.log(`🔍 Buscando usuario por nombre: ${participant.name}`);
+                
                 
                 // Obtener todos los usuarios y buscar coincidencia por nombre
                 const allUsersSnapshot = await getDocs(collection(db, 'users'));
@@ -143,7 +143,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
                 });
                 
                 if (matchingUsers.length > 0) {
-                  console.log(`✅ Encontradas ${matchingUsers.length} coincidencias por nombre`);
+                  
                   usersSnapshot = { 
                     empty: false, 
                     docs: matchingUsers 
@@ -155,7 +155,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
                 const userData = usersSnapshot.docs[0].data();
                 const userId = usersSnapshot.docs[0].id;
                 
-                console.log(`✅ Usuario encontrado: ${userId}, foto: ${userData.photoURL ? 'Sí' : 'No'}`);
+                
                 
                 // Actualizar participante con userId y photoURL
                 const updateData: any = { 
@@ -171,24 +171,24 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
                   updateData
                 );
                 
-                console.log(`✅ Participante ${participant.name} actualizado en Firestore`);
+                
                 needsReload = true;
               } else {
-                console.log(`⚠️ No se encontró usuario para: ${participant.name}`);
+                
               }
             } catch (error) {
-              console.log(`⚠️ No se pudo migrar participante ${participant.id}:`, error);
+              
             }
           }
         }
         
         // Si se actualizó algún participante, recargar datos
         if (needsReload) {
-          console.log('🔄 Recargando participantes actualizados...');
+          
           await loadData();
         }
       } catch (error) {
-        console.log('⚠️ Error en migración de participantes:', error);
+        
       }
     };
 
@@ -215,7 +215,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
             }
           },
           (error) => {
-            console.log(`Error en listener de usuario ${participant.userId}:`, error);
+            
           }
         );
         

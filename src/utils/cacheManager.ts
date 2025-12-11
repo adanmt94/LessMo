@@ -119,11 +119,11 @@ export async function getCachedOrFetch<T>(
   const cached = await getCache<T>(cacheKey);
   
   if (cached !== null) {
-    console.log(`✅ Cache hit: ${cacheKey}`);
+    
     return cached;
   }
 
-  console.log(`🔄 Cache miss: ${cacheKey}, fetching...`);
+  
   
   // No hay caché o expiró, obtener datos frescos
   const freshData = await fetchFn();
@@ -141,7 +141,7 @@ export async function invalidateCache(keys: string[]): Promise<void> {
   try {
     const promises = keys.map(key => removeCache(key));
     await Promise.all(promises);
-    console.log('🗑️ Caché invalidado:', keys);
+    
   } catch (error) {
     console.warn('⚠️ Error invalidando caché:', error);
   }

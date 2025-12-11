@@ -59,7 +59,6 @@ const firebaseConfig = {
 // ====================================================================
 // INICIALIZACIÓN SIMPLE Y SEGURA
 // ====================================================================
-console.log('🔥 [FIREBASE-INIT] Starting...');
 
 let app: any;
 let authInstance: any;
@@ -71,24 +70,24 @@ let appleProviderInstance: any;
 try {
   // Step 1: App
   app = initializeApp(firebaseConfig);
-  console.log('✅ [FIREBASE-INIT] App OK');
+  
   
   // Step 2: Auth
   authInstance = getAuth(app);
-  console.log('✅ [FIREBASE-INIT] Auth OK');
+  
   
   // Step 3: DB
   dbInstance = getFirestore(app);
-  console.log('✅ [FIREBASE-INIT] DB OK');
+  
   
   // Step 4: Storage
   storageInstance = getStorage(app);
-  console.log('✅ [FIREBASE-INIT] Storage OK');
+  
   
   // Step 5: Providers
   googleProviderInstance = new GoogleAuthProvider();
   appleProviderInstance = new OAuthProvider('apple.com');
-  console.log('✅ [FIREBASE-INIT] All OK!');
+  
 } catch (e: any) {
   console.error('❌ [FIREBASE-INIT] FAILED:', e?.message);
   // Mock objects to prevent crashes
@@ -949,7 +948,7 @@ export const deleteExpense = async (expenseId: string): Promise<void> => {
     // 3. Eliminar el gasto de Firestore
     await deleteDoc(doc(db, 'expenses', expenseId));
     
-    console.log('✅ Gasto eliminado y balances revertidos correctamente');
+    
   } catch (error: any) {
     console.error('❌ Error eliminando gasto:', error);
     throw new Error(error.message);
@@ -1001,7 +1000,7 @@ export const createGroup = async (
     }
     
     const docRef = await addDoc(collection(db, 'groups'), groupData);
-    console.log('✅ Evento creado:', docRef.id, 'tipo:', type || 'project', 'código:', inviteCode);
+    
     
     // Si es tipo 'recurring', crear evento "General" automáticamente
     if (type === 'recurring') {
@@ -1091,7 +1090,7 @@ export const getUserGroups = async (userId: string): Promise<any[]> => {
     console.error('❌ Error loading groups:', error);
     // Si es error de permisos, retornar array vacío en lugar de lanzar error
     if (error.code === 'permission-denied' || error.message?.includes('permission')) {
-      console.log('⚠️ Sin permisos para leer eventos, retornando lista vacía');
+      
       return [];
     }
     throw new Error(error.message || 'No se pudieron cargar los eventos');
@@ -1144,7 +1143,7 @@ export const updateGroup = async (
     }
 
     await updateDoc(doc(db, 'groups', groupId), groupData);
-    console.log('✅ Evento actualizado:', groupId);
+    
   } catch (error: any) {
     console.error('❌ Error updating group:', error);
     throw new Error(error.message || 'No se pudo actualizar el evento');
@@ -1157,7 +1156,7 @@ export const updateGroup = async (
 export const deleteGroup = async (groupId: string): Promise<void> => {
   try {
     await deleteDoc(doc(db, 'groups', groupId));
-    console.log('✅ Evento eliminado:', groupId);
+    
   } catch (error: any) {
     console.error('❌ Error deleting group:', error);
     throw new Error(error.message || 'No se pudo eliminar el evento');
@@ -1208,7 +1207,7 @@ export const addGroupMember = async (groupId: string, userId: string): Promise<v
     
     // Verificar si ya es miembro
     if (currentMembers.includes(userId)) {
-      console.log('⚠️ El usuario ya es miembro del evento');
+      
       return;
     }
     
@@ -1261,7 +1260,7 @@ export const removeGroupMember = async (groupId: string, userId: string): Promis
     
     // Verificar si es miembro
     if (!currentMembers.includes(userId)) {
-      console.log('⚠️ El usuario no es miembro del evento');
+      
       return;
     }
     
@@ -1276,7 +1275,7 @@ export const removeGroupMember = async (groupId: string, userId: string): Promis
       updatedAt: serverTimestamp()
     });
     
-    console.log('✅ Miembro eliminado del evento:', userId);
+    
   } catch (error: any) {
     console.error('❌ Error eliminando miembro:', error);
     throw new Error(error.message || 'No se pudo eliminar del evento');
@@ -1313,12 +1312,12 @@ export const getUserEventsByStatus = async (
       ...doc.data() 
     } as Event));
     
-    console.log('📝 Eventos creados por usuario:', userEvents.length);
+    
     
     // 2. Obtener eventos donde el usuario es miembro
     const userGroups = await getUserGroups(userId);
     const groupIds = userGroups.map(g => g.id);
-    console.log('👥 Eventos del usuario:', groupIds.length, groupIds);
+    
     
     // 3. Obtener eventos de esos eventos
     let groupEvents: Event[] = [];
@@ -1366,7 +1365,7 @@ export const getUserEventsByStatus = async (
     });
     
     const allEvents = Array.from(allEventsMap.values());
-    console.log('✅ Total eventos (sin duplicados):', allEvents.length);
+    :', allEvents.length);
     
     // 5. Ordenar por fecha de creación
     return allEvents.sort((a, b) => {
@@ -1448,7 +1447,7 @@ export const uploadChatImage = async (
     await uploadBytes(storageRef, blob);
     const downloadURL = await getDownloadURL(storageRef);
     
-    console.log('✅ Imagen de chat subida:', downloadURL);
+    
     return downloadURL;
   } catch (error: any) {
     console.error('❌ Error subiendo imagen de chat:', error);
@@ -1486,7 +1485,7 @@ export const sendEventMessage = async (
     }
     
     const docRef = await addDoc(collection(db, 'messages'), messageData);
-    console.log('✅ Mensaje enviado:', docRef.id);
+    
     return docRef.id;
   } catch (error: any) {
     console.error('❌ Error enviando mensaje:', error);
@@ -1569,7 +1568,7 @@ export const sendGroupMessage = async (
     // Usar subcolección groups/{groupId}/messages
     const messagesRef = collection(db, 'groups', groupId, 'messages');
     const docRef = await addDoc(messagesRef, messageData);
-    console.log('✅ Mensaje de evento enviado:', docRef.id);
+    
     return docRef.id;
   } catch (error: any) {
     console.error('❌ Error enviando mensaje de evento:', error);
@@ -1622,7 +1621,7 @@ export const subscribeToGroupMessages = (
  */
 export const syncGroupStats = async (groupId: string): Promise<void> => {
   try {
-    console.log('🔄 Sincronizando estadísticas del evento:', groupId);
+    
     
     // Buscar todos los eventos del evento
     const eventsQuery = query(
@@ -1679,7 +1678,7 @@ export const syncGroupStats = async (groupId: string): Promise<void> => {
  */
 export const refreshParticipantPhotos = async (eventId: string): Promise<number> => {
   try {
-    console.log('🔄 Refrescando fotos de participantes para evento:', eventId);
+    
     
     const participants = await getEventParticipants(eventId);
     let updated = 0;
@@ -1696,7 +1695,7 @@ export const refreshParticipantPhotos = async (eventId: string): Promise<number>
                 photoURL: userData.photoURL
               });
               updated++;
-              console.log('✅ Foto actualizada para', participant.name);
+              
             }
           }
         } catch (error) {
@@ -1705,7 +1704,7 @@ export const refreshParticipantPhotos = async (eventId: string): Promise<number>
       }
     }
     
-    console.log('✅ Fotos actualizadas:', updated, 'de', participants.length);
+    
     return updated;
   } catch (error: any) {
     console.error('❌ Error al refrescar fotos:', error);
@@ -1718,7 +1717,7 @@ export const refreshParticipantPhotos = async (eventId: string): Promise<number>
  */
 export const uploadReceiptPhoto = async (uri: string, expenseId: string): Promise<string> => {
   try {
-    console.log('📸 uploadReceiptPhoto - Iniciando subida de foto');
+    
     const storage = getStorage();
     const filename = `receipts/${expenseId}_${Date.now()}.jpg`;
     const storageRef = ref(storage, filename);
@@ -1727,12 +1726,12 @@ export const uploadReceiptPhoto = async (uri: string, expenseId: string): Promis
     const response = await fetch(uri);
     const blob = await response.blob();
     
-    console.log('☁️ Subiendo blob a Firebase Storage...');
+    
     await uploadBytes(storageRef, blob);
     
     // Obtener URL pública
     const downloadURL = await getDownloadURL(storageRef);
-    console.log('✅ Foto subida exitosamente:', downloadURL);
+    
     
     return downloadURL;
   } catch (error: any) {

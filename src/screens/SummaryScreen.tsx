@@ -108,7 +108,7 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   const handleMarkPayment = (settlement: any) => {
-    console.log('💰 handleMarkPayment llamado con:', settlement);
+    
     
     // Manejar tanto IDs (string) como objetos Participant
     const fromParticipant = typeof settlement.from === 'string' 
@@ -124,7 +124,7 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
     });
     
     if (!fromParticipant || !toParticipant) {
-      console.log('⚠️ No se encontraron participantes:', { from: settlement.from, to: settlement.to });
+      
       Alert.alert('Error', 'No se pudieron encontrar los participantes');
       return;
     }
@@ -137,12 +137,12 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
       toName: toParticipant.name,
     };
     
-    console.log('✅ Seteando settlement y abriendo modal:', settlementData);
+    
     
     setSelectedSettlement(settlementData);
     setShowPaymentModal(true);
     
-    console.log('✅ Modal debería estar abierto ahora');
+    
   };
 
   const handlePaymentMarked = () => {
@@ -626,7 +626,7 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
                   : settlement.to;
                 
                 if (!fromParticipant || !toParticipant) {
-                  console.log('⚠️ Participante no encontrado:', settlement);
+                  
                   return null;
                 }
 
@@ -686,7 +686,7 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
                   emailMatchesToName;
                 
                 // Log para debugging
-                console.log(`💰 Settlement ${index} (${settlementType}):`, {
+                :`, {
                   from: fromParticipant.name,
                   fromId: fromParticipant.id,
                   to: toParticipant.name,
@@ -706,7 +706,7 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
                   ? '✓ Confirmar' 
                   : '💰 Realizar Pago';
 
-                console.log(`🔘 Botón para settlement ${index}:`, { canPay, isDebtor, isCreditor, buttonText });
+                
 
                 return (
                   <View key={`settlement-${settlementType}-${index}`} style={styles.settlementItem}>
@@ -732,7 +732,7 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
                           { backgroundColor: theme.colors.primary }
                         ]}
                         onPress={() => {
-                          console.log('🔘 Botón presionado:', { isDebtor, settlement });
+                          
                           handleMarkPayment(settlement);
                         }}
                       >
@@ -747,7 +747,7 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
                           { backgroundColor: theme.colors.success || '#10B981' }
                         ]}
                         onPress={() => {
-                          console.log('🔘 Confirmar pago presionado:', { isCreditor, settlement });
+                          
                           handleMarkPayment(settlement);
                         }}
                       >

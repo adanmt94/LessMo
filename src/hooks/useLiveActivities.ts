@@ -101,7 +101,7 @@ export const useLiveActivities = () => {
         expenseCount: 0,
       }));
 
-      console.log('✅ Tracking detenido');
+      
     } catch (error) {
       console.error('❌ Error deteniendo tracking:', error);
     }

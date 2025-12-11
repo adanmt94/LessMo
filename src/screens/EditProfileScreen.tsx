@@ -220,9 +220,9 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
         );
         
         await Promise.all(updatePromises);
-        console.log(`✅ Actualizados ${updatePromises.length} participantes con la nueva foto`);
+        
       } catch (error) {
-        console.log('⚠️ No se pudieron actualizar los participantes:', error);
+        
         // No mostramos error al usuario, solo logueamos
       }
 

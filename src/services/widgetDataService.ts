@@ -145,7 +145,7 @@ export async function getWidgetData(): Promise<WidgetData | null> {
 export async function clearWidgetData(): Promise<void> {
   try {
     await AsyncStorage.removeItem(WIDGET_DATA_KEY);
-    console.log('🗑️ Datos del widget eliminados');
+    
   } catch (error) {
     console.error('Error limpiando datos del widget:', error);
   }

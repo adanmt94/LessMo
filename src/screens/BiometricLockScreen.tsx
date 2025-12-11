@@ -40,15 +40,15 @@ export const BiometricLockScreen: React.FC<Props> = ({ onUnlock }) => {
         
         if (currentUser && currentUser.uid === savedUID) {
           // Usuario correcto ya autenticado
-          console.log('✅ [BIOMETRIC LOCK] Usuario autenticado correctamente');
+          
           onUnlock();
         } else if (!currentUser) {
           // No hay usuario autenticado - desbloquear para mostrar login
-          console.log('⚠️ [BIOMETRIC LOCK] No hay usuario autenticado, desbloqueando para login');
+          
           onUnlock(); // Ir directo a login, sin alertas
         } else {
           // Hay otro usuario autenticado
-          console.log('⚠️ [BIOMETRIC LOCK] Usuario diferente autenticado, cerrando sesión');
+          
           await auth.signOut();
           Alert.alert(
             'Usuario diferente',
@@ -74,7 +74,7 @@ export const BiometricLockScreen: React.FC<Props> = ({ onUnlock }) => {
           }
         } else {
           // Si no hay usuario, ir directo a login sin contar como intento fallido
-          console.log('⚠️ [BIOMETRIC LOCK] No hay usuario - desbloqueando para login');
+          
           onUnlock();
         }
       }

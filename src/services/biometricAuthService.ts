@@ -18,7 +18,7 @@ const BIOMETRIC_ENABLED_KEY = 'biometric_auth_enabled';
  */
 export const signInWithBiometricUID = async (uid: string): Promise<boolean> => {
   try {
-    console.log('🔐 [BIOMETRIC] Intentando restaurar sesión para UID:', uid);
+    
 
     // Verificar que el usuario existe en Firestore
     const userDoc = await getDoc(doc(db, 'users', uid));
@@ -35,13 +35,13 @@ export const signInWithBiometricUID = async (uid: string): Promise<boolean> => {
     
     if (currentUser && currentUser.uid === uid) {
       // Ya está autenticado con el usuario correcto
-      console.log('✅ [BIOMETRIC] Usuario ya autenticado correctamente');
+      
       return true;
     }
 
     // Si hay otro usuario autenticado, cerrar sesión primero
     if (currentUser && currentUser.uid !== uid) {
-      console.log('⚠️ [BIOMETRIC] Cerrando sesión de usuario diferente');
+      
       await auth.signOut();
     }
 
@@ -49,8 +49,8 @@ export const signInWithBiometricUID = async (uid: string): Promise<boolean> => {
     // La única forma segura es que el usuario ya esté autenticado
     // Si no lo está, debemos pedirle que vuelva a iniciar sesión
     
-    console.log('⚠️ [BIOMETRIC] No se puede restaurar sesión automáticamente');
-    console.log('ℹ️ [BIOMETRIC] Firebase requiere credenciales para iniciar sesión');
+    
+    
     
     // Mantener los datos de biometría para intentar más tarde
     return false;
@@ -93,7 +93,7 @@ export const clearBiometricData = async (): Promise<void> => {
   try {
     await SecureStore.deleteItemAsync(BIOMETRIC_ENABLED_KEY);
     await SecureStore.deleteItemAsync(BIOMETRIC_USER_UID_KEY);
-    console.log('✅ [BIOMETRIC] Datos de biometría limpiados');
+    
   } catch (error) {
     console.error('❌ [BIOMETRIC] Error limpiando datos:', error);
   }

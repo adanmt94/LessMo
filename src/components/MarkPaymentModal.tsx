@@ -247,7 +247,7 @@ export const MarkPaymentModal: React.FC<Props> = ({
           }, 1000);
         } else {
           // Si no se puede abrir el link, solo marcar el pago
-          console.log('⚠️ No se puede abrir el link, marcando pago directamente');
+          
           handleMarkAsPaid();
         }
       } else {

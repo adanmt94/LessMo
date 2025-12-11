@@ -29,7 +29,7 @@ export interface ReceiptItem {
  */
 export async function analyzeReceipt(imageUri: string): Promise<ReceiptData> {
   try {
-    console.log('📸 Analizando recibo con OCR...');
+    
 
     // Convertir imagen a base64
     const base64Image = await FileSystem.readAsStringAsync(imageUri, {
@@ -85,12 +85,12 @@ export async function analyzeReceipt(imageUri: string): Promise<ReceiptData> {
     const textAnnotation = data.responses[0].fullTextAnnotation?.text || 
                           data.responses[0].textAnnotations?.[0]?.description || '';
 
-    console.log('📝 Texto extraído:', textAnnotation);
+    
 
     // Analizar el texto extraído
     const receiptData = parseReceiptText(textAnnotation);
     
-    console.log('✅ Datos del recibo extraídos:', receiptData);
+    
     
     return receiptData;
 
@@ -269,7 +269,7 @@ function detectCategoryFromMerchant(merchantName: string, fullText: string): str
  * Útil para modo offline o cuando falla la API
  */
 export async function analyzeReceiptOffline(imageUri: string): Promise<ReceiptData> {
-  console.log('📸 Análisis offline del recibo (sin OCR)');
+  ');
   
   // Por ahora retorna datos vacíos, pero podría usar OCR local como Tesseract
   return {

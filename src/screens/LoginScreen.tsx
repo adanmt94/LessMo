@@ -60,16 +60,16 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
       if (loginMethod === 'google') {
         // Si el último login fue con Google, considerar que hay credenciales guardadas
         setHasSavedCredentials(true);
-        console.log('🔐 Credenciales guardadas: Google');
+        
       } else if (loginMethod === 'email') {
         // Si fue con email/password, verificar que existan
         const savedEmail = await SecureStore.getItemAsync(STORED_EMAIL_KEY);
         const savedPassword = await SecureStore.getItemAsync(STORED_PASSWORD_KEY);
         setHasSavedCredentials(!!(savedEmail && savedPassword));
-        console.log('🔐 Credenciales guardadas: Email/Password');
+        
       } else {
         setHasSavedCredentials(false);
-        console.log('⚠️ No hay credenciales guardadas');
+        
       }
     } catch (error) {
       console.error('Error checking saved credentials:', error);
@@ -87,22 +87,22 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
     }
 
     try {
-      console.log('🔐 Starting biometric authentication...');
+      
       const authenticated = await authenticateWithBiometric();
       
       if (!authenticated) {
-        console.log('❌ Biometric authentication cancelled or failed');
+        
         return;
       }
 
-      console.log('✅ Biometric authentication successful');
+      
       
       // Verificar qué método de login se usó la última vez
       const loginMethod = await SecureStore.getItemAsync(STORED_LOGIN_METHOD_KEY);
       
       if (loginMethod === 'google') {
         // Iniciar sesión con Google requiere abrir el navegador
-        console.log('🔐 Signing in with Google (last used method)...');
+        ...');
         
         try {
           // Llamar al flujo de Google - esto abrirá el navegador
@@ -114,7 +114,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
           // Si después de 3 segundos no hay respuesta, podría haber un problema
           setTimeout(() => {
             if (googleLoading) {
-              console.log('⚠️ Google login tomando más tiempo del esperado');
+              
             }
           }, 3000);
           
@@ -137,7 +137,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
         }
 
         // Iniciar sesión con las credenciales guardadas
-        console.log('🔐 Signing in with email/password (last used method)...');
+        ...');
         const success = await signIn(savedEmail, savedPassword);
         if (!success) {
           Alert.alert(t('common.error'), error || t('auth.loginError'));
@@ -169,7 +169,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
           await SecureStore.setItemAsync(STORED_PASSWORD_KEY, password);
           await SecureStore.setItemAsync(STORED_LOGIN_METHOD_KEY, 'email');
           await checkSavedCredentials(); // Actualizar estado
-          console.log('✅ Credenciales guardadas para Face ID (email/password)');
+          ');
         } catch (error) {
           console.error('❌ Error guardando credenciales:', error);
         }
@@ -196,7 +196,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
       // Solo proceder si Google terminó de cargar y no hay error
       if (googleLoading) return;
       if (googleError) {
-        console.log('⚠️ Error en Google login, no guardar credenciales');
+        
         return;
       }
       
@@ -215,7 +215,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
           await SecureStore.deleteItemAsync(STORED_EMAIL_KEY);
           await SecureStore.deleteItemAsync(STORED_PASSWORD_KEY);
           await checkSavedCredentials();
-          console.log('✅ Método Google guardado para Face ID');
+          
         }
       } catch (error) {
         console.error('❌ Error guardando método Google:', error);

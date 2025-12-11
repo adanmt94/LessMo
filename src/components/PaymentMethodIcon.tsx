@@ -20,7 +20,7 @@ export const PaymentMethodIcon: React.FC<PaymentMethodIconProps> = ({ provider, 
     other: require('../../assets/payment-methods/other.png'),
   };
 
-  console.log(`🎨 PaymentMethodIcon rendering: ${provider}, has logo: ${!!logoMap[provider]}`);
+  
 
   // Emojis de fallback para logos no disponibles
   const emojiMap: { [key in PaymentProvider]: string } = {

@@ -93,7 +93,7 @@ export const Navigation: React.FC = () => {
     
     // Timeout de seguridad: si después de 2 segundos no se resolvió, continuar
     const timeout = setTimeout(() => {
-      console.log('⚠️ Timeout verificando onboarding - continuando');
+      
       setCheckingOnboarding(false);
     }, 2000);
     
@@ -104,7 +104,7 @@ export const Navigation: React.FC = () => {
     try {
       if (isAuthenticated) {
         const shouldShow = await shouldShowOnboarding();
-        console.log('📱 Mostrar onboarding:', shouldShow);
+        
         setShowOnboarding(shouldShow);
       }
     } catch (error) {

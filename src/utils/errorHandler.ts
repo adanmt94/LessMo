@@ -129,7 +129,7 @@ export function mapFirebaseError(error: any): string {
   const code = error.code || error.message || '';
   
   // Log para debugging
-  console.log('🔍 [ERROR-MAPPER] Mapeando error:', { code, message: error.message });
+  
   
   if (code.includes('permission-denied')) return ErrorType.FIREBASE_PERMISSION;
   if (code.includes('not-found')) return ErrorType.FIREBASE_NOT_FOUND;

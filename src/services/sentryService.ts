@@ -13,7 +13,7 @@ const SENTRY_DSN = process.env.SENTRY_DSN || 'https://your-dsn@sentry.io/your-pr
 export const initSentry = () => {
   // Solo en producción
   if (__DEV__) {
-    console.log('🐛 Sentry deshabilitado en desarrollo');
+    
     return;
   }
 
@@ -86,7 +86,7 @@ export const initSentry = () => {
     ],
   });
 
-  console.log('✅ Sentry inicializado correctamente');
+  
 };
 
 /**
@@ -111,7 +111,7 @@ export const captureError = (error: Error, context?: Record<string, any>) => {
  */
 export const captureMessage = (message: string, level: Sentry.SeverityLevel = 'info') => {
   if (__DEV__) {
-    console.log(`🐛 [DEV] Mensaje capturado [${level}]:`, message);
+    
     return;
   }
 

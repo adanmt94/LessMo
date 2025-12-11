@@ -473,7 +473,7 @@ export async function isPaymentProviderAvailable(provider: PaymentProvider): Pro
           return await Linking.canOpenURL('bizum://');
         } catch (error) {
           // Si falla la verificación, asumimos que está disponible (vía web)
-          console.log('⚠️ Error verificando Bizum, asumiendo disponible:', error);
+          
           return true;
         }
       case 'paypal':

@@ -82,15 +82,15 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
     useCallback(() => {
       const hasGroupFilter = route?.params?.filterGroupId;
       
-      console.log('🔍 EventsScreen Focus - Route params:', route?.params);
-      console.log('🔍 EventsScreen Focus - Group filter:', hasGroupFilter);
+      
+      
       
       if (hasGroupFilter) {
-        console.log('✅ Filtrando eventos del evento:', hasGroupFilter);
+        
         setFilterGroupId(route.params.filterGroupId);
         setIsFromTab(false);
       } else {
-        console.log('✅ Mostrando todos los eventos del usuario');
+        
         setFilterGroupId(null);
         setIsFromTab(true);
         
@@ -149,10 +149,10 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
       // Cargar nombres de eventos para eventos que pertenecen a un evento
       const eventsWithGroup = allEvents.filter(e => e.groupId);
       const groupIds = [...new Set(eventsWithGroup.map(e => e.groupId!))];
-      console.log('📁 Total eventos:', allEvents.length);
-      console.log('📁 Eventos con groupId:', eventsWithGroup.length);
-      console.log('📁 Eventos con groupId details:', eventsWithGroup.map(e => ({ id: e.id, name: e.name, groupId: e.groupId })));
-      console.log('📁 GroupIds únicos a cargar:', groupIds);
+      
+      
+      ));
+      
       const names: {[key: string]: string} = {};
       
       await Promise.all(
@@ -161,7 +161,7 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
             const group = await getGroup(groupId);
             if (group) {
               names[groupId] = group.name;
-              console.log('✅ Evento cargado:', groupId, '→', group.name);
+              
             } else {
               console.warn('⚠️ Evento no encontrado:', groupId);
             }
@@ -171,7 +171,7 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
         })
       );
       
-      console.log('📁 Nombres de eventos cargados:', names);
+      
       setGroupNames(names);
     } catch (error: any) {
       console.error('❌ Error loading events:', error);
@@ -293,8 +293,6 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
   const activeEvents = filteredEvents.filter(e => e.status === 'active');
   const pastEvents = filteredEvents.filter(e => e.status === 'completed' || e.status === 'archived');
   const displayEvents = activeTab === 'active' ? activeEvents : pastEvents;
-
-
 
   // Render item memoizado para FlatList
   const renderEventItem = useCallback(({ item: event }: { item: Event }) => {

@@ -171,7 +171,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
   }, [isEditMode, expenseId, expenses]);
 
   useEffect(() => {
-    console.log('🔍 AddExpenseScreen - Participants:', participants.length, participants);
+    
     if (participants.length > 0 && !isEditMode) {
       // Si hay datos prellenados de paidBy, usarlos; si no, el primer participante
       if (!paidBy || !prefilledData?.paidBy) {
@@ -305,7 +305,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
     setAnalyzingReceipt(true);
     
     try {
-      console.log('🔍 Analizando recibo con OCR...');
+      
       const data = await analyzeReceipt(imageUri);
       
       setOcrData(data);
@@ -504,7 +504,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
 
     const amountNum = parseFloat(amount);
     if (isNaN(amountNum) || amountNum < VALIDATION.MIN_AMOUNT || amountNum > VALIDATION.MAX_AMOUNT) {
-      console.log('❌ Error: Monto inválido', amountNum);
+      
       Alert.alert(
         t('common.error'),
         t('addExpense.amountInvalid', { min: VALIDATION.MIN_AMOUNT, max: VALIDATION.MAX_AMOUNT })
@@ -580,13 +580,13 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
 
       // Subir foto si existe
       if (receiptPhoto && receiptPhoto.startsWith('file://')) {
-        console.log('📸 Subiendo foto de recibo...');
+        
         setUploadingPhoto(true);
         try {
           const { uploadReceiptPhoto } = await import('../services/firebase');
           const tempId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
           photoURL = await uploadReceiptPhoto(receiptPhoto, tempId);
-          console.log('✅ Foto subida exitosamente:', photoURL);
+          
         } catch (photoError) {
           console.error('❌ Error subiendo foto:', photoError);
           Alert.alert(
@@ -610,7 +610,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
       
       if (isIndividualExpense) {
         // Crear gasto individual sin evento
-        console.log('💰 Creando gasto individual');
+        
         try {
           const { addDoc, collection, auth } = await import('../services/firebase');
           const { db } = await import('../services/firebase');
@@ -631,7 +631,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
           success = false;
         }
       } else if (isEditMode) {
-        console.log('📝 Modo edición - Actualizando gasto:', expenseId);
+        
         success = await editExpense(
           expenseId!,
           paidBy,
@@ -658,7 +658,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
         );
       }
 
-      console.log(`📊 Resultado ${isEditMode ? 'editExpense' : 'addExpense'}:`, success);
+      
 
       if (success) {
         

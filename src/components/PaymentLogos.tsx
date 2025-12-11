@@ -218,7 +218,7 @@ export const PaymentMethodLogo: React.FC<{ method: string } & LogoProps> = ({
   const methodKey = method.toLowerCase();
   const logoSource = logoMap[methodKey];
   
-  console.log(`🎨 PaymentMethodLogo: ${method}, has PNG: ${!!logoSource}`);
+  
   
   if (logoSource) {
     return (

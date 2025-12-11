@@ -27,7 +27,7 @@ Notifications.setNotificationHandler({
 export const requestNotificationPermissions = async (): Promise<boolean> => {
   try {
     if (!Device.isDevice) {
-      console.log('Las notificaciones push solo funcionan en dispositivos físicos');
+      
       return false;
     }
 
@@ -40,7 +40,7 @@ export const requestNotificationPermissions = async (): Promise<boolean> => {
     }
 
     if (finalStatus !== 'granted') {
-      console.log('No se obtuvieron permisos para notificaciones');
+      
       return false;
     }
 
@@ -58,12 +58,12 @@ export const requestNotificationPermissions = async (): Promise<boolean> => {
     try {
       // Solo intentamos obtener el token si estamos en un proyecto de Expo con EAS
       const token = await Notifications.getExpoPushTokenAsync();
-      console.log('Push token:', token.data);
+      
       await AsyncStorage.setItem(PUSH_TOKEN_KEY, token.data);
     } catch (tokenError) {
       // No es crítico si no podemos obtener el token
       // Las notificaciones locales funcionarán de todos modos
-      console.log('No se pudo obtener push token (notificaciones locales seguirán funcionando)');
+      ');
     }
 
     return true;
@@ -203,7 +203,7 @@ export const scheduleDailyDebtReminder = async (
 export const cancelAllNotifications = async (): Promise<void> => {
   try {
     await Notifications.cancelAllScheduledNotificationsAsync();
-    console.log('Todas las notificaciones canceladas');
+    
   } catch (error) {
     console.error('Error cancelando notificaciones:', error);
   }

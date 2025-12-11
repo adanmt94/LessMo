@@ -44,7 +44,7 @@ export const useBiometricAuth = (): BiometricAuthHook => {
       setIsAvailable(compatible);
 
       if (!compatible) {
-        console.log('❌ Dispositivo no soporta autenticación biométrica');
+        
         setIsLoading(false);
         return;
       }
@@ -54,7 +54,7 @@ export const useBiometricAuth = (): BiometricAuthHook => {
       setIsEnrolled(enrolled);
 
       if (!enrolled) {
-        console.log('⚠️ No hay datos biométricos registrados en el dispositivo');
+        
         setIsLoading(false);
         return;
       }
@@ -135,9 +135,9 @@ export const useBiometricAuth = (): BiometricAuthHook => {
           `${biometricType} activado correctamente. La próxima vez que abras la app se te pedirá ${biometricType} para acceder directamente a tu cuenta.`
         );
         
-        console.log('✅ Autenticación biométrica activada para usuario:', currentUser.uid);
+        
       } else {
-        console.log('❌ Autenticación cancelada o fallida');
+        
       }
     } catch (error: any) {
       console.error('❌ Error activando biometría:', error);
@@ -156,7 +156,7 @@ export const useBiometricAuth = (): BiometricAuthHook => {
         `${biometricType} ha sido desactivado`
       );
       
-      console.log('✅ Autenticación biométrica desactivada');
+      
     } catch (error) {
       console.error('❌ Error desactivando biometría:', error);
       Alert.alert('Error', 'No se pudo desactivar la autenticación biométrica');
@@ -166,7 +166,7 @@ export const useBiometricAuth = (): BiometricAuthHook => {
   const authenticateWithBiometric = async (): Promise<string | null> => {
     try {
       if (!isAvailable || !isEnrolled) {
-        console.log('⚠️ Biometría no disponible');
+        
         return null;
       }
 
@@ -181,10 +181,10 @@ export const useBiometricAuth = (): BiometricAuthHook => {
         // Recuperar el UID del usuario guardado
         const savedUID = await SecureStore.getItemAsync(BIOMETRIC_USER_UID_KEY);
         if (!savedUID) {
-          console.log('⚠️ No hay UID guardado');
+          
           return null;
         }
-        console.log('✅ Autenticación biométrica exitosa para UID:', savedUID);
+        
         return savedUID;
       } else {
         return null;
