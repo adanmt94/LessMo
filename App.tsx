@@ -20,13 +20,9 @@ import { globalEmitter, GlobalEvents } from './src/utils/globalEvents';
 import { isBiometricUserCurrent } from './src/services/biometricAuthService';
 import { auth } from './src/services/firebase';
 import { initDeepLinkListener, DeepLinkConfig } from './src/services/deepLinkService';
-import { initSentry, ErrorBoundary } from './src/services/sentryService';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import { initializeStripe } from './src/services/stripeService';
 import Constants from 'expo-constants';
-
-// Inicializar Sentry PRIMERO (antes de cualquier otro código)
-initSentry();
 
 // Inicializar Stripe
 initializeStripe();
@@ -163,48 +159,19 @@ export default function App() {
 
   try {
     return (
-      <ErrorBoundary
-        fallback={(errorData) => (
-          <SafeAreaProvider>
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: '#f5f5f5' }}>
-              <StatusBar style="auto" />
-              <RNText style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 12, color: '#ef4444' }}>
-                ⚠️ Error
-              </RNText>
-              <RNText style={{ fontSize: 16, color: '#666', textAlign: 'center', marginBottom: 20 }}>
-                La aplicación ha encontrado un error inesperado
-              </RNText>
-              <TouchableOpacity
-                onPress={() => errorData.resetError()}
-                style={{
-                  backgroundColor: '#6366F1',
-                  paddingHorizontal: 24,
-                  paddingVertical: 12,
-                  borderRadius: 8,
-                }}
-              >
-                <RNText style={{ color: '#fff', fontWeight: '600' }}>
-                  Reintentar
-                </RNText>
-              </TouchableOpacity>
-            </View>
-          </SafeAreaProvider>
-        )}
+      <StripeProvider
+        publishableKey={Constants.expoConfig?.extra?.STRIPE_PUBLISHABLE_KEY || ''}
+        merchantIdentifier={Constants.expoConfig?.extra?.APPLE_MERCHANT_ID || 'merchant.com.lessmo.app'}
+        urlScheme="lessmo"
       >
-        <StripeProvider
-          publishableKey={Constants.expoConfig?.extra?.STRIPE_PUBLISHABLE_KEY || ''}
-          merchantIdentifier={Constants.expoConfig?.extra?.APPLE_MERCHANT_ID || 'merchant.com.lessmo.app'}
-          urlScheme="lessmo"
-        >
-          <GestureHandlerRootView style={{ flex: 1 }}>
-            <SafeAreaProvider>
-              <ThemeProvider>
-                <AppContent appKey={appKey} />
-              </ThemeProvider>
-            </SafeAreaProvider>
-          </GestureHandlerRootView>
-        </StripeProvider>
-      </ErrorBoundary>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <SafeAreaProvider>
+            <ThemeProvider>
+              <AppContent appKey={appKey} />
+            </ThemeProvider>
+          </SafeAreaProvider>
+        </GestureHandlerRootView>
+      </StripeProvider>
     );
   } catch (err) {
     console.error('❌ Error crítico en App:', err);
