@@ -3,8 +3,9 @@
  * Herramientas para medir y optimizar el rendimiento de la app
  */
 
+import React from 'react';
 import { InteractionManager, Platform } from 'react-native';
-import { logger } from './loggerService';
+import { logger } from '../utils/logger';
 
 interface PerformanceMetric {
   name: string;

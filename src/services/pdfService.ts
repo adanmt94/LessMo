@@ -537,7 +537,7 @@ const calculateSettlements = (
         } else if (e.splitType === 'custom' && e.customSplits) {
           return sum + (e.customSplits[participant.id] || 0);
         } else if (e.splitType === 'items' && e.items) {
-          const itemShare = expense.items.reduce((itemSum, item) => {
+          const itemShare = e.items.reduce((itemSum, item) => {
             if (item.assignedTo?.includes(participant.id)) {
               return itemSum + (item.price / (item.assignedTo?.length || 1));
             }
