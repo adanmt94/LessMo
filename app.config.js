@@ -42,7 +42,13 @@ module.exports = {
       favicon: "./assets/favicon.png"
     },
     plugins: [
-      "@sentry/react-native"
+      ["@sentry/react-native/expo", {
+        organization: process.env.SENTRY_ORG || "lessmo",
+        project: process.env.SENTRY_PROJECT || "lessmo-app",
+        url: "https://sentry.io/",
+      }],
+      ["./plugins/withIosDeploymentTarget", { deploymentTarget: "16.0" }],
+      "./plugins/withSentryEnv"
     ],
     extra: {
       eas: {
