@@ -36,7 +36,7 @@ export async function updateWidgetData(userId: string): Promise<void> {
 
   try {
     // Importar servicios dinámicamente para evitar ciclos
-    const { getUserEventsByStatus, getEventExpenses, getParticipantBalances } = await import('./firebase');
+    const { getUserEventsByStatus, getEventExpenses } = await import('./firebase');
     
     // Obtener eventos del usuario
     const userEvents = await getUserEventsByStatus(userId);
@@ -49,16 +49,23 @@ export async function updateWidgetData(userId: string): Promise<void> {
     
     for (const event of activeEvents) {
       try {
-        const balances = await getParticipantBalances(event.id);
-        const userBalance = balances.find(b => b.participantId === userId);
-        
-        if (userBalance) {
-          totalBalance += userBalance.balance;
-          if (userBalance.balance > 0) {
-            totalOwed += userBalance.balance;
-          } else {
-            totalOwing += Math.abs(userBalance.balance);
-          }
+        // Calcular balance basándose en gastos del evento
+        const expenses = await getEventExpenses(event.id);
+        const userPaid = expenses
+          .filter(e => e.paidBy === userId)
+          .reduce((sum, e) => sum + e.amount, 0);
+        const userOwes = expenses
+          .filter(e => (e.beneficiaries || e.participantIds || []).includes(userId))
+          .reduce((sum, e) => {
+            const beneficiaries = e.beneficiaries || e.participantIds || [];
+            return sum + (e.amount / beneficiaries.length);
+          }, 0);
+        const eventBalance = userPaid - userOwes;
+        totalBalance += eventBalance;
+        if (eventBalance > 0) {
+          totalOwed += eventBalance;
+        } else {
+          totalOwing += Math.abs(eventBalance);
         }
       } catch (error) {
         console.warn(`Error calculando balance para evento ${event.id}:`, error);

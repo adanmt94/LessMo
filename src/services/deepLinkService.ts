@@ -19,8 +19,8 @@ export const generateEventDeepLink = (config: DeepLinkConfig): string => {
   const baseUrl = Linking.createURL('');
   const params = new URLSearchParams({
     event: config.eventId,
-    name: encodeURIComponent(config.eventName),
-    creator: encodeURIComponent(config.creatorName),
+    name: config.eventName,
+    creator: config.creatorName,
   });
   
   return `${baseUrl}invite?${params.toString()}`;
@@ -34,8 +34,8 @@ export const generateUniversalLink = (config: DeepLinkConfig): string => {
   const webDomain = 'lessmo.app';
   const params = new URLSearchParams({
     event: config.eventId,
-    name: encodeURIComponent(config.eventName),
-    creator: encodeURIComponent(config.creatorName),
+    name: config.eventName,
+    creator: config.creatorName,
   });
   
   return `https://${webDomain}/invite?${params.toString()}`;
