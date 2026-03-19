@@ -32,7 +32,9 @@ struct Provider: TimelineProvider {
         
         // Leer datos compartidos desde el App Group
         if let sharedDefaults = UserDefaults(suiteName: "group.com.lessmo.app.widgets"),
-           let widgetData = sharedDefaults.dictionary(forKey: "widgetData") {
+           let rawValue = sharedDefaults.string(forKey: "widgetData"),
+           let jsonData = rawValue.data(using: .utf8),
+           let widgetData = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any] {
             
             let eventName = widgetData["eventName"] as? String ?? "Sin eventos"
             let totalExpenses = widgetData["totalExpenses"] as? Double ?? 0.0
@@ -79,7 +81,7 @@ struct SimpleEntry: TimelineEntry {
  * Vista del Widget - Small (systemSmall)
  */
 struct LessmoWidgetEntryViewSmall: View {
-    var entry: Provider.Entry
+    var entry: SimpleEntry
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -121,7 +123,7 @@ struct LessmoWidgetEntryViewSmall: View {
  * Vista del Widget - Medium (systemMedium)
  */
 struct LessmoWidgetEntryViewMedium: View {
-    var entry: Provider.Entry
+    var entry: SimpleEntry
 
     var body: some View {
         HStack(spacing: 16) {
@@ -190,7 +192,7 @@ struct LessmoWidgetEntryViewMedium: View {
  * Vista del Widget - Large (systemLarge)
  */
 struct LessmoWidgetEntryViewLarge: View {
-    var entry: Provider.Entry
+    var entry: SimpleEntry
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -274,40 +276,35 @@ struct LessmoWidgetEntryViewLarge: View {
 }
 
 /**
+ * Vista principal que selecciona el tamaño correcto
+ */
+struct LessmoWidgetEntryView: View {
+    @Environment(\.widgetFamily) var family
+    var entry: SimpleEntry
+
+    var body: some View {
+        switch family {
+        case .systemSmall:
+            LessmoWidgetEntryViewSmall(entry: entry)
+        case .systemMedium:
+            LessmoWidgetEntryViewMedium(entry: entry)
+        case .systemLarge:
+            LessmoWidgetEntryViewLarge(entry: entry)
+        default:
+            LessmoWidgetEntryViewSmall(entry: entry)
+        }
+    }
+}
+
+/**
  * Definición del Widget con soporte para 3 tamaños
  */
-@main
 struct LessmoWidget: Widget {
     let kind: String = "LessmoWidget"
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: Provider()) { entry in
-            if #available(iOS 17.0, *) {
-                // iOS 17+ usa ContainerBackground
-                GeometryReader { geometry in
-                    if geometry.size.width < 200 {
-                        LessmoWidgetEntryViewSmall(entry: entry)
-                            .containerBackground(.fill.tertiary, for: .widget)
-                    } else if geometry.size.width < 400 {
-                        LessmoWidgetEntryViewMedium(entry: entry)
-                            .containerBackground(.fill.tertiary, for: .widget)
-                    } else {
-                        LessmoWidgetEntryViewLarge(entry: entry)
-                            .containerBackground(.fill.tertiary, for: .widget)
-                    }
-                }
-            } else {
-                // iOS 14-16 usa padding manual
-                GeometryReader { geometry in
-                    if geometry.size.width < 200 {
-                        LessmoWidgetEntryViewSmall(entry: entry)
-                    } else if geometry.size.width < 400 {
-                        LessmoWidgetEntryViewMedium(entry: entry)
-                    } else {
-                        LessmoWidgetEntryViewLarge(entry: entry)
-                    }
-                }
-            }
+            LessmoWidgetEntryView(entry: entry)
         }
         .configurationDisplayName("LessMo Widget")
         .description("Consulta rápidamente el balance de tu evento actual")
