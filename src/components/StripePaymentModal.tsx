@@ -28,7 +28,7 @@ import {
   formatAmount,
   StripePaymentInfo,
 } from '../services/stripeService';
-import { logger } from '../services/loggerService';
+import { logger } from '../utils/logger';
 
 interface StripePaymentModalProps {
   visible: boolean;

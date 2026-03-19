@@ -150,9 +150,6 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
       const eventsWithGroup = allEvents.filter(e => e.groupId);
       const groupIds = [...new Set(eventsWithGroup.map(e => e.groupId!))];
       
-      
-      ));
-      
       const names: {[key: string]: string} = {};
       
       await Promise.all(

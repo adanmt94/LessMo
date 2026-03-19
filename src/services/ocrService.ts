@@ -269,7 +269,6 @@ function detectCategoryFromMerchant(merchantName: string, fullText: string): str
  * Útil para modo offline o cuando falla la API
  */
 export async function analyzeReceiptOffline(imageUri: string): Promise<ReceiptData> {
-  ');
   
   // Por ahora retorna datos vacíos, pero podría usar OCR local como Tesseract
   return {

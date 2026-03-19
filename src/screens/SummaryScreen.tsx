@@ -685,21 +685,6 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
                   toParticipant?.name.toLowerCase() === userFirstName ||
                   emailMatchesToName;
                 
-                // Log para debugging
-                :`, {
-                  from: fromParticipant.name,
-                  fromId: fromParticipant.id,
-                  to: toParticipant.name,
-                  toId: toParticipant.id,
-                  amount: settlement.amount,
-                  isDebtor,
-                  isCreditor,
-                  userId: user?.uid,
-                  userEmail,
-                  fromEmail: fromParticipant.email,
-                  toEmail: toParticipant.email
-                });
-                
                 // Determinar si el botón debe mostrarse y ser clickeable
                 const canPay = isDebtor || (isCreditor && paymentStatus === 'sent_waiting_confirmation');
                 const buttonText = paymentStatus === 'sent_waiting_confirmation' && isCreditor

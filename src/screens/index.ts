@@ -2,7 +2,7 @@
  * Screens index - Exportación centralizada de pantallas
  */
 
-export { HomeScreen } from './HomeScreen';
+// HomeScreen está deprecated (reemplazada por MainTabs)
 export { LoginScreen } from './LoginScreen';
 export { RegisterScreen } from './RegisterScreen';
 export { ForgotPasswordScreen } from './ForgotPasswordScreen';

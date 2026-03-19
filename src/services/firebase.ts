@@ -1365,7 +1365,6 @@ export const getUserEventsByStatus = async (
     });
     
     const allEvents = Array.from(allEventsMap.values());
-    :', allEvents.length);
     
     // 5. Ordenar por fecha de creación
     return allEvents.sort((a, b) => {

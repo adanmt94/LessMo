@@ -63,7 +63,6 @@ export const requestNotificationPermissions = async (): Promise<boolean> => {
     } catch (tokenError) {
       // No es crítico si no podemos obtener el token
       // Las notificaciones locales funcionarán de todos modos
-      ');
     }
 
     return true;

@@ -102,7 +102,6 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
       
       if (loginMethod === 'google') {
         // Iniciar sesión con Google requiere abrir el navegador
-        ...');
         
         try {
           // Llamar al flujo de Google - esto abrirá el navegador
@@ -137,7 +136,6 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
         }
 
         // Iniciar sesión con las credenciales guardadas
-        ...');
         const success = await signIn(savedEmail, savedPassword);
         if (!success) {
           Alert.alert(t('common.error'), error || t('auth.loginError'));
@@ -169,7 +167,6 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
           await SecureStore.setItemAsync(STORED_PASSWORD_KEY, password);
           await SecureStore.setItemAsync(STORED_LOGIN_METHOD_KEY, 'email');
           await checkSavedCredentials(); // Actualizar estado
-          ');
         } catch (error) {
           console.error('❌ Error guardando credenciales:', error);
         }
