@@ -22,7 +22,11 @@ import { auth } from './src/services/firebase';
 import { initDeepLinkListener, DeepLinkConfig } from './src/services/deepLinkService';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import { initializeStripe } from './src/services/stripeService';
+import { initSentry, wrap as sentryWrap } from './src/services/sentryService';
 import Constants from 'expo-constants';
+
+// Inicializar Sentry (antes de cualquier renderizado)
+initSentry();
 
 // Inicializar Stripe
 initializeStripe();
@@ -115,7 +119,7 @@ const AppContent: React.FC<{ appKey: number }> = ({ appKey }) => {
   );
 };
 
-export default function App() {
+function App() {
   // Key para forzar remount completo de la app
   const [appKey, setAppKey] = useState(0);
   const [error, setError] = useState<Error | null>(null);
@@ -179,3 +183,5 @@ export default function App() {
     return null;
   }
 }
+
+export default sentryWrap(App);

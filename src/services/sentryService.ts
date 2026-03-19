@@ -5,47 +5,34 @@
 
 import * as Sentry from '@sentry/react-native';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 
-// DSN de Sentry (reemplazar con tu DSN real de Sentry.io)
-const SENTRY_DSN = process.env.SENTRY_DSN || 'https://your-dsn@sentry.io/your-project';
+// DSN de Sentry desde variables de entorno
+const SENTRY_DSN = process.env.SENTRY_DSN || Constants.expoConfig?.extra?.SENTRY_DSN || '';
 
-// Inicializar Sentry
+/**
+ * Inicializar Sentry - llamar en App.tsx antes de cualquier renderizado
+ */
 export const initSentry = () => {
-  // Solo en producción
   if (__DEV__) {
-    
+    return;
+  }
+
+  if (!SENTRY_DSN) {
+    console.warn('⚠️ Sentry DSN not configured - error tracking disabled');
     return;
   }
 
   Sentry.init({
     dsn: SENTRY_DSN,
-    
-    // Environment
-    environment: __DEV__ ? 'development' : 'production',
-    
-    // Release tracking
-    // release: 'lessmo@1.1.0', // Sincronizar con app.json
-    
-    // Sample rate para performance monitoring
-    tracesSampleRate: 1.0, // 100% en producción, ajustar según necesidad
-    
-    // Habilitar tracking de sesiones
+    environment: 'production',
+    tracesSampleRate: 1.0,
     enableAutoSessionTracking: true,
-    
-    // Session tracking interval (30 segundos)
     sessionTrackingIntervalMillis: 30000,
-    
-    // Native crash handling
     enableNative: true,
     enableNativeCrashHandling: true,
-    
-    // Breadcrumbs automáticos
-    enableAutoPerformanceTracking: true,
-    enableOutOfMemoryTracking: true,
-    
-    // Filtrar información sensible
-    beforeSend(event, hint) {
-      // No enviar errores en desarrollo
+
+    beforeSend(event) {
       if (__DEV__) {
         return null;
       }
@@ -60,7 +47,6 @@ export const initSentry = () => {
         event.breadcrumbs = event.breadcrumbs.map(breadcrumb => {
           if (breadcrumb.data) {
             const sanitized = { ...breadcrumb.data };
-            // Eliminar campos sensibles
             delete sanitized.password;
             delete sanitized.email;
             delete sanitized.token;
@@ -73,20 +59,7 @@ export const initSentry = () => {
 
       return event;
     },
-    
-    // Integrations
-    integrations: [
-      new Sentry.ReactNativeTracing({
-        // Tracking de navegación
-        routingInstrumentation: new Sentry.ReactNavigationInstrumentation(),
-        
-        // Tracking de requests HTTP
-        tracingOrigins: ['localhost', 'lessmo.app', /^\//],
-      }),
-    ],
   });
-
-  
 };
 
 /**
@@ -173,28 +146,13 @@ export const setContext = (key: string, context: Record<string, any>) => {
 };
 
 /**
- * Iniciar transacción de performance
+ * Error Boundary de Sentry para componentes React
  */
-export const startTransaction = (name: string, op: string) => {
-  if (__DEV__) {
-    return null;
-  }
-
-  return Sentry.startTransaction({
-    name,
-    op,
-  });
-};
+export const SentryErrorBoundary = Sentry.ErrorBoundary;
 
 /**
- * Hook para wrappear componentes con error boundary
+ * Wrap del componente raíz con Sentry
  */
-export const ErrorBoundary = Sentry.ErrorBoundary;
+export const wrap = Sentry.wrap;
 
-/**
- * HOC para wrappear navegación
- */
-export const withProfiler = Sentry.withProfiler;
-
-// Exportar namespace completo
 export default Sentry;
