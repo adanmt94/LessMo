@@ -16,7 +16,7 @@ import {
   PlatformPay
 } from '@stripe/stripe-react-native';
 import Constants from 'expo-constants';
-import { logger } from './loggerService';
+import { logger } from '../utils/logger';
 
 // Configuración de Stripe desde variables de entorno
 const STRIPE_CONFIG = {
@@ -110,10 +110,17 @@ export const createPaymentIntent = async (
   paymentInfo: StripePaymentInfo
 ): Promise<{ clientSecret: string; paymentIntentId: string } | null> => {
   try {
-    // TODO: Replace with your backend endpoint
-    // Example: https://us-central1-lessmo-9023f.cloudfunctions.net/createPaymentIntent
+    // Backend URL from environment variables
+    const backendUrl = Constants.expoConfig?.extra?.STRIPE_BACKEND_URL;
     
-    const backendUrl = 'YOUR_BACKEND_URL/create-payment-intent';
+    if (!backendUrl) {
+      logger.warn('⚠️ STRIPE_BACKEND_URL not configured - payment intent cannot be created');
+      Alert.alert(
+        'Configuración pendiente',
+        'El servicio de pagos no está configurado todavía.'
+      );
+      return null;
+    }
     
     const response = await fetch(backendUrl, {
       method: 'POST',

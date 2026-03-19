@@ -78,8 +78,13 @@ export const useDailyReminder = () => {
 
   const scheduleDailyReminder = async () => {
     try {
-      // Cancelar notificaciones previas
-      await Notifications.cancelAllScheduledNotificationsAsync();
+      // Cancelar solo notificaciones de recordatorio diario previas
+      const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+      for (const notification of scheduled) {
+        if (notification.content.data?.type === 'daily_reminder') {
+          await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+        }
+      }
 
       // Programar notificación diaria usando CalendarTriggerInput
       await Notifications.scheduleNotificationAsync({
