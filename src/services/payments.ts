@@ -569,3 +569,12 @@ export function getPaymentProviderIcon(provider: PaymentProvider): string {
   };
   return icons[provider] || '💰';
 }
+
+/**
+ * Check if a payment provider is "Coming Soon" (not yet fully functional)
+ * These providers require backend infrastructure that is not yet configured.
+ */
+export function isPaymentProviderComingSoon(provider: PaymentProvider): boolean {
+  const comingSoon: PaymentProvider[] = ['apple_pay', 'google_pay', 'card', 'stripe', 'zelle'];
+  return comingSoon.includes(provider);
+}

@@ -26,6 +26,7 @@ import {
   processPayment,
   getAvailablePaymentProviders,
   getPaymentProviderName,
+  isPaymentProviderComingSoon,
 } from '../services/payments';
 
 type PaymentMethodScreenNavigationProp = StackNavigationProp<RootStackParamList, 'PaymentMethod'>;
@@ -180,36 +181,45 @@ export const PaymentMethodScreen: React.FC<Props> = ({ navigation, route }) => {
           </Card>
         ) : (
           <View style={styles.providersContainer}>
-            {availableProviders.map((provider) => (
+            {availableProviders.map((provider) => {
+              const comingSoon = isPaymentProviderComingSoon(provider);
+              return (
               <TouchableOpacity
                 key={provider}
                 style={[
                   styles.providerCard,
-                  selectedProvider === provider && styles.providerCardSelected,
+                  selectedProvider === provider && !comingSoon && styles.providerCardSelected,
+                  comingSoon && styles.providerCardDisabled,
                   { backgroundColor: theme.colors.surface }
                 ]}
-                onPress={() => setSelectedProvider(provider)}
-                activeOpacity={0.7}
+                onPress={() => !comingSoon && setSelectedProvider(provider)}
+                activeOpacity={comingSoon ? 1 : 0.7}
               >
                 <View style={styles.providerContent}>
                   <View style={[styles.providerIconContainer, { backgroundColor: theme.colors.background }]}>
                     <PaymentMethodIcon provider={provider} size={56} />
                   </View>
-                  <Text style={[styles.providerName, { color: theme.colors.text }]}>
-                    {getPaymentProviderName(provider)}
-                  </Text>
+                  <View>
+                    <Text style={[styles.providerName, { color: comingSoon ? theme.colors.textSecondary : theme.colors.text }]}>
+                      {getPaymentProviderName(provider)}
+                    </Text>
+                    {comingSoon && (
+                      <Text style={styles.comingSoonBadge}>Coming Soon</Text>
+                    )}
+                  </View>
                 </View>
                 
                 <View style={[
                   styles.providerRadio,
-                  selectedProvider === provider && styles.providerRadioSelected,
+                  selectedProvider === provider && !comingSoon && styles.providerRadioSelected,
                 ]}>
-                  {selectedProvider === provider && (
+                  {selectedProvider === provider && !comingSoon && (
                     <View style={styles.providerRadioDot} />
                   )}
                 </View>
               </TouchableOpacity>
-            ))}
+              );
+            })}
           </View>
         )}
 
@@ -380,6 +390,15 @@ const getStyles = (theme: any) => StyleSheet.create({
     height: 12,
     borderRadius: 6,
     backgroundColor: theme.colors.primary,
+  },
+  providerCardDisabled: {
+    opacity: 0.55,
+  },
+  comingSoonBadge: {
+    fontSize: 11,
+    fontWeight: '600' as const,
+    color: '#F59E0B',
+    marginTop: 2,
   },
   payButton: {
     marginBottom: 16,

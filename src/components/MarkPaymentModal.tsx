@@ -67,12 +67,12 @@ export const MarkPaymentModal: React.FC<Props> = ({
   const isDebtor = settlement.from === currentUserId;
   const isCreditor = settlement.to === currentUserId;
 
-  const paymentMethods: { id: PaymentMethod; name: string; hasLink: boolean }[] = [
+  const paymentMethods: { id: PaymentMethod; name: string; hasLink: boolean; comingSoon?: boolean }[] = [
     { id: 'bizum', name: 'Bizum', hasLink: false },
     { id: 'paypal', name: 'PayPal', hasLink: true },
     { id: 'venmo', name: 'Venmo', hasLink: true },
-    { id: 'apple_pay', name: 'Apple Pay', hasLink: false },
-    { id: 'google_pay', name: 'Google Pay', hasLink: true },
+    { id: 'apple_pay', name: 'Apple Pay', hasLink: false, comingSoon: true },
+    { id: 'google_pay', name: 'Google Pay', hasLink: true, comingSoon: true },
     { id: 'bank_transfer', name: 'Transferencia', hasLink: false },
     { id: 'cash', name: 'Efectivo', hasLink: false },
     { id: 'other', name: 'Otro', hasLink: false },
@@ -366,13 +366,15 @@ export const MarkPaymentModal: React.FC<Props> = ({
                       <TouchableOpacity
                         style={[
                           styles.methodButton,
-                          selectedMethod === method.id && {
+                          selectedMethod === method.id && !method.comingSoon && {
                             backgroundColor: theme.colors.primary,
                             borderWidth: 3,
                             borderColor: theme.colors.primary,
                           },
+                          method.comingSoon && { opacity: 0.5 },
                         ]}
-                        onPress={() => setSelectedMethod(method.id)}
+                        onPress={() => !method.comingSoon && setSelectedMethod(method.id)}
+                        activeOpacity={method.comingSoon ? 1 : 0.7}
                       >
                         <View style={styles.methodLogoContainer}>
                           <PaymentMethodLogo 
@@ -386,7 +388,7 @@ export const MarkPaymentModal: React.FC<Props> = ({
                             styles.methodName,
                             {
                               color:
-                                selectedMethod === method.id
+                                selectedMethod === method.id && !method.comingSoon
                                   ? '#FFFFFF'
                                   : theme.colors.text,
                             },
@@ -394,6 +396,11 @@ export const MarkPaymentModal: React.FC<Props> = ({
                         >
                           {method.name}
                         </Text>
+                        {method.comingSoon && (
+                          <Text style={{ fontSize: 9, fontWeight: '600', color: '#F59E0B', marginTop: 2 }}>
+                            Coming Soon
+                          </Text>
+                        )}
                       </TouchableOpacity>
                     </View>
                   ))}
