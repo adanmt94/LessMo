@@ -1,10 +1,33 @@
 /**
  * 📱 Servicio de Datos para Widgets iOS
  * Prepara y actualiza datos para widgets de la pantalla de inicio
+ * Usa SharedGroupPreferences para compartir datos con WidgetKit
  */
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
+import { Platform, NativeModules } from 'react-native';
+
+const APP_GROUP = 'group.com.lessmo.app.widgets';
+const WIDGET_DATA_KEY = 'widgetData';
+
+// Importar SharedGroupPreferences solo en iOS nativo
+let SharedGroupPreferences: any = null;
+if (Platform.OS === 'ios') {
+  try {
+    SharedGroupPreferences = require('react-native-shared-group-preferences').default;
+  } catch {
+    // No disponible (p.ej. en Expo Go)
+  }
+}
+
+// Importar WidgetCenter para recargar los widgets
+let WidgetCenter: any = null;
+if (Platform.OS === 'ios') {
+  try {
+    WidgetCenter = NativeModules.WidgetCenter || require('react-native-widget-center');
+  } catch {
+    // No disponible
+  }
+}
 
 export interface WidgetExpense {
   description: string;
@@ -13,8 +36,16 @@ export interface WidgetExpense {
   category?: string;
 }
 
+/**
+ * Datos que el widget Swift lee desde UserDefaults
+ * Debe coincidir con lo que LessmoWidget.swift espera
+ */
 export interface WidgetData {
-  balance: number;
+  eventName: string;
+  totalExpenses: number;
+  userBalance: number;
+  participantsCount: number;
+  // Campos adicionales para uso interno
   currency: string;
   monthTotal: number;
   monthExpenses: number;
@@ -23,7 +54,34 @@ export interface WidgetData {
   lastUpdate: string;
 }
 
-const WIDGET_DATA_KEY = '@LessMo:widget_data';
+/**
+ * Escribir datos al App Group compartido con el widget
+ */
+async function writeToSharedGroup(data: WidgetData): Promise<void> {
+  if (!SharedGroupPreferences) {
+    console.warn('⚠️ SharedGroupPreferences no disponible - widget no se actualizará');
+    return;
+  }
+
+  try {
+    await SharedGroupPreferences.setItem(WIDGET_DATA_KEY, JSON.stringify(data), APP_GROUP);
+  } catch (error) {
+    console.error('Error escribiendo al App Group:', error);
+  }
+}
+
+/**
+ * Notificar a WidgetKit que recargue los timelines
+ */
+function reloadWidgets(): void {
+  try {
+    if (WidgetCenter?.reloadAllTimelines) {
+      WidgetCenter.reloadAllTimelines();
+    }
+  } catch {
+    // Silencioso si no está disponible
+  }
+}
 
 /**
  * Actualizar datos para widgets
@@ -31,7 +89,7 @@ const WIDGET_DATA_KEY = '@LessMo:widget_data';
  */
 export async function updateWidgetData(userId: string): Promise<void> {
   if (Platform.OS !== 'ios') {
-    return; // Widgets solo en iOS por ahora
+    return;
   }
 
   try {
@@ -106,27 +164,38 @@ export async function updateWidgetData(userId: string): Promise<void> {
     const monthExpenses = allExpenses.filter(e => new Date(e.date) >= monthStart);
     const monthTotal = monthExpenses.reduce((sum, e) => sum + e.amount, 0);
     
+    // Nombre del evento más reciente
+    const latestEvent = activeEvents[0];
+    const eventName = latestEvent?.name || latestEvent?.title || 'Sin eventos';
+    const participantsCount = latestEvent?.participants?.length || 0;
+    
     const widgetData: WidgetData = {
-      balance: totalBalance,
-      currency: 'EUR', // TODO: Obtener de configuración del usuario
+      // Campos que el widget Swift lee directamente
+      eventName,
+      totalExpenses: monthTotal,
+      userBalance: totalBalance,
+      participantsCount,
+      // Campos adicionales
+      currency: 'EUR',
       monthTotal,
       monthExpenses: monthExpenses.length,
-      recentExpenses: allExpenses.slice(0, 10), // Top 10 más recientes
+      recentExpenses: allExpenses.slice(0, 10),
       pendingPayments: totalOwing > 0 ? Math.ceil(totalOwing) : 0,
       lastUpdate: new Date().toISOString()
     };
     
-    // Guardar datos para widgets (AsyncStorage es accesible desde widgets via App Groups)
-    await AsyncStorage.setItem(WIDGET_DATA_KEY, JSON.stringify(widgetData));
+    // Escribir al App Group compartido con el widget
+    await writeToSharedGroup(widgetData);
+    
+    // Notificar al widget que hay datos nuevos
+    reloadWidgets();
     
     console.log('✅ Datos del widget actualizados:', {
-      balance: widgetData.balance,
+      eventName: widgetData.eventName,
+      balance: widgetData.userBalance,
       monthTotal: widgetData.monthTotal,
       expensesCount: widgetData.recentExpenses.length
     });
-    
-    // TODO: Notificar a los widgets iOS que hay datos nuevos
-    // Requiere native module para llamar WidgetCenter.shared.reloadAllTimelines()
     
   } catch (error) {
     console.error('❌ Error actualizando datos del widget:', error);
@@ -137,8 +206,11 @@ export async function updateWidgetData(userId: string): Promise<void> {
  * Obtener datos actuales para widgets
  */
 export async function getWidgetData(): Promise<WidgetData | null> {
+  if (!SharedGroupPreferences) {
+    return null;
+  }
   try {
-    const data = await AsyncStorage.getItem(WIDGET_DATA_KEY);
+    const data = await SharedGroupPreferences.getItem(WIDGET_DATA_KEY, APP_GROUP);
     return data ? JSON.parse(data) : null;
   } catch (error) {
     console.error('Error obteniendo datos del widget:', error);
@@ -151,8 +223,10 @@ export async function getWidgetData(): Promise<WidgetData | null> {
  */
 export async function clearWidgetData(): Promise<void> {
   try {
-    await AsyncStorage.removeItem(WIDGET_DATA_KEY);
-    
+    if (SharedGroupPreferences) {
+      await SharedGroupPreferences.setItem(WIDGET_DATA_KEY, '', APP_GROUP);
+      reloadWidgets();
+    }
   } catch (error) {
     console.error('Error limpiando datos del widget:', error);
   }

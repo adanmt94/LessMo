@@ -25,7 +25,10 @@ module.exports = {
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false
       },
-      associatedDomains: ["applinks:lessmo.app"]
+      associatedDomains: ["applinks:lessmo.app"],
+      entitlements: {
+        "com.apple.security.application-groups": ["group.com.lessmo.app.widgets"]
+      }
     },
     android: {
       adaptiveIcon: {
@@ -38,6 +41,9 @@ module.exports = {
     web: {
       favicon: "./assets/favicon.png"
     },
+    plugins: [
+      "@sentry/react-native"
+    ],
     extra: {
       eas: {
         projectId: "6efb7e40-76ab-461f-8c48-691488aef80c"
