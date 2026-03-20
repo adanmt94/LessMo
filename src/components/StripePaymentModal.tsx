@@ -257,7 +257,7 @@ export const StripePaymentModal: React.FC<StripePaymentModalProps> = ({
               <Text style={styles.sectionTitle}>Datos de la tarjeta</Text>
               <CardField
                 postalCodeEnabled={true}
-                placeholder={{
+                placeholders={{
                   number: '4242 4242 4242 4242',
                 }}
                 cardStyle={{

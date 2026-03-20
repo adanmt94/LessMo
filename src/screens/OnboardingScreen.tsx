@@ -11,9 +11,11 @@ import {
   Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
+import { Gradients, Spacing, Radius, Typography } from '../theme/designSystem';
 
 const { width, height } = Dimensions.get('window');
 const ONBOARDING_KEY = '@LessMo:onboarding_completed';
@@ -94,152 +96,169 @@ export const OnboardingScreen: React.FC<Props> = ({ onComplete }) => {
   };
 
   return (
-    <SafeAreaView edges={['top']} style={styles.container}>
-      {/* Skip button */}
-      {!isLastStep && (
-        <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
-          <Text style={styles.skipText}>{t('onboarding.skip')}</Text>
-        </TouchableOpacity>
-      )}
-
-      {/* Content */}
-      <View style={styles.content}>
-        {/* Emoji */}
-        <Text style={styles.emoji}>{step.emoji}</Text>
-
-        {/* Title */}
-        <Text style={styles.title}>{step.title}</Text>
-
-        {/* Description */}
-        <Text style={styles.description}>{step.description}</Text>
-
-        {/* Progress bar */}
-        <View style={styles.progressContainer}>
-          <View style={[styles.progressBar, { width: `${progress}%` }]} />
-        </View>
-
-        {/* Steps indicator */}
-        <View style={styles.dotsContainer}>
-          {ONBOARDING_STEPS.map((_, index) => (
-            <View
-              key={index}
-              style={[
-                styles.dot,
-                index === currentStep && styles.dotActive,
-              ]}
-            />
-          ))}
-        </View>
-      </View>
-
-      {/* Navigation buttons */}
-      <View style={styles.navigationContainer}>
-        {currentStep > 0 && (
-          <TouchableOpacity
-            style={[styles.button, styles.buttonSecondary]}
-            onPress={handleBack}
-          >
-            <Text style={styles.buttonSecondaryText}>{t('onboarding.back')}</Text>
+    <LinearGradient
+      colors={theme.isDark ? Gradients.heroDark : Gradients.hero}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.gradientBg}
+    >
+      <SafeAreaView edges={['top', 'bottom']} style={styles.container}>
+        {/* Skip button */}
+        {!isLastStep && (
+          <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
+            <Text style={styles.skipText}>{t('onboarding.skip')}</Text>
           </TouchableOpacity>
         )}
 
-        <TouchableOpacity
-          style={[
-            styles.button,
-            styles.buttonPrimary,
-            currentStep === 0 && styles.buttonFullWidth,
-          ]}
-          onPress={handleNext}
-        >
-          <Text style={styles.buttonPrimaryText}>
-            {isLastStep ? t('onboarding.start') : t('onboarding.next')}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+        {/* Content */}
+        <View style={styles.content}>
+          {/* Emoji with glass container */}
+          <View style={styles.emojiContainer}>
+            <Text style={styles.emoji}>{step.emoji}</Text>
+          </View>
+
+          {/* Title */}
+          <Text style={styles.title}>{step.title}</Text>
+
+          {/* Description */}
+          <Text style={styles.description}>{step.description}</Text>
+
+          {/* Progress bar */}
+          <View style={styles.progressContainer}>
+            <View style={[styles.progressBar, { width: `${progress}%` }]} />
+          </View>
+
+          {/* Steps indicator */}
+          <View style={styles.dotsContainer}>
+            {ONBOARDING_STEPS.map((_, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.dot,
+                  index === currentStep && styles.dotActive,
+                ]}
+              />
+            ))}
+          </View>
+        </View>
+
+        {/* Navigation buttons */}
+        <View style={styles.navigationContainer}>
+          {currentStep > 0 && (
+            <TouchableOpacity
+              style={[styles.button, styles.buttonSecondary]}
+              onPress={handleBack}
+            >
+              <Text style={styles.buttonSecondaryText}>{t('onboarding.back')}</Text>
+            </TouchableOpacity>
+          )}
+
+          <TouchableOpacity
+            style={[
+              styles.button,
+              styles.buttonPrimary,
+              currentStep === 0 && styles.buttonFullWidth,
+            ]}
+            onPress={handleNext}
+          >
+            <Text style={styles.buttonPrimaryText}>
+              {isLastStep ? t('onboarding.start') : t('onboarding.next')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    </LinearGradient>
   );
 };
 
 const getStyles = (theme: any) => StyleSheet.create({
+  gradientBg: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
   },
   skipButton: {
     position: 'absolute',
-    top: 60,
-    right: 24,
+    top: 16,
+    right: Spacing.xxl,
     zIndex: 10,
-    padding: 8,
+    padding: Spacing.sm,
   },
   skipText: {
-    fontSize: 16,
-    color: theme.colors.textSecondary,
+    ...Typography.body,
+    color: 'rgba(255,255,255,0.7)',
     fontWeight: '600',
   },
   content: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: Spacing.xl,
+  },
+  emojiContainer: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.xxxl,
   },
   emoji: {
-    fontSize: 120,
-    marginBottom: 24,
+    fontSize: 80,
   },
   title: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: theme.colors.text,
+    ...Typography.largeTitle,
+    color: '#FFFFFF',
     textAlign: 'center',
-    marginBottom: 20,
-    letterSpacing: -0.5,
+    marginBottom: Spacing.xl,
   },
   description: {
     fontSize: 18,
-    color: theme.colors.textSecondary,
+    color: 'rgba(255,255,255,0.85)',
     textAlign: 'center',
     lineHeight: 28,
-    marginBottom: 24,
-    paddingHorizontal: 10,
+    marginBottom: Spacing.xxl,
+    paddingHorizontal: Spacing.xl,
   },
   progressContainer: {
-    width: '100%',
+    width: '80%',
     height: 4,
-    backgroundColor: theme.colors.border,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 2,
     overflow: 'hidden',
-    marginBottom: 24,
+    marginBottom: Spacing.xxl,
   },
   progressBar: {
     height: '100%',
-    backgroundColor: theme.colors.primary,
+    backgroundColor: '#FFFFFF',
     borderRadius: 2,
   },
   dotsContainer: {
     flexDirection: 'row',
-    gap: 8,
+    gap: Spacing.sm,
   },
   dot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: theme.colors.border,
+    backgroundColor: 'rgba(255,255,255,0.3)',
   },
   dotActive: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: '#FFFFFF',
     width: 24,
   },
   navigationContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 24,
+    paddingHorizontal: Spacing.xxl,
     paddingBottom: 40,
-    gap: 12,
+    gap: Spacing.md,
   },
   button: {
     flex: 1,
     paddingVertical: 18,
-    borderRadius: 16,
+    borderRadius: Radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -247,25 +266,25 @@ const getStyles = (theme: any) => StyleSheet.create({
     flex: 1,
   },
   buttonPrimary: {
-    backgroundColor: theme.colors.primary,
-    shadowColor: theme.colors.primary,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 4,
   },
   buttonPrimaryText: {
-    color: theme.colors.card,
+    color: '#6366F1',
     fontSize: 18,
     fontWeight: '700',
   },
   buttonSecondary: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     borderWidth: 2,
-    borderColor: theme.colors.border,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
   buttonSecondaryText: {
-    color: theme.colors.text,
+    color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '600',
   },

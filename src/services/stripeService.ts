@@ -8,15 +8,12 @@ import {
   initStripe, 
   confirmPayment,
   createPaymentMethod,
-  presentApplePay,
-  confirmApplePayPayment,
   isPlatformPaySupported,
   PlatformPayButton,
-  ApplePay,
   PlatformPay
 } from '@stripe/stripe-react-native';
 import Constants from 'expo-constants';
-import { logger } from '../utils/logger';
+import { logger, LogCategory } from '../utils/logger';
 
 // Configuración de Stripe desde variables de entorno
 const STRIPE_CONFIG = {
@@ -52,7 +49,7 @@ export interface StripePaymentResult {
 export const initializeStripe = async (): Promise<boolean> => {
   try {
     if (!STRIPE_CONFIG.publishableKey) {
-      logger.warn('⚠️ Stripe publishable key not configured');
+      logger.warn(LogCategory.FEATURE, '⚠️ Stripe publishable key not configured');
       return false;
     }
 
@@ -62,10 +59,10 @@ export const initializeStripe = async (): Promise<boolean> => {
       urlScheme: 'lessmo',
     });
 
-    logger.info('✅ Stripe initialized successfully');
+    logger.info(LogCategory.FEATURE, '✅ Stripe initialized successfully');
     return true;
   } catch (error: any) {
-    logger.error('❌ Failed to initialize Stripe:', error);
+    logger.error(LogCategory.FEATURE, '❌ Failed to initialize Stripe:', error);
     return false;
   }
 };
@@ -78,10 +75,10 @@ export const isApplePaySupported = async (): Promise<boolean> => {
   
   try {
     const isSupported = await isPlatformPaySupported();
-    logger.info(`🍎 Apple Pay supported: ${isSupported}`);
+    logger.info(LogCategory.FEATURE, `🍎 Apple Pay supported: ${isSupported}`);
     return isSupported;
   } catch (error) {
-    logger.error('❌ Error checking Apple Pay support:', error);
+    logger.error(LogCategory.FEATURE, '❌ Error checking Apple Pay support:', String(error));
     return false;
   }
 };
@@ -94,10 +91,10 @@ export const isGooglePaySupported = async (): Promise<boolean> => {
   
   try {
     const isSupported = await isPlatformPaySupported();
-    logger.info(`📱 Google Pay supported: ${isSupported}`);
+    logger.info(LogCategory.FEATURE, `📱 Google Pay supported: ${isSupported}`);
     return isSupported;
   } catch (error) {
-    logger.error('❌ Error checking Google Pay support:', error);
+    logger.error(LogCategory.FEATURE, '❌ Error checking Google Pay support:', String(error));
     return false;
   }
 };
@@ -114,7 +111,7 @@ export const createPaymentIntent = async (
     const backendUrl = Constants.expoConfig?.extra?.STRIPE_BACKEND_URL;
     
     if (!backendUrl) {
-      logger.warn('⚠️ STRIPE_BACKEND_URL not configured - payment intent cannot be created');
+      logger.warn(LogCategory.FEATURE, '⚠️ STRIPE_BACKEND_URL not configured - payment intent cannot be created');
       Alert.alert(
         'Configuración pendiente',
         'El servicio de pagos no está configurado todavía.'
@@ -140,14 +137,14 @@ export const createPaymentIntent = async (
     }
 
     const data = await response.json();
-    logger.info('✅ Payment Intent created:', data.paymentIntentId);
+    logger.info(LogCategory.FEATURE, '✅ Payment Intent created:', data.paymentIntentId);
     
     return {
       clientSecret: data.clientSecret,
       paymentIntentId: data.id,
     };
   } catch (error: any) {
-    logger.error('❌ Error creating payment intent:', error);
+    logger.error(LogCategory.FEATURE, '❌ Error creating payment intent:', error);
     Alert.alert(
       'Error',
       'No se pudo crear la intención de pago. Asegúrate de que el backend está configurado.'
@@ -163,7 +160,7 @@ export const payWithApplePay = async (
   paymentInfo: StripePaymentInfo
 ): Promise<StripePaymentResult> => {
   try {
-    logger.info('🍎 Starting Apple Pay payment...');
+    logger.info(LogCategory.FEATURE, '🍎 Starting Apple Pay payment...');
 
     // Check if Apple Pay is supported
     const supported = await isApplePaySupported();
@@ -184,22 +181,15 @@ export const payWithApplePay = async (
     }
 
     // Present Apple Pay sheet
-    const { error: applePayError } = await presentApplePay({
-      clientSecret: paymentIntent.clientSecret,
-      cartItems: [
-        {
-          label: paymentInfo.description,
-          amount: (paymentInfo.amount / 100).toFixed(2),
-          paymentType: PlatformPay.PaymentType.Immediate,
-        },
-      ],
-      country: 'ES',
-      currency: paymentInfo.currency.toUpperCase(),
-      requiredBillingContactFields: [PlatformPay.ContactField.EmailAddress],
-    });
+    const { error: applePayError } = await confirmPayment(
+      paymentIntent.clientSecret,
+      {
+        paymentMethodType: 'Card',
+      }
+    );
 
     if (applePayError) {
-      logger.error('❌ Apple Pay error:', applePayError);
+      logger.error(LogCategory.FEATURE, '❌ Apple Pay error:', applePayError.message);
       return {
         success: false,
         error: applePayError.message,
@@ -207,26 +197,14 @@ export const payWithApplePay = async (
     }
 
     // Confirm the payment
-    const { error: confirmError } = await confirmApplePayPayment(
-      paymentIntent.clientSecret
-    );
-
-    if (confirmError) {
-      logger.error('❌ Payment confirmation error:', confirmError);
-      return {
-        success: false,
-        error: confirmError.message,
-      };
-    }
-
-    logger.info('✅ Apple Pay payment successful!');
+    logger.info(LogCategory.FEATURE, '✅ Apple Pay payment successful!');
     return {
       success: true,
       paymentIntentId: paymentIntent.paymentIntentId,
       method: 'apple_pay',
     };
   } catch (error: any) {
-    logger.error('❌ Apple Pay payment failed:', error);
+    logger.error(LogCategory.FEATURE, '❌ Apple Pay payment failed:', error);
     return {
       success: false,
       error: error.message || 'Error procesando pago con Apple Pay',
@@ -241,7 +219,7 @@ export const payWithGooglePay = async (
   paymentInfo: StripePaymentInfo
 ): Promise<StripePaymentResult> => {
   try {
-    logger.info('📱 Starting Google Pay payment...');
+    logger.info(LogCategory.FEATURE, '📱 Starting Google Pay payment...');
 
     // Check if Google Pay is supported
     const supported = await isGooglePaySupported();
@@ -262,21 +240,15 @@ export const payWithGooglePay = async (
     }
 
     // Present Google Pay sheet
-    const { error: googlePayError } = await presentApplePay({
-      clientSecret: paymentIntent.clientSecret,
-      cartItems: [
-        {
-          label: paymentInfo.description,
-          amount: (paymentInfo.amount / 100).toFixed(2),
-          paymentType: PlatformPay.PaymentType.Immediate,
-        },
-      ],
-      country: 'ES',
-      currency: paymentInfo.currency.toUpperCase(),
-    });
+    const { error: googlePayError } = await confirmPayment(
+      paymentIntent.clientSecret,
+      {
+        paymentMethodType: 'Card',
+      }
+    );
 
     if (googlePayError) {
-      logger.error('❌ Google Pay error:', googlePayError);
+      logger.error(LogCategory.FEATURE, '❌ Google Pay error:', googlePayError.message);
       return {
         success: false,
         error: googlePayError.message,
@@ -284,26 +256,14 @@ export const payWithGooglePay = async (
     }
 
     // Confirm the payment
-    const { error: confirmError } = await confirmApplePayPayment(
-      paymentIntent.clientSecret
-    );
-
-    if (confirmError) {
-      logger.error('❌ Payment confirmation error:', confirmError);
-      return {
-        success: false,
-        error: confirmError.message,
-      };
-    }
-
-    logger.info('✅ Google Pay payment successful!');
+    logger.info(LogCategory.FEATURE, '✅ Google Pay payment successful!');
     return {
       success: true,
       paymentIntentId: paymentIntent.paymentIntentId,
       method: 'google_pay',
     };
   } catch (error: any) {
-    logger.error('❌ Google Pay payment failed:', error);
+    logger.error(LogCategory.FEATURE, '❌ Google Pay payment failed:', error);
     return {
       success: false,
       error: error.message || 'Error procesando pago con Google Pay',
@@ -320,7 +280,7 @@ export const payWithCard = async (
   paymentMethodId: string
 ): Promise<StripePaymentResult> => {
   try {
-    logger.info('💳 Starting card payment...');
+    logger.info(LogCategory.FEATURE, '💳 Starting card payment...');
 
     // Create Payment Intent
     const paymentIntent = await createPaymentIntent(paymentInfo);
@@ -343,21 +303,21 @@ export const payWithCard = async (
     );
 
     if (error) {
-      logger.error('❌ Card payment error:', error);
+      logger.error(LogCategory.FEATURE, '❌ Card payment error:', error.message);
       return {
         success: false,
         error: error.message,
       };
     }
 
-    logger.info('✅ Card payment successful!');
+    logger.info(LogCategory.FEATURE, '✅ Card payment successful!');
     return {
       success: true,
       paymentIntentId: confirmedIntent?.id || paymentIntent.paymentIntentId,
       method: 'card',
     };
   } catch (error: any) {
-    logger.error('❌ Card payment failed:', error);
+    logger.error(LogCategory.FEATURE, '❌ Card payment failed:', error);
     return {
       success: false,
       error: error.message || 'Error procesando pago con tarjeta',

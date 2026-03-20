@@ -56,10 +56,11 @@ export function ItemSplitScreen({
     setItems(prevItems =>
       prevItems.map(item => {
         if (item.id === itemId) {
-          const isAssigned = item.assignedTo?.includes(participantId) || false;
+          const assignedTo = item.assignedTo || [];
+          const isAssigned = assignedTo.includes(participantId);
           const newAssignedTo = isAssigned
-            ? item.assignedTo.filter(id => id !== participantId)
-            : [...item.assignedTo, participantId];
+            ? assignedTo.filter(id => id !== participantId)
+            : [...assignedTo, participantId];
 
           // No permitir que quede vacío
           if (newAssignedTo.length === 0) {
@@ -82,7 +83,7 @@ export function ItemSplitScreen({
 
   const handleConfirm = () => {
     // Validar que todos los items tengan al menos una persona
-    const invalid = items.find(item => item.assignedTo.length === 0);
+    const invalid = items.find(item => (item.assignedTo || []).length === 0);
     if (invalid) {
       Alert.alert(
         'Error',
@@ -96,169 +97,14 @@ export function ItemSplitScreen({
 
   const getTotalByParticipant = (participantId: string): number => {
     return items.reduce((total, item) => {
-      if (item.assignedTo?.includes(participantId)) {
-        return total + item.price / item.assignedTo.length;
+      if ((item.assignedTo || []).includes(participantId)) {
+        return total + item.price / (item.assignedTo || []).length;
       }
       return total;
     }, 0);
   };
 
-  const styles = StyleSheet.create({
-    modal: {
-      flex: 1,
-      backgroundColor: theme.colors.background,
-    },
-    container: {
-      flex: 1,
-    },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: 20,
-      paddingVertical: 16,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.colors.border,
-    },
-    title: {
-      fontSize: 20,
-      fontWeight: '700',
-      color: theme.colors.text,
-    },
-    closeButton: {
-      padding: 8,
-    },
-    closeButtonText: {
-      fontSize: 16,
-      color: theme.colors.textSecondary,
-      fontWeight: '600',
-    },
-    scrollContent: {
-      padding: 20,
-    },
-    description: {
-      fontSize: 14,
-      color: theme.colors.textSecondary,
-      marginBottom: 24,
-      lineHeight: 20,
-    },
-    itemCard: {
-      backgroundColor: theme.colors.card,
-      borderRadius: 16,
-      padding: 16,
-      marginBottom: 16,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-    },
-    itemHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 12,
-    },
-    itemName: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: theme.colors.text,
-      flex: 1,
-    },
-    itemPrice: {
-      fontSize: 18,
-      fontWeight: '700',
-      color: theme.colors.primary,
-    },
-    participantsLabel: {
-      fontSize: 13,
-      color: theme.colors.textSecondary,
-      marginBottom: 8,
-      fontWeight: '600',
-    },
-    participantsList: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 8,
-    },
-    participantChip: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 20,
-      borderWidth: 1.5,
-      borderColor: theme.colors.border,
-      backgroundColor: theme.colors.surface,
-    },
-    participantChipActive: {
-      backgroundColor: theme.colors.primary,
-      borderColor: theme.colors.primary,
-    },
-    participantChipText: {
-      fontSize: 13,
-      color: theme.colors.text,
-      fontWeight: '500',
-    },
-    participantChipTextActive: {
-      color: theme.colors.card,
-      fontWeight: '600',
-    },
-    summaryCard: {
-      backgroundColor: theme.isDark
-        ? 'rgba(99, 102, 241, 0.1)'
-        : 'rgba(99, 102, 241, 0.05)',
-      borderRadius: 16,
-      padding: 16,
-      marginTop: 8,
-      marginBottom: 24,
-      borderWidth: 1,
-      borderColor: theme.isDark
-        ? 'rgba(99, 102, 241, 0.3)'
-        : 'rgba(99, 102, 241, 0.2)',
-    },
-    summaryTitle: {
-      fontSize: 15,
-      fontWeight: '700',
-      color: theme.colors.text,
-      marginBottom: 12,
-    },
-    summaryRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 8,
-    },
-    summaryName: {
-      fontSize: 14,
-      color: theme.colors.text,
-      fontWeight: '500',
-    },
-    summaryAmount: {
-      fontSize: 15,
-      fontWeight: '700',
-      color: theme.colors.primary,
-    },
-    totalRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingTop: 12,
-      marginTop: 12,
-      borderTopWidth: 1,
-      borderTopColor: theme.colors.border,
-    },
-    totalLabel: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: theme.colors.text,
-    },
-    totalAmount: {
-      fontSize: 18,
-      fontWeight: '800',
-      color: theme.colors.primary,
-    },
-    buttonContainer: {
-      padding: 20,
-      paddingBottom: 40,
-      gap: 12,
-    },
-  });
+  const styles = getStyles(theme);
 
   const totalExpense = items.reduce((sum, item) => sum + item.price, 0);
 
@@ -286,15 +132,15 @@ export function ItemSplitScreen({
               </View>
 
               <Text style={styles.participantsLabel}>
-                {item.assignedTo.length === 1
+                {(item.assignedTo || []).length === 1
                   ? '1 persona'
-                  : `${item.assignedTo.length} personas`}{' '}
-                - {(item.price / item.assignedTo.length).toFixed(2)}€ cada uno
+                  : `${(item.assignedTo || []).length} personas`}{' '}
+                - {(item.price / (item.assignedTo || []).length).toFixed(2)}€ cada uno
               </Text>
 
               <View style={styles.participantsList}>
                 {participants.map(participant => {
-                  const isActive = item.assignedTo?.includes(participant.id) || false;
+                  const isActive = (item.assignedTo || []).includes(participant.id);
                   return (
                     <TouchableOpacity
                       key={participant.id}
@@ -346,3 +192,160 @@ export function ItemSplitScreen({
     </Modal>
   );
 }
+
+const getStyles = (theme: any) => StyleSheet.create({
+  modal: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  container: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: theme.colors.text,
+  },
+  closeButton: {
+    padding: 8,
+  },
+  closeButtonText: {
+    fontSize: 16,
+    color: theme.colors.textSecondary,
+    fontWeight: '600',
+  },
+  scrollContent: {
+    padding: 20,
+  },
+  description: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  itemCard: {
+    backgroundColor: theme.colors.card,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  itemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  itemName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.text,
+    flex: 1,
+  },
+  itemPrice: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: theme.colors.primary,
+  },
+  participantsLabel: {
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+    marginBottom: 8,
+    fontWeight: '600',
+  },
+  participantsList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  participantChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+  },
+  participantChipActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  participantChipText: {
+    fontSize: 13,
+    color: theme.colors.text,
+    fontWeight: '500',
+  },
+  participantChipTextActive: {
+    color: theme.colors.card,
+    fontWeight: '600',
+  },
+  summaryCard: {
+    backgroundColor: theme.isDark
+      ? 'rgba(99, 102, 241, 0.1)'
+      : 'rgba(99, 102, 241, 0.05)',
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 8,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: theme.isDark
+      ? 'rgba(99, 102, 241, 0.3)'
+      : 'rgba(99, 102, 241, 0.2)',
+  },
+  summaryTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: theme.colors.text,
+    marginBottom: 12,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  summaryName: {
+    fontSize: 14,
+    color: theme.colors.text,
+    fontWeight: '500',
+  },
+  summaryAmount: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: theme.colors.primary,
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 12,
+    marginTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+  },
+  totalLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.colors.text,
+  },
+  totalAmount: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: theme.colors.primary,
+  },
+  buttonContainer: {
+    padding: 20,
+    paddingBottom: 40,
+    gap: 12,
+  },
+});

@@ -166,8 +166,8 @@ export async function updateWidgetData(userId: string): Promise<void> {
     
     // Nombre del evento más reciente
     const latestEvent = activeEvents[0];
-    const eventName = latestEvent?.name || latestEvent?.title || 'Sin eventos';
-    const participantsCount = latestEvent?.participants?.length || 0;
+    const eventName = latestEvent?.name || 'Sin eventos';
+    const participantsCount = latestEvent?.participantIds?.length || 0;
     
     const widgetData: WidgetData = {
       // Campos que el widget Swift lee directamente

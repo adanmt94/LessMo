@@ -12,8 +12,10 @@ import {
   Alert,
   TouchableWithoutFeedback,
   Keyboard,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as SecureStore from 'expo-secure-store';
 import { useAuth } from '../hooks/useAuth';
 import { useGoogleAuth } from '../hooks/useGoogleAuth';
@@ -23,6 +25,9 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
+import { Gradients, Spacing, Radius, Shadows, Typography } from '../theme/designSystem';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const STORED_EMAIL_KEY = 'biometric_user_email';
 const STORED_PASSWORD_KEY = 'biometric_user_password';
@@ -223,26 +228,35 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
   }, [googleLoading, googleError, isEnabled]);
 
   return (
-    <SafeAreaView edges={['top']} style={styles.container}>
-      <TouchableWithoutFeedback 
-        onPress={() => Keyboard.dismiss()}
+    <View style={styles.container}>
+      <LinearGradient
+        colors={theme.isDark ? Gradients.heroDark : Gradients.hero}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.gradientHeader}
       >
-        <ScrollView
-          ref={scrollViewRef}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          keyboardDismissMode="interactive"
-        >
+        <SafeAreaView edges={['top']} style={styles.headerSafeArea}>
           <View style={styles.header}>
             <View style={styles.logoContainer}>
               <Text style={styles.logo}>💰</Text>
             </View>
             <Text style={styles.title}>Les$Mo</Text>
             <Text style={styles.subtitle}>
-              Gestiona tus finanzas de forma fácil
+              {t('auth.loginSubtitle') || 'Gestiona tus finanzas de forma fácil'}
             </Text>
           </View>
+        </SafeAreaView>
+      </LinearGradient>
+
+      <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
+        <ScrollView
+          ref={scrollViewRef}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          keyboardDismissMode="interactive"
+          style={styles.formScrollView}
+        >
 
           <View style={styles.form}>
             <Input
@@ -358,7 +372,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
           </View>
         </ScrollView>
       </TouchableWithoutFeedback>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -367,56 +381,68 @@ const getStyles = (theme: any) => StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
+  gradientHeader: {
+    paddingBottom: Spacing.xxxl,
+    borderBottomLeftRadius: Radius.xxl,
+    borderBottomRightRadius: Radius.xxl,
+  },
+  headerSafeArea: {
+    paddingTop: Spacing.lg,
+  },
   keyboardView: {
     flex: 1,
   },
+  formScrollView: {
+    flex: 1,
+    marginTop: -Spacing.xl,
+  },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
-    padding: 24,
+    paddingHorizontal: Spacing.xxl,
+    paddingTop: Spacing.xxxl,
+    paddingBottom: Spacing.xxl,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 24,
+    paddingHorizontal: Spacing.xxl,
   },
   logoContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: theme.isDark ? theme.colors.surface : theme.colors.primary + '15',
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
-    shadowColor: theme.colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 8,
+    marginBottom: Spacing.lg,
   },
   logo: {
-    fontSize: 52,
+    fontSize: 44,
   },
   title: {
+    ...Typography.largeTitle,
     fontSize: 40,
-    fontWeight: '800',
-    color: theme.colors.primary,
-    marginBottom: 8,
+    color: '#FFFFFF',
+    marginBottom: Spacing.xs,
     letterSpacing: -1,
   },
   subtitle: {
-    fontSize: 15,
-    color: theme.colors.textSecondary,
+    ...Typography.callout,
+    color: 'rgba(255,255,255,0.85)',
     textAlign: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: Spacing.lg,
     fontWeight: '500',
   },
   form: {
     width: '100%',
+    backgroundColor: theme.colors.card,
+    borderRadius: Radius.xl,
+    padding: Spacing.xxl,
+    ...Shadows.lg,
   },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 28,
+    marginVertical: Spacing.xxl,
   },
   dividerLine: {
     flex: 1,
@@ -424,14 +450,14 @@ const getStyles = (theme: any) => StyleSheet.create({
     backgroundColor: theme.colors.border,
   },
   dividerText: {
-    marginHorizontal: 12,
+    marginHorizontal: Spacing.md,
     color: theme.colors.textTertiary,
-    fontSize: 12,
+    ...Typography.caption1,
   },
   socialButtons: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 20,
+    gap: Spacing.md,
+    marginBottom: Spacing.xl,
   },
   socialButton: {
     flex: 1,
@@ -439,12 +465,12 @@ const getStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    backgroundColor: theme.colors.card,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: Radius.md,
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    gap: 8,
+    gap: Spacing.sm,
   },
   googleIcon: {
     fontSize: 18,
@@ -455,7 +481,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontSize: 18,
   },
   socialButtonText: {
-    fontSize: 14,
+    ...Typography.subhead,
     fontWeight: '600',
     color: theme.colors.text,
   },
@@ -464,19 +490,19 @@ const getStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 12,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: Radius.md,
     backgroundColor: theme.isDark ? theme.colors.surface : theme.colors.primary + '10',
     borderWidth: 2,
     borderColor: theme.colors.primary,
-    marginTop: 16,
-    gap: 8,
+    marginTop: Spacing.lg,
+    gap: Spacing.sm,
   },
   biometricIcon: {
     fontSize: 20,
   },
   biometricText: {
-    fontSize: 15,
+    ...Typography.callout,
     fontWeight: '600',
     color: theme.colors.primary,
   },
@@ -486,19 +512,19 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   forgotPasswordLink: {
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: Spacing.lg,
   },
   forgotPasswordText: {
-    fontSize: 14,
+    ...Typography.subhead,
     color: theme.colors.primary,
     fontWeight: '600',
   },
   registerLink: {
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: Spacing.sm,
   },
   registerText: {
-    fontSize: 14,
+    ...Typography.subhead,
     color: theme.colors.textSecondary,
   },
   registerTextBold: {

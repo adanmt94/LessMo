@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -29,6 +30,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useDebounce } from '../hooks/useDebounce';
+import { Gradients, Spacing, Radius } from '../theme/designSystem';
 
 type EventsScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -476,13 +478,18 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
         </View>
       )}
       
-      <View style={[styles.header, { backgroundColor: theme.colors.card }]}>
+      <LinearGradient
+        colors={theme.isDark ? [theme.colors.card, theme.colors.background] : [theme.colors.primary, theme.colors.primaryDark]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.header}
+      >
         <View style={styles.headerTop}>
           <View>
-            <Text style={[styles.greeting, { color: theme.colors.textSecondary }]}>
+            <Text style={[styles.greeting, { color: theme.isDark ? theme.colors.textSecondary : 'rgba(255,255,255,0.8)' }]}>
               Hola {userName.split(' ')[0]} 👋
             </Text>
-            <Text style={[styles.title, { color: theme.colors.text }]}>
+            <Text style={[styles.title, { color: theme.isDark ? theme.colors.text : '#FFFFFF' }]}>
               {filterGroupId ? 'Gastos del Evento' : 'Mis Eventos'}
             </Text>
           </View>
@@ -490,31 +497,31 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
         <View style={styles.headerButtons}>
           {filterGroupId && (
             <TouchableOpacity
-              style={[styles.backButton, { backgroundColor: theme.colors.primary }]}
+              style={[styles.backButton, { backgroundColor: 'rgba(255,255,255,0.2)' }]}
               onPress={() => setFilterGroupId(null)}
               activeOpacity={0.8}
             >
-              <Text style={styles.backButtonText}>← Volver</Text>
+              <Text style={[styles.backButtonText, { color: '#FFFFFF' }]}>← Volver</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: theme.colors.primary + '15' }]}
+            style={[styles.actionButton, { backgroundColor: 'rgba(255,255,255,0.15)' }]}
             onPress={() => navigation.navigate('JoinEvent', { inviteCode: '' })}
             activeOpacity={0.7}
           >
             <Text style={styles.actionButtonIcon}>🎟️</Text>
-            <Text style={[styles.actionButtonLabel, { color: theme.colors.primary }]}>Unirse</Text>
+            <Text style={[styles.actionButtonLabel, { color: theme.isDark ? theme.colors.primary : '#FFFFFF' }]}>Unirse</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.createButton, { backgroundColor: theme.colors.primary }]}
+            style={[styles.createButton, { backgroundColor: theme.isDark ? theme.colors.primary : 'rgba(255,255,255,0.25)' }]}
             onPress={() => navigation.navigate('CreateEvent', { mode: 'create' })}
             activeOpacity={0.8}
           >
-            <Text style={styles.createButtonIcon}>+</Text>
-            <Text style={styles.createButtonText}>Crear</Text>
+            <Text style={[styles.createButtonIcon, { color: '#FFFFFF' }]}>+</Text>
+            <Text style={[styles.createButtonText, { color: '#FFFFFF' }]}>Crear</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </LinearGradient>
 
       {/* Tabs con diseño moderno */}
       <View style={[styles.tabContainer, { backgroundColor: theme.colors.background }]}>

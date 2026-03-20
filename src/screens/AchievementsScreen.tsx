@@ -74,298 +74,7 @@ export function AchievementsScreen({ navigation, route }: Props) {
     ? getEventLeaderboard(expenses, participants, event)
     : [];
 
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: theme.colors.background,
-    },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: 20,
-      paddingVertical: 16,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.colors.border,
-    },
-    backButton: {
-      padding: 8,
-    },
-    backButtonText: {
-      fontSize: 16,
-      color: theme.colors.primary,
-      fontWeight: '600',
-    },
-    title: {
-      fontSize: 20,
-      fontWeight: '700',
-      color: theme.colors.text,
-    },
-    leaderboardButton: {
-      padding: 8,
-    },
-    leaderboardButtonText: {
-      fontSize: 24,
-    },
-    scrollContent: {
-      padding: 20,
-    },
-    section: {
-      marginBottom: 24,
-    },
-    sectionTitle: {
-      fontSize: 18,
-      fontWeight: '700',
-      color: theme.colors.text,
-      marginBottom: 16,
-    },
-    badgesGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 12,
-    },
-    badgeCard: {
-      width: '48%',
-      backgroundColor: theme.colors.card,
-      borderRadius: 16,
-      padding: 16,
-      alignItems: 'center',
-      borderWidth: 2,
-      borderColor: 'transparent',
-    },
-    badgeCardLegendary: {
-      borderColor: '#F59E0B',
-      backgroundColor: theme.isDark ? 'rgba(245, 158, 11, 0.1)' : 'rgba(245, 158, 11, 0.05)',
-    },
-    badgeCardEpic: {
-      borderColor: '#8B5CF6',
-      backgroundColor: theme.isDark ? 'rgba(139, 92, 246, 0.1)' : 'rgba(139, 92, 246, 0.05)',
-    },
-    badgeCardRare: {
-      borderColor: '#3B82F6',
-      backgroundColor: theme.isDark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.05)',
-    },
-    badgeIcon: {
-      fontSize: 48,
-      marginBottom: 8,
-    },
-    badgeName: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: theme.colors.text,
-      textAlign: 'center',
-      marginBottom: 4,
-    },
-    badgeRarity: {
-      fontSize: 11,
-      fontWeight: '500',
-      textTransform: 'uppercase',
-      marginTop: 4,
-    },
-    rarityLegendary: {
-      color: '#F59E0B',
-    },
-    rarityEpic: {
-      color: '#8B5CF6',
-    },
-    rarityRare: {
-      color: '#3B82F6',
-    },
-    rarityCommon: {
-      color: theme.colors.textSecondary,
-    },
-    statsContainer: {
-      backgroundColor: theme.colors.card,
-      borderRadius: 16,
-      padding: 16,
-    },
-    statsRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      paddingVertical: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.colors.border,
-    },
-    statsRowLast: {
-      borderBottomWidth: 0,
-    },
-    statLabel: {
-      fontSize: 14,
-      color: theme.colors.textSecondary,
-      fontWeight: '500',
-    },
-    statValue: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: theme.colors.text,
-    },
-    rankingsContainer: {
-      flexDirection: 'row',
-      gap: 12,
-    },
-    rankingCard: {
-      flex: 1,
-      backgroundColor: theme.colors.card,
-      borderRadius: 12,
-      padding: 12,
-      alignItems: 'center',
-    },
-    rankingPosition: {
-      fontSize: 32,
-      fontWeight: '800',
-      color: theme.colors.primary,
-      marginBottom: 4,
-    },
-    rankingLabel: {
-      fontSize: 11,
-      color: theme.colors.textSecondary,
-      textAlign: 'center',
-      fontWeight: '500',
-    },
-    funFactsContainer: {
-      gap: 8,
-    },
-    funFact: {
-      backgroundColor: theme.colors.card,
-      padding: 12,
-      borderRadius: 12,
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      gap: 10,
-    },
-    funFactIcon: {
-      fontSize: 20,
-    },
-    funFactText: {
-      flex: 1,
-      fontSize: 14,
-      color: theme.colors.text,
-      lineHeight: 20,
-    },
-    noBadgesContainer: {
-      alignItems: 'center',
-      padding: 32,
-      backgroundColor: theme.colors.card,
-      borderRadius: 16,
-    },
-    noBadgesIcon: {
-      fontSize: 64,
-      marginBottom: 16,
-      opacity: 0.5,
-    },
-    noBadgesText: {
-      fontSize: 16,
-      color: theme.colors.textSecondary,
-      textAlign: 'center',
-      lineHeight: 24,
-    },
-    // Modal styles
-    modalOverlay: {
-      flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.7)',
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: 20,
-    },
-    modalContent: {
-      backgroundColor: theme.colors.card,
-      borderRadius: 24,
-      padding: 24,
-      width: '100%',
-      maxWidth: 400,
-      alignItems: 'center',
-    },
-    modalBadgeIcon: {
-      fontSize: 80,
-      marginBottom: 16,
-    },
-    modalBadgeName: {
-      fontSize: 24,
-      fontWeight: '700',
-      color: theme.colors.text,
-      textAlign: 'center',
-      marginBottom: 8,
-    },
-    modalBadgeDescription: {
-      fontSize: 16,
-      color: theme.colors.textSecondary,
-      textAlign: 'center',
-      lineHeight: 24,
-      marginBottom: 24,
-    },
-    modalCloseButton: {
-      backgroundColor: theme.colors.primary,
-      paddingHorizontal: 20,
-      paddingVertical: 12,
-      borderRadius: 12,
-    },
-    modalCloseButtonText: {
-      color: theme.colors.card,
-      fontSize: 16,
-      fontWeight: '600',
-    },
-    // Leaderboard modal styles
-    leaderboardModal: {
-      flex: 1,
-      backgroundColor: theme.colors.background,
-    },
-    leaderboardHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: 20,
-      paddingVertical: 16,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.colors.border,
-    },
-    leaderboardTitle: {
-      fontSize: 20,
-      fontWeight: '700',
-      color: theme.colors.text,
-    },
-    leaderboardItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: theme.colors.card,
-      padding: 16,
-      borderRadius: 16,
-      marginBottom: 12,
-    },
-    leaderboardRank: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: theme.colors.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginRight: 12,
-    },
-    leaderboardRankText: {
-      fontSize: 18,
-      fontWeight: '800',
-      color: theme.colors.card,
-    },
-    leaderboardInfo: {
-      flex: 1,
-    },
-    leaderboardName: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: theme.colors.text,
-      marginBottom: 4,
-    },
-    leaderboardStats: {
-      fontSize: 13,
-      color: theme.colors.textSecondary,
-    },
-    leaderboardBadges: {
-      flexDirection: 'row',
-      gap: 4,
-    },
-    leaderboardBadgeIcon: {
-      fontSize: 16,
-    },
-  });
+  const styles = getStyles(theme);
 
   const getRarityStyle = (rarity: string) => {
     switch (rarity) {
@@ -601,3 +310,294 @@ export function AchievementsScreen({ navigation, route }: Props) {
     </SafeAreaView>
   );
 }
+
+const getStyles = (theme: any) => StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  backButton: {
+    padding: 8,
+  },
+  backButtonText: {
+    fontSize: 16,
+    color: theme.colors.primary,
+    fontWeight: '600',
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: theme.colors.text,
+  },
+  leaderboardButton: {
+    padding: 8,
+  },
+  leaderboardButtonText: {
+    fontSize: 24,
+  },
+  scrollContent: {
+    padding: 20,
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: theme.colors.text,
+    marginBottom: 16,
+  },
+  badgesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  badgeCard: {
+    width: '48%',
+    backgroundColor: theme.colors.card,
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  badgeCardLegendary: {
+    borderColor: '#F59E0B',
+    backgroundColor: theme.isDark ? 'rgba(245, 158, 11, 0.1)' : 'rgba(245, 158, 11, 0.05)',
+  },
+  badgeCardEpic: {
+    borderColor: '#8B5CF6',
+    backgroundColor: theme.isDark ? 'rgba(139, 92, 246, 0.1)' : 'rgba(139, 92, 246, 0.05)',
+  },
+  badgeCardRare: {
+    borderColor: '#3B82F6',
+    backgroundColor: theme.isDark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.05)',
+  },
+  badgeIcon: {
+    fontSize: 48,
+    marginBottom: 8,
+  },
+  badgeName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.text,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  badgeRarity: {
+    fontSize: 11,
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    marginTop: 4,
+  },
+  rarityLegendary: {
+    color: '#F59E0B',
+  },
+  rarityEpic: {
+    color: '#8B5CF6',
+  },
+  rarityRare: {
+    color: '#3B82F6',
+  },
+  rarityCommon: {
+    color: theme.colors.textSecondary,
+  },
+  statsContainer: {
+    backgroundColor: theme.colors.card,
+    borderRadius: 16,
+    padding: 16,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  statsRowLast: {
+    borderBottomWidth: 0,
+  },
+  statLabel: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    fontWeight: '500',
+  },
+  statValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.colors.text,
+  },
+  rankingsContainer: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  rankingCard: {
+    flex: 1,
+    backgroundColor: theme.colors.card,
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+  },
+  rankingPosition: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: theme.colors.primary,
+    marginBottom: 4,
+  },
+  rankingLabel: {
+    fontSize: 11,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  funFactsContainer: {
+    gap: 8,
+  },
+  funFact: {
+    backgroundColor: theme.colors.card,
+    padding: 12,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  funFactIcon: {
+    fontSize: 20,
+  },
+  funFactText: {
+    flex: 1,
+    fontSize: 14,
+    color: theme.colors.text,
+    lineHeight: 20,
+  },
+  noBadgesContainer: {
+    alignItems: 'center',
+    padding: 32,
+    backgroundColor: theme.colors.card,
+    borderRadius: 16,
+  },
+  noBadgesIcon: {
+    fontSize: 64,
+    marginBottom: 16,
+    opacity: 0.5,
+  },
+  noBadgesText: {
+    fontSize: 16,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: theme.colors.card,
+    borderRadius: 24,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+  },
+  modalBadgeIcon: {
+    fontSize: 80,
+    marginBottom: 16,
+  },
+  modalBadgeName: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: theme.colors.text,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  modalBadgeDescription: {
+    fontSize: 16,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  modalCloseButton: {
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  modalCloseButtonText: {
+    color: theme.colors.card,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  leaderboardModal: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  leaderboardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  leaderboardTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: theme.colors.text,
+  },
+  leaderboardItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.card,
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 12,
+  },
+  leaderboardRank: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  leaderboardRankText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: theme.colors.card,
+  },
+  leaderboardInfo: {
+    flex: 1,
+  },
+  leaderboardName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.text,
+    marginBottom: 4,
+  },
+  leaderboardStats: {
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+  },
+  leaderboardBadges: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  leaderboardBadgeIcon: {
+    fontSize: 16,
+  },
+});

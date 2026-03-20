@@ -19,7 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
-import { RootStackParamList, ExpenseCategory, IncomeCategory, TransactionType, CategoryLabels, IncomeCategoryLabels, VALIDATION } from '../types';
+import { RootStackParamList, ExpenseCategory, IncomeCategory, TransactionType, CategoryLabels, IncomeCategoryLabels, VALIDATION, SplitType } from '../types';
 import { Button, Input, Card } from '../components/lovable';
 import { useExpenses } from '../hooks/useExpenses';
 import { useNotifications } from '../hooks/useNotifications';
@@ -94,7 +94,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
   const [paidBy, setPaidBy] = useState(prefilledData?.paidBy || '');
   const [category, setCategory] = useState<ExpenseCategory | IncomeCategory>((prefilledData?.category as ExpenseCategory) || 'food');
   const [selectedBeneficiaries, setSelectedBeneficiaries] = useState<string[]>([]);
-  const [splitType, setSplitType] = useState<'equal' | 'percentage' | 'custom' | 'amount' | 'items'>('equal');
+  const [splitType, setSplitType] = useState<SplitType>('equal');
   const [customSplits, setCustomSplits] = useState<{ [participantId: string]: string }>({});
   const [percentageSplits, setPercentageSplits] = useState<{ [participantId: string]: string }>({});
   const [loading, setLoading] = useState(false);
@@ -624,8 +624,10 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
         // Crear gasto individual sin evento
         
         try {
-          const { addDoc, collection, auth } = await import('../services/firebase');
-          const { db } = await import('../services/firebase');
+          const firebaseModule = await import('../services/firebase');
+          const { addDoc, collection } = await import('firebase/firestore');
+          const { db } = firebaseModule;
+          const { auth } = firebaseModule;
           
           await addDoc(collection(db, 'expenses'), {
             paidBy: auth.currentUser?.uid || '',
@@ -645,7 +647,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
         }
       } else if (isEditMode) {
         
-        success = await editExpense(
+        success = editExpense ? await editExpense(
           expenseId!,
           paidBy,
           amountNum,
@@ -657,9 +659,9 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
           percentageSplitsData,
           photoURL,
           transactionType
-        );
+        ) : false;
       } else {
-        success = await addExpense(
+        success = addExpense ? await addExpense(
           paidBy,
           amountNum,
           description,
@@ -670,7 +672,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
           percentageSplitsData,
           photoURL,
           transactionType
-        );
+        ) : false;
       }
 
       
@@ -1274,8 +1276,9 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
             // Calcular splits personalizados basados en los items
             const splits: { [participantId: string]: number } = {};
             items.forEach(item => {
-              const pricePerPerson = item.price / item.assignedTo.length;
-              item.assignedTo.forEach(participantId => {
+              const assignedTo = item.assignedTo || [];
+              const pricePerPerson = item.price / assignedTo.length;
+              assignedTo.forEach(participantId => {
                 splits[participantId] = (splits[participantId] || 0) + pricePerPerson;
               });
             });

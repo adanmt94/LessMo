@@ -468,13 +468,13 @@ const generatePDFHTML = (
             .reduce((sum, e) => {
               // Calculate participant's share based on split type
               if (e.splitType === 'equal') {
-                return sum + (e.amount / e.beneficiaries.length);
+                return sum + (e.amount / (e.beneficiaries || e.participantIds || []).length);
               } else if (e.splitType === 'custom' && e.customSplits) {
                 return sum + (e.customSplits[participant.id] || 0);
               } else if (e.splitType === 'items' && e.items) {
                 const itemShare = e.items.reduce((itemSum, item) => {
-                  if (item.assignedTo.includes(participant.id)) {
-                    return itemSum + (item.price / item.assignedTo.length);
+                  if ((item.assignedTo || []).includes(participant.id)) {
+                    return itemSum + (item.price / (item.assignedTo || []).length);
                   }
                   return itemSum;
                 }, 0);

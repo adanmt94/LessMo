@@ -9,7 +9,7 @@ interface PaymentMethodIconProps {
 
 export const PaymentMethodIcon: React.FC<PaymentMethodIconProps> = ({ provider, size = 40 }) => {
   // Mapeo de logos disponibles - PNG de assets/payment-methods (8 métodos)
-  const logoMap: { [key in PaymentProvider]?: any } = {
+  const logoMap: { [key: string]: any } = {
     paypal: require('../../assets/payment-methods/paypal.png'),
     bizum: require('../../assets/payment-methods/bizum.png'),
     venmo: require('../../assets/payment-methods/venmo.png'),

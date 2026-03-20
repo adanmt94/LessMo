@@ -14,6 +14,7 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../hooks/useAuth';
 import { useGoogleAuth } from '../hooks/useGoogleAuth';
 import { Button, Input } from '../components/lovable';
@@ -21,6 +22,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
+import { Gradients, Spacing, Radius, Shadows, Typography } from '../theme/designSystem';
 
 type RegisterScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Register'>;
 
@@ -76,15 +78,31 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView edges={['top']} style={styles.container}>
-      <View style={styles.headerBar}>
-        <TouchableOpacity 
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-        >
-          <Text style={styles.backButtonText}>← {t('common.back')}</Text>
-        </TouchableOpacity>
-      </View>
+    <View style={styles.container}>
+      <LinearGradient
+        colors={theme.isDark ? Gradients.heroDark : Gradients.hero}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.gradientHeader}
+      >
+        <SafeAreaView edges={['top']} style={styles.headerSafeArea}>
+          <TouchableOpacity 
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+          >
+            <Text style={styles.backButtonText}>← {t('common.back')}</Text>
+          </TouchableOpacity>
+          <View style={styles.header}>
+            <View style={styles.logoContainer}>
+              <Text style={styles.logo}>💰</Text>
+            </View>
+            <Text style={styles.title}>Crear cuenta</Text>
+            <Text style={styles.subtitle}>
+              Únete a Les$Mo y comienza a gestionar tus gastos
+            </Text>
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
       
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -95,16 +113,8 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="always"
           showsVerticalScrollIndicator={false}
+          style={styles.formScrollView}
         >
-          <View style={styles.header}>
-            <View style={styles.logoContainer}>
-              <Text style={styles.logo}>💰</Text>
-            </View>
-            <Text style={styles.title}>Crear cuenta</Text>
-            <Text style={styles.subtitle}>
-              Únete a Les$Mo y comienza a gestionar tus gastos
-            </Text>
-          </View>
 
           <View style={styles.form}>
             <Input
@@ -185,7 +195,7 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -194,70 +204,77 @@ const getStyles = (theme: any) => StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  headerBar: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: theme.colors.background,
+  gradientHeader: {
+    paddingBottom: Spacing.xxl,
+    borderBottomLeftRadius: Radius.xxl,
+    borderBottomRightRadius: Radius.xxl,
+  },
+  headerSafeArea: {
+    paddingTop: Spacing.sm,
   },
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
   },
   backButtonText: {
-    fontSize: 16,
-    color: theme.colors.primary,
+    ...Typography.body,
+    color: '#FFFFFF',
     fontWeight: '600',
   },
   keyboardView: {
     flex: 1,
   },
+  formScrollView: {
+    flex: 1,
+    marginTop: -Spacing.lg,
+  },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
-    padding: 24,
+    paddingHorizontal: Spacing.xxl,
+    paddingTop: Spacing.xxl,
+    paddingBottom: Spacing.xxl,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 24,
+    paddingHorizontal: Spacing.xxl,
   },
   logoContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: theme.isDark ? theme.colors.surface : theme.colors.primary + '15',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
-    shadowColor: theme.colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 8,
+    marginBottom: Spacing.md,
   },
   logo: {
-    fontSize: 52,
+    fontSize: 40,
   },
   title: {
-    fontSize: 40,
-    fontWeight: '800',
-    color: theme.colors.primary,
-    marginBottom: 8,
-    letterSpacing: -1,
+    ...Typography.title1,
+    color: '#FFFFFF',
+    marginBottom: Spacing.xs,
   },
   subtitle: {
-    fontSize: 15,
-    color: theme.colors.textSecondary,
+    ...Typography.callout,
+    color: 'rgba(255,255,255,0.85)',
     textAlign: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: Spacing.lg,
     fontWeight: '500',
   },
   form: {
     width: '100%',
+    backgroundColor: theme.colors.card,
+    borderRadius: Radius.xl,
+    padding: Spacing.xxl,
+    ...Shadows.lg,
   },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 28,
+    marginVertical: Spacing.xxl,
   },
   dividerLine: {
     flex: 1,
@@ -265,22 +282,22 @@ const getStyles = (theme: any) => StyleSheet.create({
     backgroundColor: theme.colors.border,
   },
   dividerText: {
-    marginHorizontal: 12,
+    marginHorizontal: Spacing.md,
     color: theme.colors.textTertiary,
-    fontSize: 12,
+    ...Typography.caption1,
   },
   socialButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    backgroundColor: theme.colors.card,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: Radius.md,
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    gap: 8,
-    marginBottom: 20,
+    gap: Spacing.sm,
+    marginBottom: Spacing.xl,
   },
   googleIcon: {
     fontSize: 18,
@@ -288,16 +305,16 @@ const getStyles = (theme: any) => StyleSheet.create({
     color: theme.colors.primary,
   },
   socialButtonText: {
-    fontSize: 14,
+    ...Typography.subhead,
     fontWeight: '600',
     color: theme.colors.text,
   },
   loginLink: {
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: Spacing.sm,
   },
   loginText: {
-    fontSize: 14,
+    ...Typography.subhead,
     color: theme.colors.textSecondary,
   },
   loginTextBold: {

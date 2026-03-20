@@ -353,7 +353,7 @@ function calculateBadges(
 
   // Team Player - Compartió más del 80%
   const sharedExpenses = participantExpenses.filter(exp => 
-    exp.beneficiaries.length > 1 || exp.splitType !== 'equal'
+    (exp.beneficiaries || exp.participantIds || []).length > 1 || exp.splitType !== 'equal'
   );
   const sharedPercentage = stats.totalExpenses > 0 
     ? (sharedExpenses.length / stats.totalExpenses) * 100 

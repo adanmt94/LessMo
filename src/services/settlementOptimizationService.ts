@@ -44,9 +44,10 @@ export const calculateTraditionalSettlements = (
 
     if (expense.splitType === 'equal') {
       // Equal split
-      const shareAmount = expense.amount / expense.beneficiaries.length;
+      const beneficiaries = expense.beneficiaries || expense.participantIds || [];
+      const shareAmount = expense.amount / beneficiaries.length;
       
-      for (const participantId of expense.beneficiaries) {
+      for (const participantId of beneficiaries) {
         if (participantId === expense.paidBy) continue; // Skip payer
         
         const participant = participantMap.get(participantId);
@@ -77,9 +78,10 @@ export const calculateTraditionalSettlements = (
       const itemTotals = new Map<string, number>();
       
       for (const item of expense.items) {
-        const perPersonAmount = item.price / item.assignedTo.length;
+        const assignedTo = item.assignedTo || [];
+        const perPersonAmount = item.price / assignedTo.length;
         
-        for (const participantId of item.assignedTo) {
+        for (const participantId of assignedTo) {
           const current = itemTotals.get(participantId) || 0;
           itemTotals.set(participantId, current + perPersonAmount);
         }
@@ -143,9 +145,10 @@ export const calculateOptimizedSettlements = (
 
     if (expense.splitType === 'equal') {
       // Equal split - each participant owes their share
-      const shareAmount = expense.amount / expense.beneficiaries.length;
+      const beneficiaries = expense.beneficiaries || expense.participantIds || [];
+      const shareAmount = expense.amount / beneficiaries.length;
       
-      for (const participantId of expense.beneficiaries) {
+      for (const participantId of beneficiaries) {
         const participantBalance = balances.get(participantId) || 0;
         balances.set(participantId, participantBalance - shareAmount);
       }
@@ -160,9 +163,10 @@ export const calculateOptimizedSettlements = (
       const itemTotals = new Map<string, number>();
       
       for (const item of expense.items) {
-        const perPersonAmount = item.price / item.assignedTo.length;
+        const assignedTo = item.assignedTo || [];
+        const perPersonAmount = item.price / assignedTo.length;
         
-        for (const participantId of item.assignedTo) {
+        for (const participantId of assignedTo) {
           const current = itemTotals.get(participantId) || 0;
           itemTotals.set(participantId, current + perPersonAmount);
         }

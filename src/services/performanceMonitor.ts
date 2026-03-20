@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { InteractionManager, Platform } from 'react-native';
-import { logger } from '../utils/logger';
+import { logger, LogCategory } from '../utils/logger';
 
 interface PerformanceMetric {
   name: string;
@@ -40,7 +40,7 @@ class PerformanceMonitor {
 
     const metric = this.metrics.get(name);
     if (!metric) {
-      logger.warn(`⚠️ Metric "${name}" not started`);
+      logger.warn(LogCategory.PERFORMANCE, `⚠️ Metric "${name}" not started`);
       return null;
     }
 
@@ -52,9 +52,9 @@ class PerformanceMonitor {
 
     // Log si es muy lento (> 1 segundo)
     if (duration > 1000) {
-      logger.warn(`⚠️ Slow operation: ${name} took ${duration}ms`, metric.metadata);
+      logger.warn(LogCategory.PERFORMANCE, `⚠️ Slow operation: ${name} took ${duration}ms`, metric.metadata);
     } else {
-      logger.info(`⏱️ ${name}: ${duration}ms`, metric.metadata);
+      logger.info(LogCategory.PERFORMANCE, `⏱️ ${name}: ${duration}ms`, metric.metadata);
     }
 
     this.metrics.delete(name);
@@ -104,7 +104,7 @@ class PerformanceMonitor {
     const startTime = Date.now();
     InteractionManager.runAfterInteractions(() => {
       const duration = Date.now() - startTime;
-      logger.info(`🎯 Interaction complete: ${name} took ${duration}ms`);
+      logger.info(LogCategory.PERFORMANCE, `🎯 Interaction complete: ${name} took ${duration}ms`);
     });
   }
 
@@ -137,7 +137,7 @@ class PerformanceMonitor {
 
     if (Platform.OS === 'web' && (global as any).performance?.memory) {
       const memory = (global as any).performance.memory;
-      logger.info('💾 Memory Usage:', {
+      logger.info(LogCategory.PERFORMANCE, '💾 Memory Usage:', {
         used: `${(memory.usedJSHeapSize / 1048576).toFixed(2)} MB`,
         total: `${(memory.totalJSHeapSize / 1048576).toFixed(2)} MB`,
         limit: `${(memory.jsHeapSizeLimit / 1048576).toFixed(2)} MB`,
@@ -158,6 +158,7 @@ export const useRenderPerformance = (componentName: string) => {
     React.useEffect(() => {
       if (renderCount.current > 10) {
         logger.warn(
+          LogCategory.PERFORMANCE,
           `⚠️ Component "${componentName}" rendered ${renderCount.current} times`
         );
       }

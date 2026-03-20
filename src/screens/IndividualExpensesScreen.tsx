@@ -14,6 +14,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useTheme } from '../context/ThemeContext';
@@ -24,6 +25,7 @@ import { db } from '../services/firebase';
 import { Expense, RootStackParamList, AllCategoryLabels } from '../types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { Gradients, Spacing, Radius, Shadows, Typography } from '../theme/designSystem';
 
 type NavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -140,9 +142,14 @@ export const IndividualExpensesScreen: React.FC = () => {
   if (loading && !refreshing) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Mis Gastos Individuales</Text>
-        </View>
+        <LinearGradient
+          colors={theme.isDark ? [theme.colors.card, theme.colors.background] : Gradients.primary}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.gradientHeader}
+        >
+          <Text style={styles.headerTitle}>Mis Gastos</Text>
+        </LinearGradient>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
@@ -152,14 +159,21 @@ export const IndividualExpensesScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Mis Gastos Individuales</Text>
+      <LinearGradient
+        colors={theme.isDark ? [theme.colors.card, theme.colors.background] : Gradients.primary}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.gradientHeader}
+      >
+        <Text style={styles.headerTitle}>Mis Gastos</Text>
         <View style={styles.headerStats}>
-          <Text style={styles.headerStatsText}>
-            {expenses.length} {expenses.length === 1 ? 'gasto' : 'gastos'}
-          </Text>
+          <View style={styles.statPill}>
+            <Text style={styles.headerStatsText}>
+              {expenses.length} {expenses.length === 1 ? 'gasto' : 'gastos'}
+            </Text>
+          </View>
         </View>
-      </View>
+      </LinearGradient>
       
       <FlatList
         data={expenses}
@@ -205,26 +219,31 @@ const getStyles = (theme: any) => StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  header: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: theme.colors.card,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+  gradientHeader: {
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.xl,
+    borderBottomLeftRadius: Radius.xl,
+    borderBottomRightRadius: Radius.xl,
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: theme.colors.text,
-    marginBottom: 8,
+    ...Typography.title1,
+    color: theme.isDark ? theme.colors.text : '#FFFFFF',
+    marginBottom: Spacing.sm,
   },
   headerStats: {
     flexDirection: 'row',
     alignItems: 'center',
   },
+  statPill: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: Radius.round,
+  },
   headerStatsText: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
+    ...Typography.subhead,
+    color: theme.isDark ? theme.colors.textSecondary : 'rgba(255,255,255,0.9)',
     fontWeight: '600',
   },
   loadingContainer: {

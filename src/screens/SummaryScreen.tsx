@@ -293,7 +293,7 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
         // Solo agregar si no es el que pagó (para no mostrar que se debe a sí mismo)
         if (expense.paidBy !== participantId) {
           owes.push({
-            description: expense.description,
+            description: expense.description || '',
             amount: owedAmount,
             from: payer?.name || 'Desconocido',
             category: expense.category,

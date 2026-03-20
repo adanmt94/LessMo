@@ -215,8 +215,9 @@ export type RootStackParamList = {
   
   // Eventos/Gastos individuales
   AddExpense: { 
-    eventId: string;          // groupId en realidad
+    eventId?: string;          // groupId en realidad
     expenseId?: string;       // groupEventId en realidad
+    groupId?: string;
     mode?: 'create' | 'edit';
     prefilledData?: {
       amount?: number;

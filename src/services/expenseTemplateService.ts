@@ -7,10 +7,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { collection, doc, getDocs, setDoc, deleteDoc, query, where } from 'firebase/firestore';
 import { db } from './firebase';
 import { logger, LogCategory } from '../utils/logger';
-import type { ExpenseCategory } from '../types';
+import type { ExpenseCategory, SplitType } from '../types';
 
 // Tipos locales para las plantillas
-type SplitType = 'equal' | 'custom' | 'items';
 type Category = ExpenseCategory;
 type PaymentMethod = 'cash' | 'card' | 'transfer' | 'other';
 

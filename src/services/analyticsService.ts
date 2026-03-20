@@ -282,7 +282,7 @@ export function detectSpendingPatterns(expenses: Expense[]): SpendingPattern[] {
     // Patrón 3: Gastos recurrentes (descripción similar)
     const descriptionCount: { [key: string]: { count: number; total: number } } = {};
     expenses.forEach(e => {
-      const desc = e.description.toLowerCase().trim();
+      const desc = (e.description || '').toLowerCase().trim();
       if (desc.length > 3) {
         if (!descriptionCount[desc]) {
           descriptionCount[desc] = { count: 0, total: 0 };
@@ -325,7 +325,7 @@ export function getParticipantStats(expenses: Expense[], participants: Participa
 
       const totalPaid = paidExpenses.reduce((sum, e) => sum + e.amount, 0);
       const totalOwed = involvedExpenses.reduce((sum, e) => {
-        const beneficiaryCount = e.beneficiaries.length;
+        const beneficiaryCount = (e.beneficiaries || e.participantIds || []).length;
         return sum + (e.amount / beneficiaryCount);
       }, 0);
 
