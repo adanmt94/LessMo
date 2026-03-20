@@ -133,7 +133,7 @@ service cloud.firestore {
     }
 
     // Templates de usuario
-    match /user_templates/{templateId} {
+    match /expense_templates/{templateId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && 
                        request.resource.data.userId == request.auth.uid;
