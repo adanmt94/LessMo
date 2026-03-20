@@ -13,6 +13,9 @@
 // Tipos de monedas soportadas
 export type Currency = 'EUR' | 'USD' | 'GBP' | 'JPY' | 'CNY' | 'MXN' | 'ARS' | 'COP' | 'CLP' | 'BRL';
 
+// Tipo de transacción: gasto o ingreso
+export type TransactionType = 'expense' | 'income';
+
 // Categorías de gastos
 export type ExpenseCategory = 
   | 'food'          // 🍴 Comida
@@ -22,6 +25,19 @@ export type ExpenseCategory =
   | 'shopping'      // 🛒 Compras
   | 'health'        // 💊 Salud
   | 'other';        // 📱 Otros
+
+// Categorías de ingresos
+export type IncomeCategory =
+  | 'salary'        // 💰 Salario
+  | 'freelance'     // 💻 Freelance
+  | 'refund'        // 🔄 Reembolso
+  | 'gift'          // 🎁 Regalo
+  | 'investment'    // 📈 Inversión
+  | 'sale'          // 🏷️ Venta
+  | 'other_income'; // 💵 Otros ingresos
+
+// Categoría general (gasto o ingreso)
+export type TransactionCategory = ExpenseCategory | IncomeCategory;
 
 // Tipos de división de gastos
 export type SplitType = 
@@ -88,9 +104,10 @@ export interface GroupEvent {
   groupId?: string;           // Alias de eventId
   name: string;
   description?: string;
-  paidBy: string;             // participantId de quien pagó
+  type?: TransactionType;     // 'expense' (default) o 'income'
+  paidBy: string;             // participantId de quien pagó/recibió
   amount: number;
-  category: ExpenseCategory;
+  category: ExpenseCategory | IncomeCategory;
   date: Date;
   currency: Currency;
   participantIds?: string[];  // Participantes que deben (opcional por compatibilidad con datos antiguos)
@@ -274,7 +291,7 @@ export const CurrencySymbols: Record<Currency, string> = {
   BRL: 'R$',
 };
 
-// Etiquetas de categorías en español
+// Etiquetas de categorías de gastos en español
 export const CategoryLabels: Record<ExpenseCategory, string> = {
   food: '🍴 Comida',
   transport: '🚗 Transporte',
@@ -285,7 +302,24 @@ export const CategoryLabels: Record<ExpenseCategory, string> = {
   other: '📱 Otros',
 };
 
-// Colores para categorías (para gráficos)
+// Etiquetas de categorías de ingresos en español
+export const IncomeCategoryLabels: Record<IncomeCategory, string> = {
+  salary: '💰 Salario',
+  freelance: '💻 Freelance',
+  refund: '🔄 Reembolso',
+  gift: '🎁 Regalo',
+  investment: '📈 Inversión',
+  sale: '🏷️ Venta',
+  other_income: '💵 Otros ingresos',
+};
+
+// Etiquetas combinadas
+export const AllCategoryLabels: Record<ExpenseCategory | IncomeCategory, string> = {
+  ...CategoryLabels,
+  ...IncomeCategoryLabels,
+};
+
+// Colores para categorías de gastos (para gráficos)
 export const CategoryColors: Record<ExpenseCategory, string> = {
   food: '#EF4444',
   transport: '#3B82F6',
@@ -294,6 +328,23 @@ export const CategoryColors: Record<ExpenseCategory, string> = {
   shopping: '#F59E0B',
   health: '#10B981',
   other: '#6B7280',
+};
+
+// Colores para categorías de ingresos
+export const IncomeCategoryColors: Record<IncomeCategory, string> = {
+  salary: '#059669',
+  freelance: '#0891B2',
+  refund: '#7C3AED',
+  gift: '#DB2777',
+  investment: '#0D9488',
+  sale: '#D97706',
+  other_income: '#4B5563',
+};
+
+// Colores combinados
+export const AllCategoryColors: Record<ExpenseCategory | IncomeCategory, string> = {
+  ...CategoryColors,
+  ...IncomeCategoryColors,
 };
 
 // Validaciones

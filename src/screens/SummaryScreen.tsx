@@ -17,7 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { PieChart } from 'react-native-chart-kit';
-import { RootStackParamList, Event, CategoryColors, CategoryLabels, CurrencySymbols } from '../types';
+import { RootStackParamList, Event, CategoryColors, CategoryLabels, CurrencySymbols, AllCategoryLabels, AllCategoryColors } from '../types';
 import { Card, Button } from '../components/lovable';
 import { getEvent } from '../services/firebase';
 import { useExpenses } from '../hooks/useExpenses';
@@ -307,9 +307,9 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
 
   // Datos para el gráfico de pastel
   const chartData = expensesByCategory.map((item) => ({
-    name: CategoryLabels[item.category].split(' ')[1], // Quitamos el emoji
+    name: (AllCategoryLabels[item.category] || CategoryLabels[item.category] || item.category).split(' ')[1] || item.category,
     population: item.total,
-    color: CategoryColors[item.category],
+    color: AllCategoryColors[item.category] || CategoryColors[item.category] || '#6B7280',
     legendFontColor: '#6B7280',
     legendFontSize: 12,
   }));
@@ -410,11 +410,11 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
                     <View
                       style={[
                         styles.categoryDot,
-                        { backgroundColor: CategoryColors[item.category] },
+                        { backgroundColor: AllCategoryColors[item.category] || CategoryColors[item.category] || '#6B7280' },
                       ]}
                     />
                     <Text style={styles.categoryName}>
-                      {CategoryLabels[item.category]}
+                      {AllCategoryLabels[item.category] || CategoryLabels[item.category] || item.category}
                     </Text>
                   </View>
                   <View style={styles.categoryStats}>

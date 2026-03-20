@@ -13,13 +13,13 @@ import {
 } from 'react-native';
 import { RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList, Expense, ExpenseCategory, Participant } from '../types';
+import { RootStackParamList, Expense, ExpenseCategory, IncomeCategory, Participant } from '../types';
 import { PieChart, BarChart, LineChart } from 'react-native-chart-kit';
 import { useExpenses } from '../hooks/useExpenses';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { Card } from '../components/lovable/Card';
-import { CategoryLabels, CategoryColors } from '../types';
+import { CategoryLabels, CategoryColors, AllCategoryLabels, AllCategoryColors } from '../types';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -43,19 +43,23 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({ route }) => 
 
   // Calcular datos para gráfico de categorías
   const categoryData = useMemo(() => {
-    const categoryTotals: { [key in ExpenseCategory]?: number } = {};
+    const categoryTotals: { [key: string]: number } = {};
     
-    expenses.forEach((expense: Expense) => {
+    expenses.filter(e => e.type !== 'income').forEach((expense: Expense) => {
       categoryTotals[expense.category] = (categoryTotals[expense.category] || 0) + expense.amount;
     });
     
-    return Object.entries(categoryTotals).map(([category, total]) => ({
-      name: CategoryLabels[category as ExpenseCategory].split(' ')[1] || CategoryLabels[category as ExpenseCategory],
-      population: total,
-      color: CategoryColors[category as ExpenseCategory],
-      legendFontColor: theme.colors.text,
-      legendFontSize: 12,
-    }));
+    return Object.entries(categoryTotals).map(([category, total]) => {
+      const cat = category as ExpenseCategory | IncomeCategory;
+      const label = AllCategoryLabels[cat] || CategoryLabels[category as ExpenseCategory] || category;
+      return {
+        name: label.split(' ')[1] || label,
+        population: total,
+        color: AllCategoryColors[cat] || CategoryColors[category as ExpenseCategory] || '#6B7280',
+        legendFontColor: theme.colors.text,
+        legendFontSize: 12,
+      };
+    });
   }, [expenses, theme]);
 
   // Calcular datos para gráfico de participantes (Top 5)
@@ -124,22 +128,22 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({ route }) => 
 
   // Insights
   const mostFrequentCategory = useMemo(() => {
-    const categoryCounts: { [key in ExpenseCategory]?: number } = {};
-    expenses.forEach((e: Expense) => {
+    const categoryCounts: { [key: string]: number } = {};
+    expenses.filter(e => e.type !== 'income').forEach((e: Expense) => {
       categoryCounts[e.category] = (categoryCounts[e.category] || 0) + 1;
     });
     
-    let maxCategory: ExpenseCategory | null = null;
+    let maxCategory: string | null = null;
     let maxCount = 0;
     
     Object.entries(categoryCounts).forEach(([category, count]) => {
       if (count > maxCount) {
         maxCount = count;
-        maxCategory = category as ExpenseCategory;
+        maxCategory = category;
       }
     });
     
-    return maxCategory ? CategoryLabels[maxCategory] : 'N/A';
+    return maxCategory ? (AllCategoryLabels[maxCategory as ExpenseCategory | IncomeCategory] || maxCategory) : 'N/A';
   }, [expenses]);
 
   const averagePerDay = useMemo(() => {

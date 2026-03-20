@@ -19,7 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
-import { RootStackParamList, ExpenseCategory, CategoryLabels, VALIDATION } from '../types';
+import { RootStackParamList, ExpenseCategory, IncomeCategory, TransactionType, CategoryLabels, IncomeCategoryLabels, VALIDATION } from '../types';
 import { Button, Input, Card } from '../components/lovable';
 import { useExpenses } from '../hooks/useExpenses';
 import { useNotifications } from '../hooks/useNotifications';
@@ -55,6 +55,16 @@ const CATEGORIES: ExpenseCategory[] = [
   'other',
 ];
 
+const INCOME_CATEGORIES: IncomeCategory[] = [
+  'salary',
+  'freelance',
+  'refund',
+  'gift',
+  'investment',
+  'sale',
+  'other_income',
+];
+
 export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
   const { eventId, expenseId, mode, prefilledData } = route.params;
   const { theme } = useTheme();
@@ -80,8 +90,9 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const [description, setDescription] = useState(prefilledData?.description || '');
   const [amount, setAmount] = useState(prefilledData?.amount ? prefilledData.amount.toString() : '');
+  const [transactionType, setTransactionType] = useState<TransactionType>('expense');
   const [paidBy, setPaidBy] = useState(prefilledData?.paidBy || '');
-  const [category, setCategory] = useState<ExpenseCategory>((prefilledData?.category as ExpenseCategory) || 'food');
+  const [category, setCategory] = useState<ExpenseCategory | IncomeCategory>((prefilledData?.category as ExpenseCategory) || 'food');
   const [selectedBeneficiaries, setSelectedBeneficiaries] = useState<string[]>([]);
   const [splitType, setSplitType] = useState<'equal' | 'percentage' | 'custom' | 'amount' | 'items'>('equal');
   const [customSplits, setCustomSplits] = useState<{ [participantId: string]: string }>({});
@@ -154,7 +165,8 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
         setDescription(expense.description || '');
         setAmount(expense.amount.toString());
         setPaidBy(expense.paidBy);
-        setCategory(expense.category);
+        setCategory(expense.category as ExpenseCategory);
+        setTransactionType(expense.type || 'expense');
         setSelectedBeneficiaries(expense.beneficiaries || expense.participantIds || []);
         setSplitType(expense.splitType || 'equal');
         setReceiptPhoto(expense.receiptPhoto || null);
@@ -620,6 +632,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
             amount: amountNum,
             description,
             category,
+            type: transactionType,
             currency: 'EUR', // Default para gastos individuales
             createdAt: new Date(),
             splitType: 'equal',
@@ -642,7 +655,8 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
           splitType,
           customSplitsData,
           percentageSplitsData,
-          photoURL
+          photoURL,
+          transactionType
         );
       } else {
         success = await addExpense(
@@ -654,7 +668,8 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
           splitType,
           customSplitsData,
           percentageSplitsData,
-          photoURL
+          photoURL,
+          transactionType
         );
       }
 
@@ -689,7 +704,9 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
         
         Alert.alert(
           t('common.success'),
-          isEditMode ? t('addExpense.expenseUpdated') : t('addExpense.expenseAdded'),
+          isEditMode
+            ? (transactionType === 'income' ? t('addExpense.incomeUpdated') : t('addExpense.expenseUpdated'))
+            : (transactionType === 'income' ? t('addExpense.incomeAdded') : t('addExpense.expenseAdded')),
           [
             {
               text: 'OK',
@@ -734,10 +751,50 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
             </TouchableOpacity>
           )}
 
+          {/* Toggle Gasto / Ingreso */}
+          <View style={styles.transactionTypeContainer}>
+            <TouchableOpacity
+              style={[
+                styles.transactionTypeButton,
+                transactionType === 'expense' && styles.transactionTypeButtonActiveExpense,
+              ]}
+              onPress={() => {
+                setTransactionType('expense');
+                setCategory('food');
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={[
+                styles.transactionTypeText,
+                transactionType === 'expense' && [styles.transactionTypeTextActive, { color: '#EF4444' }],
+              ]}>
+                📉 {t('addExpense.expense')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.transactionTypeButton,
+                transactionType === 'income' && styles.transactionTypeButtonActiveIncome,
+              ]}
+              onPress={() => {
+                setTransactionType('income');
+                setCategory('salary');
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={[
+                styles.transactionTypeText,
+                transactionType === 'income' && [styles.transactionTypeTextActive, { color: '#10B981' }],
+              ]}>
+                📈 {t('addExpense.income')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           <Card>
             <Input
               label={t('addExpense.descriptionLabel')}
-              placeholder={t('addExpense.descriptionPlaceholder')}
+              placeholder={transactionType === 'income' ? t('addExpense.descriptionPlaceholderIncome') : t('addExpense.descriptionPlaceholder')}
               value={description}
               onChangeText={setDescription}
               maxLength={VALIDATION.MAX_DESCRIPTION_LENGTH}
@@ -756,25 +813,47 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
 
             <Text style={styles.label}>{t('addExpense.categoryLabel')}</Text>
             <View style={styles.categoriesGrid}>
-              {CATEGORIES.map((cat) => (
-                <TouchableOpacity
-                  key={cat}
-                  style={[
-                    styles.categoryButton,
-                    category === cat && styles.categoryButtonActive,
-                  ]}
-                  onPress={() => setCategory(cat)}
-                >
-                  <Text
+              {transactionType === 'expense' ? (
+                CATEGORIES.map((cat) => (
+                  <TouchableOpacity
+                    key={cat}
                     style={[
-                      styles.categoryText,
-                      category === cat && styles.categoryTextActive,
+                      styles.categoryButton,
+                      category === cat && styles.categoryButtonActive,
                     ]}
+                    onPress={() => setCategory(cat)}
                   >
-                    {CategoryLabels[cat]}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                    <Text
+                      style={[
+                        styles.categoryText,
+                        category === cat && styles.categoryTextActive,
+                      ]}
+                    >
+                      {CategoryLabels[cat]}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              ) : (
+                INCOME_CATEGORIES.map((cat) => (
+                  <TouchableOpacity
+                    key={cat}
+                    style={[
+                      styles.categoryButton,
+                      category === cat && styles.categoryButtonActiveIncome,
+                    ]}
+                    onPress={() => setCategory(cat)}
+                  >
+                    <Text
+                      style={[
+                        styles.categoryText,
+                        category === cat && [styles.categoryTextActive, { color: '#10B981' }],
+                      ]}
+                    >
+                      {IncomeCategoryLabels[cat]}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              )}
             </View>
 
             {analyzingReceipt && (
@@ -859,7 +938,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
 
             {!isIndividualExpense && (
               <>
-                <Text style={styles.label}>{t('addExpense.whoPaidLabel')}</Text>
+                <Text style={styles.label}>{transactionType === 'income' ? t('addExpense.whoReceived') : t('addExpense.whoPaidLabel')}</Text>
                 {participants.length === 0 ? (
                   <Text style={styles.emptyText}>{t('addExpense.noParticipants')}</Text>
                 ) : (
@@ -991,7 +1070,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
                 </View>
 
                 <Text style={styles.label}>
-                  {t('addExpense.beneficiariesTitle')} * 
+                  {transactionType === 'income' ? t('addExpense.incomeBeneficiaries') : t('addExpense.beneficiariesTitle')} * 
                   {splitType === 'equal' && ' (A partes iguales)'}
                   {splitType === 'percentage' && ' (Por porcentaje)'}
                   {splitType === 'amount' && ' (Cantidad fija por persona)'}
@@ -1154,7 +1233,9 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
           </Card>
 
           <Button
-            title={isEditMode ? t('addExpense.updateButton') : t('addExpense.addButton')}
+            title={isEditMode
+              ? (transactionType === 'income' ? t('addExpense.updateIncomeButton') : t('addExpense.updateButton'))
+              : (transactionType === 'income' ? t('addExpense.addIncomeButton') : t('addExpense.addButton'))}
             onPress={handleAddExpense}
             loading={loading}
             fullWidth
@@ -1630,5 +1711,40 @@ const getStyles = (theme: any) => StyleSheet.create({
     color: theme.colors.warningText || '#92400E',
     fontWeight: '600',
     marginBottom: 4,
+  },
+  transactionTypeContainer: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    gap: 8,
+  },
+  transactionTypeButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: theme.colors.inputBackground,
+    borderWidth: 2,
+    borderColor: theme.colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  transactionTypeButtonActiveExpense: {
+    backgroundColor: theme.isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)',
+    borderColor: '#EF4444',
+  },
+  transactionTypeButtonActiveIncome: {
+    backgroundColor: theme.isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.1)',
+    borderColor: '#10B981',
+  },
+  transactionTypeText: {
+    fontSize: 15,
+    color: theme.colors.textSecondary,
+    fontWeight: '600',
+  },
+  transactionTypeTextActive: {
+    fontWeight: '700',
+  },
+  categoryButtonActiveIncome: {
+    backgroundColor: theme.isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.1)',
+    borderColor: '#10B981',
   },
 });

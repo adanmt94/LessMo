@@ -16,7 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
-import { Event, Expense, CategoryLabels, CategoryColors, CurrencySymbols } from '../types';
+import { Event, Expense, CategoryLabels, CategoryColors, CurrencySymbols, AllCategoryLabels, AllCategoryColors } from '../types';
 import {
   ItineraryStop,
   TimelineItem,
@@ -159,8 +159,8 @@ export const ItineraryScreen: React.FC<ItineraryScreenProps> = ({ navigation, ro
 
   const renderExpenseCard = (expense: Expense) => {
     const currencySymbol = CurrencySymbols[event.currency];
-    const categoryLabel = CategoryLabels[expense.category];
-    const categoryColor = CategoryColors[expense.category];
+    const categoryLabel = AllCategoryLabels[expense.category] || expense.category;
+    const categoryColor = AllCategoryColors[expense.category] || '#6B7280';
 
     return (
       <View

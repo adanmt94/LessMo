@@ -67,6 +67,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
     loading,
     loadData,
     getTotalExpenses,
+    getTotalIncome,
     getRemainingBalance,
     getParticipantById,
     getParticipantBalances,
@@ -356,6 +357,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const currencySymbol = CurrencySymbols[event.currency];
   const totalExpenses = getTotalExpenses();
+  const totalIncome = getTotalIncome();
   const remainingBalance = getRemainingBalance(event.initialBudget);
 
   // Filtrar gastos por búsqueda
@@ -491,6 +493,15 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
               {formatCurrency(totalExpenses, event.currency as any)}
             </Text>
           </View>
+
+          {totalIncome > 0 && (
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>{t('expense.totalIncome')}</Text>
+              <Text style={[styles.summaryValue, { color: '#10B981' }]}>
+                +{formatCurrency(totalIncome, event.currency as any)}
+              </Text>
+            </View>
+          )}
 
           <View style={styles.divider} />
 

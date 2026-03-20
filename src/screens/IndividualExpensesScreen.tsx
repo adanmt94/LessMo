@@ -21,7 +21,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../hooks/useAuth';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../services/firebase';
-import { Expense, RootStackParamList } from '../types';
+import { Expense, RootStackParamList, AllCategoryLabels } from '../types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -97,29 +97,32 @@ export const IndividualExpensesScreen: React.FC = () => {
     }
   };
 
-  const renderExpenseItem = ({ item }: { item: Expense }) => (
+  const renderExpenseItem = ({ item }: { item: Expense }) => {
+    const isIncome = item.type === 'income';
+    return (
     <TouchableOpacity style={styles.expenseCard} activeOpacity={0.7}>
       <View style={styles.expenseHeader}>
         <View style={styles.expenseIconContainer}>
-          <Text style={styles.expenseIcon}>💰</Text>
+          <Text style={styles.expenseIcon}>{isIncome ? '📈' : '💰'}</Text>
         </View>
         <View style={styles.expenseInfo}>
           <Text style={styles.expenseDescription}>{item.description}</Text>
           <Text style={styles.expenseDate}>{formatDate(item.createdAt)}</Text>
         </View>
         <View style={styles.expenseAmountContainer}>
-          <Text style={styles.expenseAmount}>
-            {formatCurrency(item.amount, item.currency)}
+          <Text style={[styles.expenseAmount, isIncome ? { color: '#10B981' } : { color: '#EF4444' }]}>
+            {isIncome ? '+' : '-'}{formatCurrency(item.amount, item.currency)}
           </Text>
         </View>
       </View>
       {item.category && (
         <View style={styles.categoryBadge}>
-          <Text style={styles.categoryText}>{item.category}</Text>
+          <Text style={styles.categoryText}>{AllCategoryLabels[item.category] || item.category}</Text>
         </View>
       )}
     </TouchableOpacity>
-  );
+    );
+  };
 
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>

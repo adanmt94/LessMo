@@ -7,7 +7,7 @@
 import React, { memo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Image } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
-import { Expense, CategoryLabels, CategoryColors, CurrencySymbols, Currency } from '../../types';
+import { Expense, CategoryLabels, CategoryColors, CurrencySymbols, Currency, AllCategoryLabels, AllCategoryColors } from '../../types';
 import { Card } from './Card';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -31,8 +31,9 @@ const ExpenseItemComponent: React.FC<ExpenseItemProps> = ({
 }) => {
   const { theme } = useTheme();
   const { t } = useLanguage();
-  const categoryColor = CategoryColors[expense.category];
-  const categoryLabel = CategoryLabels[expense.category];
+  const isIncome = expense.type === 'income';
+  const categoryColor = AllCategoryColors[expense.category] || '#6B7280';
+  const categoryLabel = AllCategoryLabels[expense.category] || expense.category;
   const currencySymbol = CurrencySymbols[currency];
   const styles = getStyles(theme);
 
@@ -101,8 +102,8 @@ const ExpenseItemComponent: React.FC<ExpenseItemProps> = ({
             </View>
           </View>
           <View style={styles.amountContainer}>
-            <Text style={styles.amount}>
-              {currencySymbol}{expense.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            <Text style={[styles.amount, isIncome && { color: '#10B981' }]}>
+              {isIncome ? '+' : ''}{currencySymbol}{expense.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </Text>
           </View>
         </View>
@@ -133,7 +134,7 @@ const ExpenseItemComponent: React.FC<ExpenseItemProps> = ({
                 style={styles.participantAvatar}
               />
             )}
-            <Text style={styles.participant}>Pagado por {participantName}</Text>
+            <Text style={styles.participant}>{isIncome ? 'Recibido por' : 'Pagado por'} {participantName}</Text>
           </View>
           <Text style={styles.date}>{formatDate(expense.date)}</Text>
         </View>

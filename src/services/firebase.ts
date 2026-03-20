@@ -585,9 +585,11 @@ export const createExpense = async (
   receiptPhoto?: string,
   name?: string,
   currency?: Currency,
-  createdBy?: string
+  createdBy?: string,
+  transactionType?: 'expense' | 'income'
 ): Promise<string> => {
   try {
+    const type = transactionType || 'expense';
     const expenseData: Omit<Expense, 'id'> = {
       eventId,
       name: name || description,
@@ -595,6 +597,7 @@ export const createExpense = async (
       amount,
       description,
       category: category as any,
+      type,
       date: new Date(),
       participantIds,
       splitType,
@@ -614,6 +617,7 @@ export const createExpense = async (
       amount: expenseData.amount,
       description: expenseData.description,
       category: expenseData.category,
+      type: type,
       date: expenseData.date,
       participantIds: expenseData.participantIds,
       splitType: expenseData.splitType,
@@ -640,7 +644,7 @@ export const createExpense = async (
     const docRef = await addDoc(collection(db, 'expenses'), cleanExpenseData);
     
     // Actualizar balances de participantes
-    await updateBalancesAfterExpense(paidBy, amount, participantIds, splitType, customSplits, percentageSplits);
+    await updateBalancesAfterExpense(paidBy, amount, participantIds, splitType, customSplits, percentageSplits, type);
     
     return docRef.id;
   } catch (error: any) {
@@ -649,7 +653,7 @@ export const createExpense = async (
 };
 
 /**
- * Actualizar balances después de crear gasto
+ * Actualizar balances después de crear gasto o ingreso
  */
 const updateBalancesAfterExpense = async (
   paidBy: string,
@@ -657,13 +661,15 @@ const updateBalancesAfterExpense = async (
   participantIds: string[],
   splitType: SplitType,
   customSplits?: { [participantId: string]: number },
-  percentageSplits?: { [participantId: string]: number }
+  percentageSplits?: { [participantId: string]: number },
+  transactionType: 'expense' | 'income' = 'expense'
 ): Promise<void> => {
   try {
     const batch = writeBatch(db);
     
-    // Lógica: Solo RESTAR de cada participante su parte del gasto
-    // El balance representa el saldo disponible de su presupuesto individual
+    // Para gastos: RESTAR del balance (gasto reduce presupuesto)
+    // Para ingresos: SUMAR al balance (ingreso aumenta presupuesto)
+    const multiplier = transactionType === 'income' ? 1 : -1;
     
     if (splitType === 'equal') {
       if (!participantIds || participantIds.length === 0) {
@@ -677,7 +683,7 @@ const updateBalancesAfterExpense = async (
         
         if (participantDoc.exists()) {
           const participant = participantDoc.data() as Participant;
-          const newBalance = participant.currentBalance - splitAmount;
+          const newBalance = participant.currentBalance + (splitAmount * multiplier);
           batch.update(doc(db, 'participants', participantId), {
             currentBalance: newBalance
           });
@@ -690,7 +696,7 @@ const updateBalancesAfterExpense = async (
         
         if (participantDoc.exists()) {
           const participant = participantDoc.data() as Participant;
-          const newBalance = participant.currentBalance - splitAmount;
+          const newBalance = participant.currentBalance + (splitAmount * multiplier);
           batch.update(doc(db, 'participants', participantId), {
             currentBalance: newBalance
           });
@@ -702,21 +708,19 @@ const updateBalancesAfterExpense = async (
         
         if (participantDoc.exists()) {
           const participant = participantDoc.data() as Participant;
-          const newBalance = participant.currentBalance - splitAmount;
+          const newBalance = participant.currentBalance + (splitAmount * multiplier);
           batch.update(doc(db, 'participants', participantId), {
             currentBalance: newBalance
           });
         }
       }
     } else if (splitType === 'items' && customSplits) {
-      // Para 'items', usar el mismo comportamiento que 'custom' 
-      // ya que customSplits contendrá el desglose calculado por participante
       for (const [beneficiaryId, splitAmount] of Object.entries(customSplits)) {
         const participantDoc = await getDoc(doc(db, 'participants', beneficiaryId));
         
         if (participantDoc.exists()) {
           const participant = participantDoc.data() as Participant;
-          const newBalance = participant.currentBalance - splitAmount;
+          const newBalance = participant.currentBalance + (splitAmount * multiplier);
           batch.update(doc(db, 'participants', beneficiaryId), {
             currentBalance: newBalance
           });
@@ -744,7 +748,8 @@ export const updateExpense = async (
   splitType: SplitType = 'equal',
   customSplits?: { [participantId: string]: number },
   percentageSplits?: { [participantId: string]: number },
-  receiptPhoto?: string
+  receiptPhoto?: string,
+  transactionType?: 'expense' | 'income'
 ): Promise<void> => {
   try {
     // 1. Obtener el gasto original
@@ -753,6 +758,7 @@ export const updateExpense = async (
       throw new Error('Gasto no encontrado');
     }
     const originalExpense = expenseDoc.data() as Expense;
+    const originalType = originalExpense.type || 'expense';
 
     // 2. Revertir los cambios de balance del gasto original
     await revertBalanceChanges(
@@ -761,8 +767,11 @@ export const updateExpense = async (
       originalExpense.participantIds || [],
       originalExpense.splitType,
       originalExpense.customSplits,
-      originalExpense.percentageSplits
+      originalExpense.percentageSplits,
+      originalType
     );
+
+    const type = transactionType || originalType;
 
     // 3. Actualizar el gasto en Firestore
     const cleanExpenseData: any = {
@@ -771,6 +780,7 @@ export const updateExpense = async (
       amount,
       description,
       category,
+      type,
       participantIds,
       splitType,
     };
@@ -790,14 +800,14 @@ export const updateExpense = async (
     await updateDoc(doc(db, 'expenses', expenseId), cleanExpenseData);
 
     // 4. Aplicar los nuevos cambios de balance
-    await updateBalancesAfterExpense(paidBy, amount, participantIds, splitType, customSplits, percentageSplits);
+    await updateBalancesAfterExpense(paidBy, amount, participantIds, splitType, customSplits, percentageSplits, type);
   } catch (error: any) {
     throw new Error(error.message);
   }
 };
 
 /**
- * Revertir cambios de balance (para edición/eliminación de gastos)
+ * Revertir cambios de balance (para edición/eliminación de gastos/ingresos)
  */
 const revertBalanceChanges = async (
   paidBy: string,
@@ -805,10 +815,14 @@ const revertBalanceChanges = async (
   participantIds: string[],
   splitType: SplitType,
   customSplits?: { [participantId: string]: number },
-  percentageSplits?: { [participantId: string]: number }
+  percentageSplits?: { [participantId: string]: number },
+  transactionType: 'expense' | 'income' = 'expense'
 ): Promise<void> => {
   try {
     const batch = writeBatch(db);
+    
+    // Para revertir: gastos se suman (devolver al balance), ingresos se restan
+    const multiplier = transactionType === 'income' ? -1 : 1;
     
     if (splitType === 'equal') {
       if (!participantIds || participantIds.length === 0) {
@@ -821,7 +835,7 @@ const revertBalanceChanges = async (
         const participantDoc = await getDoc(doc(db, 'participants', participantId));
         if (participantDoc.exists()) {
           const participant = participantDoc.data() as Participant;
-          const newBalance = participant.currentBalance + splitAmount; // SUMAR para revertir
+          const newBalance = participant.currentBalance + (splitAmount * multiplier);
           batch.update(doc(db, 'participants', participantId), {
             currentBalance: newBalance
           });
@@ -833,7 +847,7 @@ const revertBalanceChanges = async (
         const participantDoc = await getDoc(doc(db, 'participants', participantId));
         if (participantDoc.exists()) {
           const participant = participantDoc.data() as Participant;
-          const newBalance = participant.currentBalance + splitAmount; // SUMAR para revertir
+          const newBalance = participant.currentBalance + (splitAmount * multiplier);
           batch.update(doc(db, 'participants', participantId), {
             currentBalance: newBalance
           });
@@ -844,20 +858,18 @@ const revertBalanceChanges = async (
         const participantDoc = await getDoc(doc(db, 'participants', participantId));
         if (participantDoc.exists()) {
           const participant = participantDoc.data() as Participant;
-          const newBalance = participant.currentBalance + splitAmount; // SUMAR para revertir
+          const newBalance = participant.currentBalance + (splitAmount * multiplier);
           batch.update(doc(db, 'participants', participantId), {
             currentBalance: newBalance
           });
         }
       }
     } else if (splitType === 'items' && customSplits) {
-      // Para 'items', usar el mismo comportamiento que 'custom' 
-      // ya que customSplits contendrá el desglose calculado por participante
       for (const [participantId, splitAmount] of Object.entries(customSplits)) {
         const participantDoc = await getDoc(doc(db, 'participants', participantId));
         if (participantDoc.exists()) {
           const participant = participantDoc.data() as Participant;
-          const newBalance = participant.currentBalance + splitAmount; // SUMAR para revertir
+          const newBalance = participant.currentBalance + (splitAmount * multiplier);
           batch.update(doc(db, 'participants', participantId), {
             currentBalance: newBalance
           });
@@ -934,15 +946,15 @@ export const deleteExpense = async (expenseId: string): Promise<void> => {
 
     const expense = expenseDoc.data() as Expense;
 
-    // 2. Revertir los cambios de balance que causó este gasto
-    // La función revertBalanceChanges SUMA los montos que se habían RESTADO
+    // 2. Revertir los cambios de balance que causó este gasto/ingreso
     await revertBalanceChanges(
       expense.paidBy,
       expense.amount,
       expense.participantIds || [],
       expense.splitType,
       expense.customSplits,
-      expense.percentageSplits
+      expense.percentageSplits,
+      expense.type || 'expense'
     );
 
     // 3. Eliminar el gasto de Firestore

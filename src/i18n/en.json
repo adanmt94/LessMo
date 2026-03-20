@@ -214,7 +214,20 @@
     "expenseDeleted": "Expense deleted successfully",
     "errorAdding": "Could not add expense",
     "errorUpdating": "Could not update expense",
-    "errorDeleting": "Could not delete expense"
+    "errorDeleting": "Could not delete expense",
+    "transactionType": "Transaction type",
+    "expense": "Expense",
+    "income": "Income",
+    "addIncome": "Add Income",
+    "editIncome": "Edit Income",
+    "incomeAdded": "Income added successfully",
+    "incomeUpdated": "Income updated successfully",
+    "incomeDeleted": "Income deleted successfully",
+    "whoReceived": "Who received? *",
+    "incomeBeneficiaries": "Who benefits from this?",
+    "addIncomeButton": "Add income",
+    "updateIncomeButton": "Update income",
+    "descriptionPlaceholderIncome": "e.g., Salary payment"
   },
   "expense": {
     "add": "Add Expense",
@@ -239,7 +252,18 @@
       "shopping": "Shopping",
       "health": "Health",
       "other": "Other"
-    }
+    },
+    "incomeCategories": {
+      "salary": "Salary",
+      "freelance": "Freelance",
+      "refund": "Refund",
+      "gift": "Gift",
+      "investment": "Investment",
+      "sale": "Sale",
+      "other_income": "Other income"
+    },
+    "totalIncome": "Total Income",
+    "netBalance": "Net Balance"
   },
   "summary": {
     "title": "Summary",

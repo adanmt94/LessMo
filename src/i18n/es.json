@@ -218,7 +218,20 @@
     "expenseDeleted": "Gasto eliminado correctamente",
     "errorAdding": "No se pudo agregar el gasto",
     "errorUpdating": "No se pudo actualizar el gasto",
-    "errorDeleting": "No se pudo eliminar el gasto"
+    "errorDeleting": "No se pudo eliminar el gasto",
+    "transactionType": "Tipo de transacción",
+    "expense": "Gasto",
+    "income": "Ingreso",
+    "addIncome": "Agregar Ingreso",
+    "editIncome": "Editar Ingreso",
+    "incomeAdded": "Ingreso agregado exitosamente",
+    "incomeUpdated": "Ingreso actualizado exitosamente",
+    "incomeDeleted": "Ingreso eliminado correctamente",
+    "whoReceived": "¿Quién recibió? *",
+    "incomeBeneficiaries": "¿A quiénes beneficia?",
+    "addIncomeButton": "Agregar ingreso",
+    "updateIncomeButton": "Actualizar ingreso",
+    "descriptionPlaceholderIncome": "Ej: Pago de salario"
   },
   "expense": {
     "add": "Agregar Gasto",
@@ -243,7 +256,18 @@
       "shopping": "Compras",
       "health": "Salud",
       "other": "Otros"
-    }
+    },
+    "incomeCategories": {
+      "salary": "Salario",
+      "freelance": "Freelance",
+      "refund": "Reembolso",
+      "gift": "Regalo",
+      "investment": "Inversión",
+      "sale": "Venta",
+      "other_income": "Otros ingresos"
+    },
+    "totalIncome": "Ingresos Totales",
+    "netBalance": "Balance Neto"
   },
   "summary": {
     "title": "Resumen",

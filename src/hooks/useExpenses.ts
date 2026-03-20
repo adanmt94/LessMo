@@ -23,6 +23,7 @@ import {
   Settlement,
   ExpenseCategory,
   SplitType,
+  TransactionCategory,
 } from '../types';
 import { withCache, cache } from '../utils/cache';
 import { logger, LogCategory } from '../utils/logger';
@@ -86,12 +87,13 @@ export const useExpenses = (eventId: string) => {
     paidBy: string,
     amount: number,
     description: string,
-    category: ExpenseCategory,
+    category: TransactionCategory,
     participantIds: string[],
     splitType: SplitType = 'equal',
     customSplits?: { [participantId: string]: number },
     percentageSplits?: { [participantId: string]: number },
-    receiptPhoto?: string
+    receiptPhoto?: string,
+    transactionType?: 'expense' | 'income'
   ): Promise<boolean> => {
     try {
       logger.info(LogCategory.EXPENSE, 'Creando gasto', { amount, description, category });
@@ -101,12 +103,16 @@ export const useExpenses = (eventId: string) => {
         paidBy,
         amount,
         description,
-        category,
+        category as ExpenseCategory,
         participantIds,
         splitType,
         customSplits,
         percentageSplits,
-        receiptPhoto
+        receiptPhoto,
+        undefined, // name
+        undefined, // currency
+        undefined, // createdBy
+        transactionType
       );
       logger.info(LogCategory.EXPENSE, 'Gasto creado', { expenseId });
       
@@ -142,12 +148,13 @@ export const useExpenses = (eventId: string) => {
     paidBy: string,
     amount: number,
     description: string,
-    category: ExpenseCategory,
+    category: TransactionCategory,
     participantIds: string[],
     splitType: SplitType = 'equal',
     customSplits?: { [participantId: string]: number },
     percentageSplits?: { [participantId: string]: number },
-    receiptPhoto?: string
+    receiptPhoto?: string,
+    transactionType?: 'expense' | 'income'
   ): Promise<boolean> => {
     try {
       logger.info(LogCategory.EXPENSE, 'Actualizando gasto', { expenseId, amount, description });
@@ -158,12 +165,13 @@ export const useExpenses = (eventId: string) => {
         paidBy,
         amount,
         description,
-        category,
+        category as ExpenseCategory,
         participantIds,
         splitType,
         customSplits,
         percentageSplits,
-        receiptPhoto
+        receiptPhoto,
+        transactionType
       );
       logger.info(LogCategory.EXPENSE, 'Gasto actualizado', { expenseId });
       
@@ -203,10 +211,21 @@ export const useExpenses = (eventId: string) => {
   };
 
   /**
-   * Calcular total de gastos
+   * Calcular total de gastos (solo tipo expense)
    */
   const getTotalExpenses = (): number => {
-    return expenses.reduce((total, expense) => total + expense.amount, 0);
+    return expenses
+      .filter(expense => expense.type !== 'income')
+      .reduce((total, expense) => total + expense.amount, 0);
+  };
+
+  /**
+   * Calcular total de ingresos
+   */
+  const getTotalIncome = (): number => {
+    return expenses
+      .filter(expense => expense.type === 'income')
+      .reduce((total, expense) => total + expense.amount, 0);
   };
 
   /**
@@ -218,18 +237,20 @@ export const useExpenses = (eventId: string) => {
       ? eventBudget 
       : participants.reduce((sum, p) => sum + p.individualBudget, 0);
     const totalSpent = getTotalExpenses();
+    const totalIncomeAmount = getTotalIncome();
     
-    return totalBudget - totalSpent;
+    return totalBudget - totalSpent + totalIncomeAmount;
   };
 
   /**
    * Obtener resumen de gastos por categoría
    */
   const getExpensesByCategory = (): ExpenseSummary[] => {
-    const total = getTotalExpenses();
+    const expenseItems = expenses.filter(e => e.type !== 'income');
+    const total = expenseItems.reduce((sum, e) => sum + e.amount, 0);
     const categoryTotals: { [key: string]: { total: number; count: number } } = {};
 
-    expenses.forEach((expense) => {
+    expenseItems.forEach((expense) => {
       if (!categoryTotals[expense.category]) {
         categoryTotals[expense.category] = { total: 0, count: 0 };
       }
@@ -336,6 +357,7 @@ export const useExpenses = (eventId: string) => {
     deleteExpense,
     loadData,
     getTotalExpenses,
+    getTotalIncome,
     getRemainingBalance,
     getExpensesByCategory,
     getParticipantBalances,
