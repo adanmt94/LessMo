@@ -17,7 +17,8 @@
     "export": "Export",
     "ok": "OK",
     "deleteConfirmTitle": "Are you sure?",
-    "cannotUndo": "This action cannot be undone"
+    "cannotUndo": "This action cannot be undone",
+    "all": "All"
   },
   "tabs": {
     "expenses": "Expenses",
@@ -244,6 +245,7 @@
     "amount": "Amount",
     "category": "Category",
     "paidBy": "Paid by",
+    "receivedBy": "Received by",
     "beneficiaries": "Beneficiaries",
     "date": "Date",
     "selectCurrency": "Select Currency",

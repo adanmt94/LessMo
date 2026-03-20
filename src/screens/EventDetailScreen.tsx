@@ -58,6 +58,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   const [activeTab, setActiveTab] = useState<TabType>('expenses');
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'expense' | 'income'>('all');
   const [userPhotos, setUserPhotos] = useState<{[userId: string]: string}>({});
   const [editParticipantsModalVisible, setEditParticipantsModalVisible] = useState(false);
   
@@ -363,13 +364,20 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   const totalIncome = getTotalIncome();
   const remainingBalance = getRemainingBalance(event.initialBudget);
 
-  // Filtrar gastos por búsqueda
-  const filteredExpenses = searchQuery.trim()
-    ? expenses.filter(e => 
-        (e.description || '').toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
-        getParticipantById(e.paidBy)?.name.toLowerCase().includes(searchQuery.toLowerCase().trim())
-      )
-    : expenses;
+  // Filtrar gastos por búsqueda y tipo
+  const filteredExpenses = expenses.filter(e => {
+    // Filter by type
+    if (typeFilter === 'expense' && e.type === 'income') return false;
+    if (typeFilter === 'income' && e.type !== 'income') return false;
+    // Filter by search
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      const matchesDescription = (e.description || '').toLowerCase().includes(q);
+      const matchesParticipant = getParticipantById(e.paidBy)?.name.toLowerCase().includes(q);
+      return matchesDescription || matchesParticipant;
+    }
+    return true;
+  });
 
   const renderExpenses = () => (
     <View style={[styles.tabContent, { position: 'relative' }]}>
@@ -650,6 +658,36 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
               <Text style={[styles.clearButtonText, { color: theme.colors.textSecondary }]}>✕</Text>
             </TouchableOpacity>
           )}
+          {/* Type filter pills */}
+          <View style={styles.filterRow}>
+            {(['all', 'expense', 'income'] as const).map((filter) => (
+              <TouchableOpacity
+                key={filter}
+                style={[
+                  styles.filterPill,
+                  { borderColor: theme.colors.border, backgroundColor: theme.colors.background },
+                  typeFilter === filter && (filter === 'income'
+                    ? { borderColor: '#10B981', backgroundColor: 'rgba(16, 185, 129, 0.1)' }
+                    : filter === 'expense'
+                    ? { borderColor: '#EF4444', backgroundColor: 'rgba(239, 68, 68, 0.1)' }
+                    : { borderColor: theme.colors.primary, backgroundColor: theme.colors.primaryLight }),
+                ]}
+                onPress={() => setTypeFilter(filter)}
+              >
+                <Text style={[
+                  styles.filterPillText,
+                  { color: theme.colors.textSecondary },
+                  typeFilter === filter && (filter === 'income'
+                    ? { color: '#10B981', fontWeight: '700' }
+                    : filter === 'expense'
+                    ? { color: '#EF4444', fontWeight: '700' }
+                    : { color: theme.colors.primary, fontWeight: '700' }),
+                ]}>
+                  {filter === 'all' ? t('common.all') : filter === 'expense' ? t('addExpense.expense') : t('addExpense.income')}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
       )}
 
@@ -1054,6 +1092,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   searchContainer: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -1084,6 +1123,22 @@ const getStyles = (theme: any) => StyleSheet.create({
   clearButtonText: {
     fontSize: 18,
     color: theme.colors.textSecondary,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+    width: '100%',
+  },
+  filterPill: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1.5,
+  },
+  filterPillText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   // Modal styles
   modalOverlay: {

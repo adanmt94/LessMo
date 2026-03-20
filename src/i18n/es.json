@@ -17,7 +17,8 @@
     "export": "Exportar",
     "ok": "OK",
     "deleteConfirmTitle": "¿Estás seguro?",
-    "cannotUndo": "Esta acción no se puede deshacer"
+    "cannotUndo": "Esta acción no se puede deshacer",
+    "all": "Todos"
   },
   "tabs": {
     "expenses": "Gastos",
@@ -248,6 +249,7 @@
     "amount": "Monto",
     "category": "Categoría",
     "paidBy": "Pagado por",
+    "receivedBy": "Recibido por",
     "beneficiaries": "Beneficiarios",
     "date": "Fecha",
     "selectCurrency": "Seleccionar Moneda",

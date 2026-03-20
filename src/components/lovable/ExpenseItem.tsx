@@ -134,7 +134,7 @@ const ExpenseItemComponent: React.FC<ExpenseItemProps> = ({
                 style={styles.participantAvatar}
               />
             )}
-            <Text style={styles.participant}>{isIncome ? 'Recibido por' : 'Pagado por'} {participantName}</Text>
+            <Text style={styles.participant}>{isIncome ? t('expense.receivedBy') : t('expense.paidBy')} {participantName}</Text>
           </View>
           <Text style={styles.date}>{formatDate(expense.date)}</Text>
         </View>
