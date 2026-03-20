@@ -128,7 +128,14 @@
     "shareWithoutCode": "🎉 I invite you to \"{{name}}\"\n\n💰 Budget: {{budget}} {{currency}}\n\n📱 Download Les$Mo to manage shared expenses",
     "deleteEventError": "Could not delete event",
     "deleteExpenseConfirm": "Are you sure you want to delete this expense? This action cannot be undone.",
-    "deleteExpenseError": "Could not delete expense"
+    "deleteExpenseError": "Could not delete expense",
+    "addExpenseButton": "+ Add",
+    "addFirstExpense": "Add your first expense to get started",
+    "unknown": "Unknown",
+    "initialBudget": "Initial budget",
+    "totalSpent": "Total spent",
+    "remainingBalance": "Remaining balance",
+    "budgetUsed": "{{percentage}}% of budget used"
   },
   "createEvent": {
     "title": "Create Event",

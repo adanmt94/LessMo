@@ -66,6 +66,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
     participants,
     loading,
     loadData,
+    deleteExpense,
     getTotalExpenses,
     getTotalIncome,
     getRemainingBalance,
@@ -334,8 +335,10 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
           style: 'destructive',
           onPress: async () => {
             try {
-              // TODO: Implementar función deleteExpense que revierta los balances
-              Alert.alert(t('common.error'), t('eventDetail.deleteNotImplemented'));
+              const success = await deleteExpense(expenseId);
+              if (!success) {
+                Alert.alert(t('common.error'), t('eventDetail.deleteExpenseError'));
+              }
             } catch (error: any) {
               Alert.alert(t('common.error'), error.message || t('eventDetail.deleteExpenseError'));
             }
@@ -374,7 +377,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
         <View style={styles.emptyState}>
           <Text style={styles.emptyIcon}>💳</Text>
           <Text style={styles.emptyText}>{t('eventDetail.noExpenses')}</Text>
-          <Text style={styles.emptySubtext}>Añade tu primer gasto para comenzar</Text>
+          <Text style={styles.emptySubtext}>{t('eventDetail.addFirstExpense')}</Text>
         </View>
       ) : filteredExpenses.length === 0 ? (
         <View style={styles.emptyState}>
@@ -398,7 +401,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
               <ExpenseItem
                 key={expense.id}
                 expense={expense}
-                participantName={participant?.name || 'Desconocido'}
+                participantName={participant?.name || t('eventDetail.unknown')}
                 participantPhoto={photoURL}
                 currency={event.currency}
                 onPress={() => navigation.navigate('AddExpense', { 
@@ -418,7 +421,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
         style={styles.floatingAddButton}
         onPress={() => navigation.navigate('AddExpense', { eventId })}
       >
-        <Text style={styles.floatingAddButtonText}>+ Añadir Gasto</Text>
+        <Text style={styles.floatingAddButtonText}>{t('eventDetail.addExpenseButton')}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -481,14 +484,14 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
           <Text style={styles.summaryTitle}>{t('eventDetail.summaryTitle')}</Text>
           
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Presupuesto inicial</Text>
+            <Text style={styles.summaryLabel}>{t('eventDetail.initialBudget')}</Text>
             <Text style={styles.summaryValue}>
               {formatCurrency(event.initialBudget, event.currency as any)}
             </Text>
           </View>
 
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Total gastado</Text>
+            <Text style={styles.summaryLabel}>{t('eventDetail.totalSpent')}</Text>
             <Text style={[styles.summaryValue, { color: '#EF4444' }]}>
               {formatCurrency(totalExpenses, event.currency as any)}
             </Text>
@@ -506,7 +509,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
           <View style={styles.divider} />
 
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabelBold}>Saldo restante</Text>
+            <Text style={styles.summaryLabelBold}>{t('eventDetail.remainingBalance')}</Text>
             <Text style={[styles.summaryValueBold, { color: remainingBalance >= 0 ? '#10B981' : '#EF4444' }]}>
               {formatCurrency(remainingBalance, event.currency as any)}
             </Text>
@@ -524,7 +527,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
             />
           </View>
           <Text style={styles.percentageText}>
-            {percentageSpent.toFixed(1)}% del presupuesto usado
+            {t('eventDetail.budgetUsed', { percentage: percentageSpent.toFixed(1) })}
           </Text>
         </Card>
 

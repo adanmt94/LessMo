@@ -130,7 +130,14 @@
     "shareWithoutCode": "🎉 Te invito a \"{{name}}\"\n\n💰 Presupuesto: {{budget}} {{currency}}\n\n📱 Descarga Les$Mo para gestionar gastos compartidos",
     "deleteEventError": "No se pudo eliminar el evento",
     "deleteExpenseConfirm": "¿Estás seguro de que quieres eliminar este gasto? Esta acción no se puede deshacer.",
-    "deleteExpenseError": "No se pudo eliminar el gasto"
+    "deleteExpenseError": "No se pudo eliminar el gasto",
+    "addExpenseButton": "+ Añadir",
+    "addFirstExpense": "Añade tu primer gasto para comenzar",
+    "unknown": "Desconocido",
+    "initialBudget": "Presupuesto inicial",
+    "totalSpent": "Total gastado",
+    "remainingBalance": "Saldo restante",
+    "budgetUsed": "{{percentage}}% del presupuesto usado"
   },
   "createEvent": {
     "title": "Crear Evento",
