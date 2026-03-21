@@ -325,18 +325,27 @@ export const payWithCard = async (
   }
 };
 
+// Stripe zero-decimal currencies (amount is already in smallest unit)
+const ZERO_DECIMAL_CURRENCIES = ['JPY', 'CLP', 'KRW', 'VND', 'BIF', 'CLP', 'DJF', 'GNF', 'KMF', 'MGA', 'PYG', 'RWF', 'UGX', 'VUV', 'XAF', 'XOF', 'XPF'];
+
 /**
- * Convert amount to cents for Stripe
- * Stripe requires amounts in the smallest currency unit (cents)
+ * Convert amount to smallest currency unit for Stripe
+ * Most currencies use cents (x100), but JPY, CLP etc. are zero-decimal
  */
-export const amountToCents = (amount: number): number => {
+export const amountToCents = (amount: number, currency?: string): number => {
+  if (currency && ZERO_DECIMAL_CURRENCIES.includes(currency.toUpperCase())) {
+    return Math.round(amount);
+  }
   return Math.round(amount * 100);
 };
 
 /**
- * Convert cents to display amount
+ * Convert smallest currency unit to display amount
  */
-export const centsToAmount = (cents: number): number => {
+export const centsToAmount = (cents: number, currency?: string): number => {
+  if (currency && ZERO_DECIMAL_CURRENCIES.includes(currency.toUpperCase())) {
+    return cents;
+  }
   return cents / 100;
 };
 

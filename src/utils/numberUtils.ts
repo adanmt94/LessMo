@@ -18,6 +18,9 @@ export function formatNumber(
   });
 }
 
+// Currencies that use 0 decimal places
+const ZERO_DECIMAL_CURRENCIES: Currency[] = ['JPY', 'CLP'];
+
 /**
  * Formatear moneda con símbolo
  */
@@ -25,9 +28,10 @@ export function formatCurrency(
   amount: number,
   currency: Currency,
   showSymbol: boolean = true,
-  decimals: number = 2
+  decimals?: number
 ): string {
-  const formatted = formatNumber(Math.abs(amount), decimals);
+  const dec = decimals ?? (ZERO_DECIMAL_CURRENCIES.includes(currency) ? 0 : 2);
+  const formatted = formatNumber(Math.abs(amount), dec);
   const symbol = showSymbol ? CurrencySymbols[currency] : '';
   const sign = amount < 0 ? '-' : '';
   

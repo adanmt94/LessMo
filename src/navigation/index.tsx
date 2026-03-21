@@ -194,7 +194,7 @@ export const Navigation: React.FC = () => {
               component={CreateEventScreen}
               options={({ route }) => ({ 
                 headerShown: true,
-                title: route.params?.mode === 'edit' ? 'Editar Evento' : 'Crear Evento',
+                title: route.params?.mode === 'edit' ? t('createEvent.editTitle') : t('createEvent.title'),
                 headerBackTitle: t('common.back')
               })}
             />
@@ -228,7 +228,7 @@ export const Navigation: React.FC = () => {
               component={JoinGroupScreen}
               options={{ 
                 headerShown: true,
-                title: 'Unirse a Evento',
+                title: t('nav.joinEvent'),
                 headerBackTitle: t('common.back')
               }}
             />
@@ -262,7 +262,7 @@ export const Navigation: React.FC = () => {
               component={ChatScreen}
               options={{ 
                 headerShown: true,
-                title: 'Chat',
+                title: t('nav.chat'),
                 headerBackTitle: t('common.back')
               }}
             />
@@ -271,7 +271,7 @@ export const Navigation: React.FC = () => {
               component={PaymentMethodScreen}
               options={{ 
                 headerShown: true,
-                title: 'Método de Pago',
+                title: t('nav.paymentMethod'),
                 headerBackTitle: t('common.back')
               }}
             />
@@ -280,7 +280,7 @@ export const Navigation: React.FC = () => {
               component={StatisticsScreen}
               options={{ 
                 headerShown: true,
-                title: 'Estadísticas',
+                title: t('nav.statistics'),
                 headerBackTitle: t('common.back')
               }}
             />
@@ -289,7 +289,7 @@ export const Navigation: React.FC = () => {
               component={AchievementsScreen}
               options={{ 
                 headerShown: true,
-                title: '🏆 Logros y Badges',
+                title: t('nav.achievements'),
                 headerBackTitle: t('common.back')
               }}
             />
@@ -298,7 +298,7 @@ export const Navigation: React.FC = () => {
               component={BankConnectionScreen}
               options={{ 
                 headerShown: true,
-                title: '🏦 Conectar Banco',
+                title: t('nav.bankConnection'),
                 headerBackTitle: t('common.back')
               }}
             />
@@ -307,7 +307,7 @@ export const Navigation: React.FC = () => {
               component={BankTransactionsScreen}
               options={{ 
                 headerShown: true,
-                title: '🔍 Transacciones',
+                title: t('nav.bankTransactions'),
                 headerBackTitle: t('common.back')
               }}
             />
@@ -316,7 +316,7 @@ export const Navigation: React.FC = () => {
               component={QRCodePaymentScreen}
               options={{ 
                 headerShown: true,
-                title: '📱 Código QR',
+                title: t('nav.qrCode'),
                 headerBackTitle: t('common.back'),
                 presentation: 'modal',
               }}
@@ -326,7 +326,7 @@ export const Navigation: React.FC = () => {
               component={ReminderSettingsScreen}
               options={{ 
                 headerShown: true,
-                title: '🔔 Recordatorios',
+                title: t('nav.reminders'),
                 headerBackTitle: t('common.back'),
               }}
             />
@@ -335,7 +335,7 @@ export const Navigation: React.FC = () => {
               component={ItineraryScreen}
               options={{ 
                 headerShown: true,
-                title: '🗺️ Itinerario',
+                title: t('nav.itinerary'),
                 headerBackTitle: t('common.back'),
               }}
             />
@@ -351,7 +351,7 @@ export const Navigation: React.FC = () => {
               component={PaymentHistoryScreen}
               options={{ 
                 headerShown: true,
-                title: '💳 Historial de Pagos',
+                title: t('nav.paymentHistory'),
                 headerBackTitle: t('common.back'),
               }}
             />

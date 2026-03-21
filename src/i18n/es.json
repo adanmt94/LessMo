@@ -596,5 +596,18 @@
     "createExpenseMessage": "¿Quieres crear un gasto de {amount}€ por \"{description}\"?",
     "createExpense": "Crear gasto",
     "tapToCreateExpense": "💸 Toca para crear gasto"
+  },
+  "nav": {
+    "chat": "Chat",
+    "paymentMethod": "Método de Pago",
+    "statistics": "Estadísticas",
+    "achievements": "Logros y Badges",
+    "bankConnection": "Conectar Banco",
+    "bankTransactions": "Transacciones",
+    "qrCode": "Código QR",
+    "reminders": "Recordatorios",
+    "itinerary": "Itinerario",
+    "paymentHistory": "Historial de Pagos",
+    "joinEvent": "Unirse a Evento"
   }
 }

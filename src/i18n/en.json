@@ -118,6 +118,8 @@
     "expensesTab": "Expenses",
     "participantsTab": "Participants",
     "summaryTab": "Summary",
+    "chat": "Chat",
+    "stats": "Statistics",
     "searchExpenses": "Search expenses...",
     "noExpenses": "No expenses registered",
     "noExpensesFound": "No expenses found",
@@ -167,7 +169,9 @@
     "eventCreated": "Event created successfully",
     "eventUpdated": "Event updated successfully",
     "errorCreating": "Error creating event",
-    "errorUpdating": "Error updating event"
+    "errorUpdating": "Error updating event",
+    "deleteParticipantConfirm": "Are you sure you want to remove this participant? This action cannot be undone.",
+    "participantDeleted": "Participant removed successfully"
   },
   "event": {
     "create": "Create Event",
@@ -592,5 +596,18 @@
     "createExpenseMessage": "Do you want to create an expense of {amount}€ for \"{description}\"?",
     "createExpense": "Create expense",
     "tapToCreateExpense": "💸 Tap to create expense"
+  },
+  "nav": {
+    "chat": "Chat",
+    "paymentMethod": "Payment Method",
+    "statistics": "Statistics",
+    "achievements": "Achievements & Badges",
+    "bankConnection": "Connect Bank",
+    "bankTransactions": "Transactions",
+    "qrCode": "QR Code",
+    "reminders": "Reminders",
+    "itinerary": "Itinerary",
+    "paymentHistory": "Payment History",
+    "joinEvent": "Join Event"
   }
 }

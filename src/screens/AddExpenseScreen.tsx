@@ -26,6 +26,7 @@ import { useNotifications } from '../hooks/useNotifications';
 import { useSpendingAlerts } from '../hooks/useSpendingAlerts';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useCurrency } from '../hooks/useCurrency';
 import { analyzeReceipt, ReceiptData } from '../services/ocrService';
 import { ItemSplitScreen } from './ItemSplitScreen';
 import { ExpenseItem } from '../types';
@@ -73,16 +74,12 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
   const isEditMode = mode === 'edit' && expenseId;
   const isIndividualExpense = eventId === 'individual';
   
-  // Para gastos individuales, no necesitamos el hook useExpenses
-  const expenseHookResult = !isIndividualExpense ? useExpenses(eventId!) : { 
-    participants: [], 
-    addExpense: null, 
-    editExpense: null, 
-    expenses: [], 
-    getRemainingBalance: () => 0, 
-    getTotalExpenses: () => 0 
-  };
-  const { participants, addExpense, editExpense, expenses, getRemainingBalance, getTotalExpenses } = expenseHookResult;
+  // Always call useExpenses (Rules of Hooks) — use dummy eventId for individual expenses
+  const expenseHookResult = useExpenses(isIndividualExpense ? '__individual__' : eventId!);
+  const { participants, addExpense, editExpense, expenses, getRemainingBalance, getTotalExpenses } = isIndividualExpense 
+    ? { participants: [], addExpense: null, editExpense: null, expenses: [], getRemainingBalance: () => 0, getTotalExpenses: () => 0 }
+    : expenseHookResult;
+  const { currentCurrency } = useCurrency();
   
   const { notifyNewExpense } = useNotifications();
   const { checkAvailableAmount, checkTotalSpent } = useSpendingAlerts();
@@ -635,7 +632,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
             description,
             category,
             type: transactionType,
-            currency: 'EUR', // Default para gastos individuales
+            currency: currentCurrency.code,
             createdAt: new Date(),
             splitType: 'equal',
             receiptPhoto: photoURL
