@@ -18,7 +18,7 @@ import QRCode from 'react-native-qrcode-svg';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import * as Clipboard from 'expo-clipboard';
-import * as FileSystem from 'expo-file-system';
+import { writeAsStringAsync } from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 
 interface QRCodePaymentScreenProps {
@@ -193,7 +193,7 @@ export const QRCodePaymentScreen: React.FC<QRCodePaymentScreenProps> = ({
       qrRef.toDataURL(async (dataURL: string) => {
         // Use a temporary directory - simplificado para evitar problemas con FileSystem
         const filename = `/tmp/payment_qr_${Date.now()}.png`;
-        await FileSystem.writeAsStringAsync(filename, dataURL, {
+        await writeAsStringAsync(filename, dataURL, {
           encoding: 'base64',
         });
 

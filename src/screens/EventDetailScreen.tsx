@@ -423,14 +423,6 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
           })}
         </ScrollView>
       )}
-      
-      {/* Botón flotante SIEMPRE visible */}
-      <TouchableOpacity
-        style={styles.floatingAddButton}
-        onPress={() => navigation.navigate('AddExpense', { eventId })}
-      >
-        <Text style={styles.floatingAddButtonText}>{t('eventDetail.addExpenseButton')}</Text>
-      </TouchableOpacity>
     </View>
   );
 
@@ -590,7 +582,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
 
   return (
     <SafeAreaView edges={['top']} style={styles.container}>
-      {/* Header minimalista */}
+      {/* Header con acciones */}
       <View style={[styles.header, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.border }]}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
@@ -606,9 +598,46 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
         <View style={styles.headerActions}>
           <TouchableOpacity
             style={[styles.headerButton, { backgroundColor: theme.colors.primary + '15' }]}
+            onPress={() => navigation.navigate('Statistics', { 
+              eventId: eventId, 
+              eventName: event?.name || '',
+              currency: event?.currency || 'EUR'
+            })}
+          >
+            <Text style={[styles.headerButtonText, { color: theme.colors.primary }]}>📊</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.headerButton, { backgroundColor: theme.colors.primary + '15' }]}
             onPress={handleShareEvent}
           >
             <Text style={[styles.headerButtonText, { color: theme.colors.primary }]}>⤴</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.headerButton, { backgroundColor: theme.colors.primary + '15' }]}
+            onPress={() => {
+              Alert.alert(
+                event?.name || '',
+                '',
+                [
+                  {
+                    text: `💬 ${t('eventDetail.chat')}`,
+                    onPress: () => navigation.navigate('Chat', { eventId, title: event?.name || 'Chat' }),
+                  },
+                  {
+                    text: `✏️ ${t('common.edit')}`,
+                    onPress: handleEditEvent,
+                  },
+                  {
+                    text: `🗑️ ${t('common.delete')}`,
+                    style: 'destructive',
+                    onPress: handleDeleteEvent,
+                  },
+                  { text: t('common.cancel'), style: 'cancel' },
+                ]
+              );
+            }}
+          >
+            <Text style={[styles.headerButtonText, { color: theme.colors.primary }]}>⋯</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -695,7 +724,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
       {activeTab === 'participants' && renderParticipants()}
       {activeTab === 'summary' && renderSummary()}
 
-      {activeTab === 'expenses' && expenses.length > 0 && (
+      {activeTab === 'expenses' && (
         <View style={styles.fabContainer}>
           <TouchableOpacity
             style={styles.fab}
@@ -706,70 +735,6 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
           </TouchableOpacity>
         </View>
       )}
-
-      {/* Action Buttons Footer */}
-      <View style={[styles.actionButtonsContainer, { backgroundColor: theme.colors.card, borderTopColor: theme.colors.border }]}>
-        <TouchableOpacity 
-          style={styles.actionButton}
-          onPress={() => navigation.navigate('Statistics', { 
-            eventId: eventId, 
-            eventName: event?.name || 'Estadísticas',
-            currency: event?.currency || 'EUR'
-          })}
-        >
-          <View style={[styles.iconCircle, { backgroundColor: theme.colors.primary + '20' }]}>
-            <Text style={[styles.actionButtonIcon, { color: theme.colors.primary }]}>📊</Text>
-          </View>
-          <Text style={[styles.actionButtonText, { color: theme.colors.text }]}>{t('eventDetail.stats')}</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={styles.actionButton}
-          onPress={() => navigation.navigate('Chat', { 
-            eventId: eventId, 
-            title: event?.name || 'Chat' 
-          })}
-          activeOpacity={0.7}
-        >
-          <View style={[styles.iconCircle, { backgroundColor: theme.colors.primary + '20' }]}>
-            <Text style={[styles.actionButtonIcon, { color: theme.colors.primary }]}>💬</Text>
-          </View>
-          <Text style={[styles.actionButtonText, { color: theme.colors.text }]}>{t('eventDetail.chat')}</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={styles.actionButton}
-          onPress={handleShareEvent}
-          activeOpacity={0.7}
-        >
-          <View style={[styles.iconCircle, { backgroundColor: theme.colors.primary + '20' }]}>
-            <Text style={[styles.actionButtonIcon, { color: theme.colors.primary }]}>↗</Text>
-          </View>
-          <Text style={[styles.actionButtonText, { color: theme.colors.text }]}>{t('common.share')}</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={styles.actionButton}
-          onPress={handleEditEvent}
-          activeOpacity={0.7}
-        >
-          <View style={[styles.iconCircle, { backgroundColor: theme.colors.primary + '20' }]}>
-            <Text style={[styles.actionButtonIcon, { color: theme.colors.primary }]}>✏️</Text>
-          </View>
-          <Text style={[styles.actionButtonText, { color: theme.colors.text }]}>{t('common.edit')}</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={styles.actionButton}
-          onPress={handleDeleteEvent}
-          activeOpacity={0.7}
-        >
-          <View style={[styles.iconCircle, { backgroundColor: '#EF444420' }]}>
-            <Text style={[styles.actionButtonIcon, { color: '#EF4444' }]}>×</Text>
-          </View>
-          <Text style={[styles.actionButtonText, { color: '#EF4444' }]}>{t('common.delete')}</Text>
-        </TouchableOpacity>
-      </View>
 
       {/* Modal para Editar Participantes */}
       <Modal
@@ -1068,7 +1033,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   fabContainer: {
     position: 'absolute',
-    bottom: 110,
+    bottom: 24,
     right: 20,
     zIndex: 10,
   },

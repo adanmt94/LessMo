@@ -521,12 +521,12 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
       return;
     }
 
-    if (!paidBy) {
+    if (!isIndividualExpense && !paidBy) {
       Alert.alert(t('common.error'), t('addExpense.selectWhoPaid'));
       return;
     }
 
-    if (selectedBeneficiaries.length === 0) {
+    if (!isIndividualExpense && selectedBeneficiaries.length === 0) {
       Alert.alert(t('common.error'), t('addExpense.selectBeneficiaries'));
       return;
     }
@@ -627,14 +627,19 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
           const { auth } = firebaseModule;
           
           await addDoc(collection(db, 'expenses'), {
+            userId: auth.currentUser?.uid || '',
             paidBy: auth.currentUser?.uid || '',
             amount: amountNum,
             description,
             category,
             type: transactionType,
             currency: currentCurrency.code,
+            date: new Date(),
             createdAt: new Date(),
             splitType: 'equal',
+            participantIds: [],
+            beneficiaries: [],
+            isIndividual: true,
             receiptPhoto: photoURL
           });
           success = true;

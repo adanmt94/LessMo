@@ -3,7 +3,7 @@
  * Extrae información inteligente de tickets/recibos
  */
 
-import * as FileSystem from 'expo-file-system';
+import { readAsStringAsync } from 'expo-file-system/legacy';
 
 // Tipos para los datos extraídos del ticket
 export interface ReceiptData {
@@ -32,7 +32,7 @@ export async function analyzeReceipt(imageUri: string): Promise<ReceiptData> {
     
 
     // Convertir imagen a base64
-    const base64Image = await FileSystem.readAsStringAsync(imageUri, {
+    const base64Image = await readAsStringAsync(imageUri, {
       encoding: 'base64',
     });
 

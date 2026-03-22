@@ -3,8 +3,7 @@
  */
 
 import * as Linking from 'expo-linking';
-import * as Sharing from 'expo-sharing';
-import { Platform } from 'react-native';
+import { Share, Platform } from 'react-native';
 
 export interface DeepLinkConfig {
   eventId: string;
@@ -56,20 +55,15 @@ ${link}
 
 O visita: ${generateUniversalLink(config)}`;
 
-    const canShare = await Sharing.isAvailableAsync();
-    
-    if (canShare) {
-      await Sharing.shareAsync(link, {
-        dialogTitle: `Compartir evento: ${config.eventName}`,
-      });
-      return true;
-    } else {
-      // Fallback to clipboard if sharing not available
-      // import { Clipboard } from 'react-native';
-      // await Clipboard.setString(message);
-      return false;
+    await Share.share({
+      message,
+      title: `Compartir evento: ${config.eventName}`,
+    });
+    return true;
+  } catch (error: any) {
+    if (error.message === 'User did not share') {
+      return true; // User cancelled — not an error
     }
-  } catch (error) {
     console.error('Error sharing event:', error);
     return false;
   }
