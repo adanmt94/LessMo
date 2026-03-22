@@ -86,7 +86,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
     if (!hasSavedCredentials) {
       Alert.alert(
         t('common.error'),
-        'Debes iniciar sesión primero y activar Face ID en Ajustes'
+        t('auth.biometricLoginFirst')
       );
       return;
     }
@@ -126,7 +126,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
           console.error('❌ Error en Google login desde Face ID:', err);
           Alert.alert(
             t('common.error'),
-            'Error al abrir Google Sign-In. Por favor, inicia sesión manualmente.'
+            t('auth.googleSignInError')
           );
         }
       } else if (loginMethod === 'email') {
@@ -135,7 +135,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
         const savedPassword = await SecureStore.getItemAsync(STORED_PASSWORD_KEY);
 
         if (!savedEmail || !savedPassword) {
-          Alert.alert(t('common.error'), 'No hay credenciales guardadas');
+          Alert.alert(t('common.error'), t('auth.noSavedCredentials'));
           setHasSavedCredentials(false);
           return;
         }
@@ -148,12 +148,12 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
       } else {
         Alert.alert(
           t('common.error'),
-          'No se pudo determinar el método de inicio de sesión anterior'
+          t('auth.unknownLoginMethod')
         );
       }
     } catch (error) {
       console.error('❌ Error in biometric login:', error);
-      Alert.alert(t('common.error'), 'Error al iniciar sesión con biometría');
+      Alert.alert(t('common.error'), t('auth.biometricLoginError'));
     }
   };
 
@@ -242,7 +242,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
             </View>
             <Text style={styles.title}>Les$Mo</Text>
             <Text style={styles.subtitle}>
-              {t('auth.loginSubtitle') || 'Gestiona tus finanzas de forma fácil'}
+              {t('auth.loginSubtitle')}
             </Text>
           </View>
         </SafeAreaView>
@@ -309,7 +309,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
                 <Text style={[styles.biometricText, !hasSavedCredentials && styles.biometricTextDisabled]}>
                   {hasSavedCredentials 
                     ? `${t('auth.loginWith')} ${biometricType}`
-                    : `Activa ${biometricType} en Ajustes después de iniciar sesión`
+                    : t('auth.activateBiometricHint', { biometricType })
                   }
                 </Text>
               </TouchableOpacity>
@@ -355,7 +355,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
               onPress={() => navigation.navigate('ForgotPassword')}
             >
               <Text style={styles.forgotPasswordText}>
-                ¿Olvidaste tu contraseña?
+                {t('auth.forgotPassword')}
               </Text>
             </TouchableOpacity>
 

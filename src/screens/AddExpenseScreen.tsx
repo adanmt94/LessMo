@@ -27,6 +27,7 @@ import { useSpendingAlerts } from '../hooks/useSpendingAlerts';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useCurrency } from '../hooks/useCurrency';
+import { useAuth } from '../hooks/useAuth';
 import { analyzeReceipt, ReceiptData } from '../services/ocrService';
 import { ItemSplitScreen } from './ItemSplitScreen';
 import { ExpenseItem } from '../types';
@@ -69,15 +70,31 @@ const INCOME_CATEGORIES: IncomeCategory[] = [
 export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
   const { eventId, expenseId, mode, prefilledData } = route.params;
   const { theme } = useTheme();
-  const { t, currentLanguage } = useLanguage();
+  const { t } = useLanguage();
   const styles = getStyles(theme);
   const isEditMode = mode === 'edit' && expenseId;
   const isIndividualExpense = eventId === 'individual';
+  const { user } = useAuth();
   
   // Always call useExpenses (Rules of Hooks) — use dummy eventId for individual expenses
   const expenseHookResult = useExpenses(isIndividualExpense ? '__individual__' : eventId!);
+  
+  // For individual expenses, create a virtual participant from current user
+  const individualParticipant = isIndividualExpense && user ? {
+    id: user.uid,
+    name: user.displayName || user.email?.split('@')[0] || t('settings.user'),
+    eventId: 'individual',
+    individualBudget: 0,
+    currentBalance: 0,
+    joinedAt: new Date(),
+  } : null;
+  
   const { participants, addExpense, editExpense, expenses, getRemainingBalance, getTotalExpenses } = isIndividualExpense 
-    ? { participants: [], addExpense: null, editExpense: null, expenses: [], getRemainingBalance: () => 0, getTotalExpenses: () => 0 }
+    ? { 
+        participants: individualParticipant ? [individualParticipant] : [], 
+        addExpense: null, editExpense: null, expenses: [], 
+        getRemainingBalance: () => 0, getTotalExpenses: () => 0 
+      }
     : expenseHookResult;
   const { currentCurrency } = useCurrency();
   
@@ -105,19 +122,18 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
   const [showTemplates, setShowTemplates] = useState(false);
 
   // Helper function to translate category names
-  const translateCategory = (category: ExpenseCategory, language: 'es' | 'en'): string => {
-    const translations: Record<ExpenseCategory, { es: string; en: string }> = {
-      food: { es: 'Comida', en: 'Food' },
-      transport: { es: 'Transporte', en: 'Transport' },
-      accommodation: { es: 'Alojamiento', en: 'Accommodation' },
-      entertainment: { es: 'Entretenimiento', en: 'Entertainment' },
-      shopping: { es: 'Compras', en: 'Shopping' },
-      health: { es: 'Salud', en: 'Health' },
-      other: { es: 'Otros', en: 'Other' },
+  const translateCategory = (category: ExpenseCategory): string => {
+    const categoryKeys: Record<ExpenseCategory, string> = {
+      food: 'expense.categories.food',
+      transport: 'expense.categories.transport',
+      accommodation: 'expense.categories.accommodation',
+      entertainment: 'expense.categories.entertainment',
+      shopping: 'expense.categories.shopping',
+      health: 'expense.categories.health',
+      other: 'expense.categories.other',
     };
     
-    const lang = typeof language === 'string' ? language : 'es';
-    return translations[category]?.[lang] || translations[category]?.es || category;
+    return t(categoryKeys[category] || 'expense.categories.other');
   };
 
   // Cargar datos del evento y plantillas
@@ -229,10 +245,10 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
       await incrementTemplateUsage(template.id);
       
       setShowTemplates(false);
-      Alert.alert('✅ Plantilla aplicada', `Datos de "${template.name}" cargados correctamente`);
+      Alert.alert(t('addExpense.templateApplied'), t('addExpense.templateAppliedMessage', { name: template.name }));
     } catch (error) {
       console.error('Error al aplicar plantilla:', error);
-      Alert.alert('Error', 'No se pudo aplicar la plantilla');
+      Alert.alert(t('common.error'), t('addExpense.errorApplyingTemplate'));
     }
   };
 
@@ -240,7 +256,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
   const handleSaveAsTemplate = async () => {
     try {
       if (!description.trim()) {
-        Alert.alert('Error', 'Debes agregar una descripción primero');
+        Alert.alert(t('common.error'), t('addExpense.descriptionRequiredForTemplate'));
         return;
       }
 
@@ -248,21 +264,21 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
       const { auth } = await import('../services/firebase');
       
       if (!auth.currentUser) {
-        Alert.alert('Error', 'Debes iniciar sesión');
+        Alert.alert(t('common.error'), t('addExpense.loginRequired'));
         return;
       }
 
       // Preguntar detalles de la plantilla
       Alert.prompt(
-        'Guardar como plantilla',
-        '¿Nombre para la plantilla?',
+        t('addExpense.saveAsTemplate'),
+        t('addExpense.templateNamePrompt'),
         [
           {
-            text: 'Cancelar',
+            text: t('common.cancel'),
             style: 'cancel',
           },
           {
-            text: 'Guardar',
+            text: t('common.save'),
             onPress: async (templateName?: string) => {
               if (!templateName) return;
               if (!templateName?.trim()) return;
@@ -292,10 +308,10 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
                 setTemplates(updatedTemplates);
                 
                 setShowTemplates(false);
-                Alert.alert('✅ Plantilla guardada', `"${templateName}" guardada correctamente`);
+                Alert.alert(t('addExpense.templateSaved'), t('addExpense.templateSavedMessage', { name: templateName }));
               } catch (error) {
                 console.error('Error al guardar plantilla:', error);
-                Alert.alert('Error', 'No se pudo guardar la plantilla');
+                Alert.alert(t('common.error'), t('addExpense.errorSavingTemplate'));
               }
             },
           },
@@ -305,7 +321,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
       );
     } catch (error) {
       console.error('Error al guardar plantilla:', error);
-      Alert.alert('Error', 'No se pudo guardar la plantilla');
+      Alert.alert(t('common.error'), t('addExpense.errorSavingTemplate'));
     }
   };
 
@@ -322,21 +338,21 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
       // Si encontró datos con buena confianza, mostrar diálogo de confirmación
       if (data.confidence > 0.6 && (data.total || data.merchantName)) {
         const message = [
-          data.merchantName ? `📍 Lugar: ${data.merchantName}` : '',
-          data.total ? `💰 Total: ${data.total.toFixed(2)}€` : '',
-          data.date ? `📅 Fecha: ${data.date.toLocaleDateString()}` : '',
-          data.category ? `🏷️ Categoría sugerida: ${translateCategory(data.category as ExpenseCategory, currentLanguage.code as 'es' | 'en')}` : '',
-          data.items && data.items.length > 0 ? `\n📝 ${data.items.length} items detectados` : '',
+          data.merchantName ? t('addExpense.ocrPlace', { name: data.merchantName }) : '',
+          data.total ? t('addExpense.ocrTotal', { total: data.total.toFixed(2) + currentCurrency.symbol }) : '',
+          data.date ? t('addExpense.ocrDate', { date: data.date.toLocaleDateString() }) : '',
+          data.category ? t('addExpense.ocrCategory', { category: translateCategory(data.category as ExpenseCategory) }) : '',
+          data.items && data.items.length > 0 ? t('addExpense.ocrItemsDetected', { count: data.items.length }) : '',
         ].filter(Boolean).join('\n');
 
         // Si hay items detectados, preguntar si quiere dividirlos
         if (data.items && data.items.length > 1) {
           Alert.alert(
-            '🤖 Datos del recibo detectados',
-            message + '\n\n¿Quieres dividir los items entre participantes?',
+            t('addExpense.ocrDetectedTitle'),
+            message + '\n\n' + t('addExpense.ocrDivideItemsQuestion'),
             [
               {
-                text: 'No, usar total',
+                text: t('addExpense.ocrUseTotal'),
                 onPress: () => {
                   // Aplicar solo datos generales
                   if (data.total) setAmount(data.total.toString());
@@ -345,7 +361,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
                 },
               },
               {
-                text: 'Sí, dividir items',
+                text: t('addExpense.ocrDivideItems'),
                 onPress: () => {
                   // Aplicar datos y abrir división de items
                   if (data.merchantName && !description) setDescription(data.merchantName);
@@ -358,15 +374,15 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
         } else {
           // Sin items, mostrar diálogo normal
           Alert.alert(
-            '🤖 Datos del recibo detectados',
-            message + '\n\n¿Quieres usar estos datos?',
+            t('addExpense.ocrDetectedTitle'),
+            message + '\n\n' + t('addExpense.ocrUseDataQuestion'),
             [
               {
-                text: 'No, gracias',
+                text: t('addExpense.ocrNoThanks'),
                 style: 'cancel',
               },
               {
-                text: 'Sí, usar datos',
+                text: t('addExpense.ocrUseData'),
                 onPress: () => {
                   // Aplicar datos detectados
                   if (data.total) {
@@ -387,8 +403,8 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
         // Si solo encontró el total, aplicarlo directamente
         setAmount(data.total.toString());
         Alert.alert(
-          '✅ Total detectado',
-          `Se detectó un total de ${data.total.toFixed(2)}€`
+          t('addExpense.ocrTotalDetected'),
+          t('addExpense.ocrTotalDetectedMessage', { total: data.total.toFixed(2) + currentCurrency.symbol })
         );
       }
     } catch (error) {
@@ -406,7 +422,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
       if (status !== 'granted') {
         Alert.alert(
           t('common.error'),
-          'Necesitamos acceso a tus fotos para adjuntar recibos'
+          t('addExpense.photoPermissionNeeded')
         );
         return;
       }
@@ -427,7 +443,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
       }
     } catch (error) {
       console.error('Error picking image:', error);
-      Alert.alert(t('common.error'), 'Error al seleccionar la imagen');
+      Alert.alert(t('common.error'), t('addExpense.errorPickingImage'));
     }
   };
 
@@ -438,7 +454,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
       if (status !== 'granted') {
         Alert.alert(
           t('common.error'),
-          'Necesitamos acceso a tu cámara para tomar fotos de recibos'
+          t('addExpense.cameraPermissionNeeded')
         );
         return;
       }
@@ -458,7 +474,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
       }
     } catch (error) {
       console.error('Error taking photo:', error);
-      Alert.alert(t('common.error'), 'Error al tomar la foto');
+      Alert.alert(t('common.error'), t('addExpense.errorTakingPhoto'));
     }
   };
 
@@ -521,12 +537,12 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
       return;
     }
 
-    if (!isIndividualExpense && !paidBy) {
+    if (!paidBy) {
       Alert.alert(t('common.error'), t('addExpense.selectWhoPaid'));
       return;
     }
 
-    if (!isIndividualExpense && selectedBeneficiaries.length === 0) {
+    if (selectedBeneficiaries.length === 0) {
       Alert.alert(t('common.error'), t('addExpense.selectBeneficiaries'));
       return;
     }
@@ -543,7 +559,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
         const percentage = parseFloat(percentageSplits[beneficiaryId] || '0');
         const participant = participants.find(p => p.id === beneficiaryId);
         if (isNaN(percentage) || percentage <= 0 || percentage > 100) {
-          Alert.alert(t('common.error'), `El porcentaje de ${participant?.name || 'participante'} debe estar entre 0 y 100`);
+          Alert.alert(t('common.error'), t('addExpense.percentageInvalid', { name: participant?.name || 'participante' }));
           return;
         }
         percentageSplitsData[beneficiaryId] = percentage;
@@ -554,7 +570,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
       if (Math.abs(totalPercentage - 100) > 0.1) {
         Alert.alert(
           t('common.error'),
-          `La suma de porcentajes debe ser 100%. Actualmente es ${totalPercentage.toFixed(1)}%`
+          t('addExpense.percentageSumInvalid', { current: totalPercentage.toFixed(1) })
         );
         return;
       }
@@ -599,11 +615,11 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
         } catch (photoError) {
           console.error('❌ Error subiendo foto:', photoError);
           Alert.alert(
-            'Advertencia',
-            'No se pudo subir la foto del recibo, pero se guardará el gasto sin ella. ¿Deseas continuar?',
+            t('common.warning'),
+            t('addExpense.photoUploadFailedContinue'),
             [
-              { text: 'Cancelar', style: 'cancel', onPress: () => { setLoading(false); setUploadingPhoto(false); return; } },
-              { text: 'Continuar', onPress: () => { photoURL = undefined; } }
+              { text: t('common.cancel'), style: 'cancel', onPress: () => { setLoading(false); setUploadingPhoto(false); return; } },
+              { text: t('common.continue'), onPress: () => { photoURL = undefined; } }
             ]
           );
           return;
@@ -626,9 +642,9 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
           const { db } = firebaseModule;
           const { auth } = firebaseModule;
           
-          await addDoc(collection(db, 'expenses'), {
+          const expenseData: Record<string, any> = {
             userId: auth.currentUser?.uid || '',
-            paidBy: auth.currentUser?.uid || '',
+            paidBy: paidBy || auth.currentUser?.uid || '',
             amount: amountNum,
             description,
             category,
@@ -636,12 +652,16 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
             currency: currentCurrency.code,
             date: new Date(),
             createdAt: new Date(),
-            splitType: 'equal',
-            participantIds: [],
-            beneficiaries: [],
+            splitType,
+            participantIds: selectedBeneficiaries,
+            beneficiaries: selectedBeneficiaries,
             isIndividual: true,
-            receiptPhoto: photoURL
-          });
+          };
+          if (photoURL) {
+            expenseData.receiptPhoto = photoURL;
+          }
+          
+          await addDoc(collection(db, 'expenses'), expenseData);
           success = true;
         } catch (error) {
           console.error('Error creando gasto individual:', error);
@@ -750,7 +770,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
               activeOpacity={0.8}
             >
               <Text style={[styles.templatesButtonText, { color: theme.colors.primary }]}>
-                📝 Usar plantilla {templates.length > 0 && `(${templates.length})`}
+                {t('addExpense.useTemplate')} {templates.length > 0 && `(${templates.length})`}
               </Text>
             </TouchableOpacity>
           )}
@@ -864,7 +884,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
               <View style={styles.ocrAnalyzing}>
                 <ActivityIndicator size="small" color={theme.colors.primary} />
                 <Text style={styles.ocrAnalyzingText}>
-                  🔍 Analizando recibo con IA...
+                  {t('addExpense.analyzingReceipt')}
                 </Text>
               </View>
             )}
@@ -872,11 +892,11 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
             {ocrData && ocrData.confidence > 0.6 && (
               <View style={styles.ocrSuccess}>
                 <Text style={styles.ocrSuccessText}>
-                  ✨ Datos detectados automáticamente
+                  {t('addExpense.dataDetectedAutomatically')}
                 </Text>
                 {ocrData.items && ocrData.items.length > 0 && (
                   <Text style={styles.ocrItemsText}>
-                    📝 {ocrData.items.length} items encontrados
+                  {t('addExpense.itemsFound', { count: ocrData.items.length })}
                   </Text>
                 )}
               </View>
@@ -893,7 +913,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
                   {analyzingReceipt && (
                     <View style={styles.analyzingOverlay}>
                       <ActivityIndicator size="large" color="#FFFFFF" />
-                      <Text style={styles.analyzingText}>🔍 Analizando recibo...</Text>
+                      <Text style={styles.analyzingText}>{t('addExpense.analyzingReceiptShort')}</Text>
                     </View>
                   )}
                 </View>
@@ -903,7 +923,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
                   activeOpacity={0.7}
                 >
                   <Text style={styles.removePhotoIcon}>🗑️</Text>
-                  <Text style={styles.removePhotoText}>Quitar foto</Text>
+                  <Text style={styles.removePhotoText}>{t('addExpense.removePhoto')}</Text>
                 </TouchableOpacity>
               </View>
             ) : (
@@ -913,8 +933,8 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
                     <Text style={styles.receiptIcon}>📸</Text>
                   </View>
                   <View style={styles.receiptTitleContainer}>
-                    <Text style={styles.receiptTitle}>Foto del Recibo</Text>
-                    <Text style={styles.receiptSubtitle}>Escanea automáticamente con OCR</Text>
+                    <Text style={styles.receiptTitle}>{t('addExpense.receiptPhoto')}</Text>
+                    <Text style={styles.receiptSubtitle}>{t('addExpense.receiptOcrSubtitle')}</Text>
                   </View>
                 </View>
                 <View style={styles.receiptButtons}>
@@ -925,7 +945,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
                     activeOpacity={0.8}
                   >
                     <Text style={styles.photoButtonIcon}>📷</Text>
-                    <Text style={styles.photoButtonTextPrimary}>Tomar Foto</Text>
+                    <Text style={styles.photoButtonTextPrimary}>{t('addExpense.takePhoto')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity 
                     style={[styles.photoButton, styles.photoButtonSecondary]}
@@ -934,13 +954,13 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
                     activeOpacity={0.8}
                   >
                     <Text style={styles.photoButtonIcon}>🖼️</Text>
-                    <Text style={styles.photoButtonTextSecondary}>Desde Galería</Text>
+                    <Text style={styles.photoButtonTextSecondary}>{t('addExpense.fromGallery')}</Text>
                   </TouchableOpacity>
                 </View>
               </Card>
             )}
 
-            {!isIndividualExpense && (
+            {participants.length > 0 && (
               <>
                 <Text style={styles.label}>{transactionType === 'income' ? t('addExpense.whoReceived') : t('addExpense.whoPaidLabel')}</Text>
                 {participants.length === 0 ? (
@@ -971,9 +991,9 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
               </>
             )}
 
-            {!isIndividualExpense && (
+            {participants.length > 0 && (
               <>
-                <Text style={styles.label}>¿Cómo quieres dividir el gasto? *</Text>
+                <Text style={styles.label}>{t('addExpense.splitHowLabel')}</Text>
                 <View style={styles.splitTypeContainer}>
                   <View style={styles.splitTypeRow}>
                 <TouchableOpacity
@@ -990,7 +1010,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
                       splitType === 'equal' && styles.splitTypeTextActive,
                     ]}
                   >
-                    Partes iguales
+                    {t('addExpense.splitEqualLabel')}
                   </Text>
                 </TouchableOpacity>
                 
@@ -1008,7 +1028,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
                       splitType === 'percentage' && styles.splitTypeTextActive,
                     ]}
                   >
-                    Porcentaje
+                    {t('addExpense.splitPercentageLabel')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -1028,7 +1048,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
                       splitType === 'amount' && styles.splitTypeTextActive,
                     ]}
                   >
-                    Cantidad fija
+                    {t('addExpense.splitFixedAmount')}
                   </Text>
                 </TouchableOpacity>
                 
@@ -1046,7 +1066,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
                       splitType === 'custom' && styles.splitTypeTextActive,
                     ]}
                   >
-                    Personalizado
+                    {t('addExpense.splitCustomLabel')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -1066,7 +1086,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
                       splitType === 'items' && styles.splitTypeTextActive,
                     ]}
                   >
-                    Por items
+                    {t('addExpense.splitByItems')}
                   </Text>
                 </TouchableOpacity>
                 <View style={styles.splitTypeButtonPlaceholder} />
@@ -1075,20 +1095,20 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
 
                 <Text style={styles.label}>
                   {transactionType === 'income' ? t('addExpense.incomeBeneficiaries') : t('addExpense.beneficiariesTitle')} * 
-                  {splitType === 'equal' && ' (A partes iguales)'}
-                  {splitType === 'percentage' && ' (Por porcentaje)'}
-                  {splitType === 'amount' && ' (Cantidad fija por persona)'}
-                  {splitType === 'custom' && ' (Personalizado)'}
-                  {splitType === 'items' && ' (Por items)'}
+                  {splitType === 'equal' && ` ${t('addExpense.equalParenthesis')}`}
+                  {splitType === 'percentage' && ` ${t('addExpense.percentageParenthesis')}`}
+                  {splitType === 'amount' && ` ${t('addExpense.fixedAmountParenthesis')}`}
+                  {splitType === 'custom' && ` ${t('addExpense.customParenthesis')}`}
+                  {splitType === 'items' && ` ${t('addExpense.byItemsParenthesis')}`}
                 </Text>
                 
                 {splitType === 'percentage' && amount && (
                   <View style={styles.customSummary}>
                     <Text style={styles.customSummaryText}>
-                      💡 La suma de porcentajes debe ser 100%
+                      {t('addExpense.percentageSumHint')}
                     </Text>
                     <Text style={styles.customSummaryText}>
-                      Suma actual: {
+                      {t('addExpense.currentSum')} {
                         selectedBeneficiaries.reduce((sum, id) => {
                           return sum + parseFloat(percentageSplits[id] || '0');
                         }, 0).toFixed(1)
@@ -1100,10 +1120,10 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
                 {(splitType === 'custom' || splitType === 'amount') && amount && (
                   <View style={styles.customSummary}>
                     <Text style={styles.customSummaryText}>
-                      Total a dividir: €{parseFloat(amount || '0').toFixed(2)}
+                      {t('addExpense.totalToDivide')} {currentCurrency.symbol}{parseFloat(amount || '0').toFixed(2)}
                     </Text>
                     <Text style={styles.customSummaryText}>
-                      Suma actual: €{
+                      {t('addExpense.currentSum')} {currentCurrency.symbol}{
                         selectedBeneficiaries.reduce((sum, id) => {
                           return sum + parseFloat(customSplits[id] || '0');
                         }, 0).toFixed(2)
@@ -1296,8 +1316,8 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
             setSelectedBeneficiaries(Object.keys(splits));
             
             Alert.alert(
-              '✅ División completada',
-              `Items divididos entre ${Object.keys(splits).length} personas`
+              t('addExpense.itemSplitCompleted'),
+              t('addExpense.itemSplitCompletedMessage', { count: Object.keys(splits).length })
             );
           }}
         />
