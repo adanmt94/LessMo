@@ -19,7 +19,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../types';
 import { Button, Input, Card } from '../components/lovable';
-import { createGroup } from '../services/firebase';
+import { createGroup, addParticipant } from '../services/firebase';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -92,7 +92,7 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
   const handleAddMember = async () => {
     // NOMBRE es obligatorio
     if (!newMemberName.trim()) {
-      Alert.alert(t('common.error'), 'Por favor ingresa un nombre para el participante');
+      Alert.alert(t('common.error'), t('createGroup.participantNameRequired'));
       return;
     }
 
@@ -122,7 +122,7 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
           
           // Verificar si ya está en la lista
           if (members.some(m => m.id === userId)) {
-            Alert.alert(t('common.error'), 'Este usuario ya está en la lista');
+            Alert.alert(t('common.error'), t('createGroup.userAlreadyInList'));
             return;
           }
           
@@ -136,7 +136,7 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
       
       // Verificar si ya existe por nombre (para usuarios sin registro)
       if (members.some(m => m.name.toLowerCase() === userName.toLowerCase())) {
-        Alert.alert(t('common.error'), 'Ya existe un participante con ese nombre');
+        Alert.alert(t('common.error'), t('createGroup.participantAlreadyExists'));
         return;
       }
       
@@ -152,10 +152,10 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
       
       setNewMemberName('');
       setNewMemberEmail('');
-      Alert.alert('✅ Éxito', isEditMode ? 'Participante añadido al evento' : 'Participante añadido (se guardará al crear el evento)');
+      Alert.alert(t('common.success'), isEditMode ? t('createGroup.participantAdded') : t('createGroup.participantAddedPending'));
     } catch (error: any) {
       console.error('Error añadiendo participante:', error);
-      Alert.alert(t('common.error'), error.message || 'No se pudo añadir el participante');
+      Alert.alert(t('common.error'), error.message || t('createGroup.addParticipantError'));
     }
   };
 
@@ -165,17 +165,17 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
     
     // No permitir eliminar al creador
     if (group.createdBy === memberId) {
-      Alert.alert(t('common.error'), 'No puedes eliminar al creador del evento');
+      Alert.alert(t('common.error'), t('createGroup.cannotRemoveCreator'));
       return;
     }
     
     Alert.alert(
-      'Eliminar miembro',
-      `¿Estás seguro de eliminar a ${memberName} del evento?`,
+      t('createGroup.removeMember'),
+      t('createGroup.removeMemberConfirm', { name: memberName }),
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Eliminar',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -185,9 +185,9 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
               }
               
               setMembers(members.filter(m => m.id !== memberId));
-              Alert.alert('Éxito', 'Miembro eliminado correctamente');
+              Alert.alert(t('common.success'), t('createGroup.memberRemoved'));
             } catch (error: any) {
-              Alert.alert(t('common.error'), error.message || 'No se pudo eliminar el miembro');
+              Alert.alert(t('common.error'), error.message || t('createGroup.removeMemberError'));
             }
           }
         }
@@ -241,10 +241,47 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
           description,
           selectedColor,
           selectedIcon,
-          groupType, // Pasar el tipo seleccionado
-          budgetNumber, // Presupuesto
-          currency // Moneda
+          groupType,
+          budgetNumber,
+          currency
         );
+
+        // Add participants to the event that was auto-created
+        try {
+          const { getGroup } = await import('../services/firebase');
+          const group = await getGroup(newGroupId);
+          const targetEventId = group.defaultEventId || (group.eventIds && group.eventIds[0]);
+          
+          if (targetEventId) {
+            const budgetPerPerson = budgetNumber && members.length > 0 
+              ? budgetNumber / (members.length + 1) 
+              : 0;
+            
+            // Add creator as participant
+            await addParticipant(
+              targetEventId,
+              user!.displayName || user!.email?.split('@')[0] || t('eventDetail.user'),
+              budgetPerPerson,
+              user!.email || undefined,
+              user!.uid
+            );
+            
+            // Add each member as participant
+            for (const member of members) {
+              if (member.id !== user!.uid) {
+                await addParticipant(
+                  targetEventId,
+                  member.name,
+                  budgetPerPerson,
+                  member.email || undefined,
+                  member.id.startsWith('temp_') ? undefined : member.id
+                );
+              }
+            }
+          }
+        } catch (participantError) {
+          console.error('Error adding participants:', participantError);
+        }
 
         Alert.alert(
           t('common.success'),
@@ -294,8 +331,8 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
               <View style={styles.budgetHeader}>
                 <Text style={styles.budgetIcon}>💰</Text>
                 <View style={styles.budgetHeaderText}>
-                  <Text style={styles.budgetTitle}>¿Qué presupuesto grupal quieres añadir?</Text>
-                  <Text style={styles.budgetSubtitle}>Define el límite máximo para este evento</Text>
+                  <Text style={styles.budgetTitle}>{t('createGroup.budgetQuestion')}</Text>
+                  <Text style={styles.budgetSubtitle}>{t('createGroup.budgetSubtitle')}</Text>
                 </View>
               </View>
               
@@ -321,17 +358,17 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
                 </View>
                 
                 <Input
-                  label="Presupuesto máximo"
+                  label={t('createGroup.maxBudget')}
                   value={budget}
                   onChangeText={setBudget}
-                  placeholder="Ej: 1000 (Puede quedar en blanco)"
+                  placeholder={t('createGroup.budgetPlaceholder')}
                   keyboardType="numeric"
                   style={styles.budgetInput}
                 />
               </View>
               
               <Text style={styles.budgetHelp}>
-                💡 Puedes dejarlo en blanco si aún no lo sabes. Podrás editarlo después.
+                💡 {t('createGroup.budgetHelp')}
               </Text>
             </Card>
           )}
@@ -352,7 +389,7 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
               label={t('createGroup.descriptionLabel')}
               value={description}
               onChangeText={setDescription}
-              placeholder="Describe el evento..."
+              placeholder={t('createGroup.descriptionPlaceholder')}
               multiline
               numberOfLines={3}
               maxLength={200}
@@ -362,9 +399,9 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
           {/* Tipo de evento */}
           {!isEditMode && (
             <Card style={styles.section}>
-              <Text style={styles.sectionTitle}>Tipo de evento</Text>
+              <Text style={styles.sectionTitle}>{t('createGroup.eventType')}</Text>
               <Text style={styles.sectionSubtitle}>
-                Elige cómo organizar los gastos
+                {t('createGroup.chooseOrganization')}
               </Text>
               
               <View style={styles.typeContainer}>
@@ -380,10 +417,10 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
                     styles.typeTitle,
                     groupType === 'project' && styles.typeTitleSelected
                   ]}>
-                    Proyecto/Viaje
+                    {t('createGroup.projectTrip')}
                   </Text>
                   <Text style={styles.typeDescription}>
-                    Añade gastos específicos dentro del evento
+                    {t('createGroup.projectDescription')}
                   </Text>
                 </TouchableOpacity>
 
@@ -399,10 +436,10 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
                     styles.typeTitle,
                     groupType === 'recurring' && styles.typeTitleSelected
                   ]}>
-                    Gastos Recurrentes
+                    {t('createGroup.recurringExpenses')}
                   </Text>
                   <Text style={styles.typeDescription}>
-                    Añade gastos directamente (piso, pareja...)
+                    {t('createGroup.recurringDescription')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -452,9 +489,9 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
 
           {/* Gestión de participantes */}
           <Card style={styles.section}>
-            <Text style={styles.sectionTitle}>Participantes ({members.length})</Text>
+            <Text style={styles.sectionTitle}>{t('createGroup.participants')} ({members.length})</Text>
             <Text style={styles.sectionSubtitle}>
-              {isEditMode ? 'Gestiona los miembros del evento' : 'Añade participantes al evento (opcional)'}
+              {isEditMode ? t('createGroup.manageMembers') : t('createGroup.addParticipantsOptional')}
             </Text>
             
             {/* Añadir nuevo miembro */}
@@ -462,19 +499,19 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
               <View style={styles.inputRow}>
                 <View style={styles.inputColumn}>
                   <Input
-                    label="Nombre del participante *"
+                    label={t('createGroup.participantName')}
                     value={newMemberName}
                     onChangeText={setNewMemberName}
-                    placeholder="Ej: María"
+                    placeholder={t('createGroup.participantNamePlaceholder')}
                     autoCapitalize="words"
                   />
                 </View>
                 <View style={styles.inputColumn}>
                   <Input
-                    label="Email (opcional)"
+                    label={t('createGroup.emailOptional')}
                     value={newMemberEmail}
                     onChangeText={setNewMemberEmail}
-                    placeholder="email@ejemplo.com"
+                    placeholder={t('createGroup.emailPlaceholder')}
                     autoCapitalize="none"
                     keyboardType="email-address"
                   />
@@ -484,7 +521,7 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
                 style={styles.addMemberButton}
                 onPress={handleAddMember}
               >
-                <Text style={styles.addMemberButtonText}>+ Añadir</Text>
+                <Text style={styles.addMemberButtonText}>{t('createGroup.addButton')}</Text>
               </TouchableOpacity>
             </View>
               
@@ -519,9 +556,9 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
                 <Text style={styles.previewIconText}>{selectedIcon}</Text>
               </View>
               <View style={styles.previewInfo}>
-                <Text style={styles.previewName}>{groupName || 'Nombre del evento'}</Text>
+                <Text style={styles.previewName}>{groupName || t('createGroup.eventNameFallback')}</Text>
                 <Text style={styles.previewDescription}>
-                  {description || 'Sin descripción'}
+                  {description || t('createGroup.noDescription')}
                 </Text>
               </View>
             </View>

@@ -2,7 +2,7 @@
  * AddExpenseScreen - Pantalla para agregar gastos
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -80,22 +80,28 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
   const expenseHookResult = useExpenses(isIndividualExpense ? '__individual__' : eventId!);
   
   // For individual expenses, create a virtual participant from current user
-  const individualParticipant = isIndividualExpense && user ? {
-    id: user.uid,
-    name: user.displayName || user.email?.split('@')[0] || t('settings.user'),
-    eventId: 'individual',
-    individualBudget: 0,
-    currentBalance: 0,
-    joinedAt: new Date(),
-  } : null;
+  const individualParticipant = useMemo(() => 
+    isIndividualExpense && user ? {
+      id: user.uid,
+      name: user.displayName || user.email?.split('@')[0] || t('settings.user'),
+      eventId: 'individual',
+      individualBudget: 0,
+      currentBalance: 0,
+      joinedAt: new Date(),
+    } : null,
+    [isIndividualExpense, user?.uid, user?.displayName, user?.email]
+  );
   
-  const { participants, addExpense, editExpense, expenses, getRemainingBalance, getTotalExpenses } = isIndividualExpense 
-    ? { 
-        participants: individualParticipant ? [individualParticipant] : [], 
-        addExpense: null, editExpense: null, expenses: [], 
-        getRemainingBalance: () => 0, getTotalExpenses: () => 0 
-      }
-    : expenseHookResult;
+  const { participants, addExpense, editExpense, expenses, getRemainingBalance, getTotalExpenses } = useMemo(() => 
+    isIndividualExpense 
+      ? { 
+          participants: individualParticipant ? [individualParticipant] : [] as any[], 
+          addExpense: null, editExpense: null, expenses: [] as any[], 
+          getRemainingBalance: () => 0, getTotalExpenses: () => 0 
+        }
+      : expenseHookResult,
+    [isIndividualExpense, individualParticipant, expenseHookResult]
+  );
   const { currentCurrency } = useCurrency();
   
   const { notifyNewExpense } = useNotifications();
@@ -186,8 +192,8 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
         
         if (expense.splitType === 'custom' && expense.customSplits) {
           const splitsString: { [key: string]: string } = {};
-          Object.entries(expense.customSplits).forEach(([id, amount]) => {
-            splitsString[id] = amount.toString();
+          Object.entries(expense.customSplits).forEach(([id, amount]: [string, unknown]) => {
+            splitsString[id] = String(amount);
           });
           setCustomSplits(splitsString);
         }

@@ -1014,27 +1014,23 @@ export const createGroup = async (
     const docRef = await addDoc(collection(db, 'groups'), groupData);
     
     
-    // Si es tipo 'recurring', crear evento "General" automáticamente
-    if (type === 'recurring') {
-      try {
-        const defaultEventId = await createEvent(
-          'General', // Nombre fijo
-          0, // Sin presupuesto inicial
-          'EUR', // Currency
-          createdBy, // userId
-          'Gastos generales del evento', // Descripción
-          docRef.id // groupId
-        );
-        
-        // Actualizar evento con defaultEventId
-        await updateDoc(doc(db, 'groups', docRef.id), {
-          defaultEventId,
-          eventIds: [defaultEventId]
-        });
-      } catch (error) {
-        console.error('⚠️ Error creando evento General:', error);
-        // No fallar la creación del evento por esto
-      }
+    // Create default "General" event for all group types
+    try {
+      const defaultEventId = await createEvent(
+        'General',
+        budget || 0,
+        currency || 'EUR',
+        createdBy,
+        '',
+        docRef.id
+      );
+      
+      await updateDoc(doc(db, 'groups', docRef.id), {
+        defaultEventId,
+        eventIds: [defaultEventId]
+      });
+    } catch (error) {
+      console.error('⚠️ Error creating default event:', error);
     }
     
     return docRef.id;

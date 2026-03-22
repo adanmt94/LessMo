@@ -2,7 +2,7 @@
  * EventDetailScreen - Pantalla de detalle del evento con tabs
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -20,7 +20,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp, useFocusEffect } from '@react-navigation/native';
 import { RootStackParamList, Event, CurrencySymbols } from '../types';
 import { Button, Card, ExpenseItem, ParticipantItem } from '../components/lovable';
-import { getEvent } from '../services/firebase';
+import { getEvent, addParticipant } from '../services/firebase';
 import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { useExpenses } from '../hooks/useExpenses';
@@ -61,6 +61,10 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   const [typeFilter, setTypeFilter] = useState<'all' | 'expense' | 'income'>('all');
   const [userPhotos, setUserPhotos] = useState<{[userId: string]: string}>({});
   const [editParticipantsModalVisible, setEditParticipantsModalVisible] = useState(false);
+  const [newParticipantName, setNewParticipantName] = useState('');
+  const [newParticipantEmail, setNewParticipantEmail] = useState('');
+  const [addingParticipant, setAddingParticipant] = useState(false);
+  const hasMigratedRef = useRef(false);
   
   const {
     expenses,
@@ -94,8 +98,10 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
 
     
     
-    // Primero ejecutar migración
+    // Primero ejecutar migración (solo una vez)
     const migrateAndLoadPhotos = async () => {
+      if (hasMigratedRef.current) return;
+      hasMigratedRef.current = true;
       // Migrar participantes sin userId pero con email que coincide con usuarios
       try {
         const { collection, query, where, getDocs, updateDoc } = await import('firebase/firestore');
@@ -237,7 +243,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
       const eventData = await getEvent(eventId);
       setEvent(eventData);
     } catch (error) {
-      Alert.alert('Error', 'No se pudo cargar el evento');
+      Alert.alert(t('common.error'), t('eventDetail.loadError'));
     }
   };
 
@@ -250,10 +256,13 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   const handleEditEvent = () => {
-    navigation.navigate('CreateEvent', { 
-      eventId: eventId, 
-      mode: 'edit' 
-    });
+    const groupId = event?.groupId;
+    if (groupId) {
+      navigation.navigate('CreateGroup', { 
+        groupId, 
+        mode: 'edit' 
+      });
+    }
   };
 
   const handleDeleteEvent = () => {
@@ -291,7 +300,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
     if (!event || !user) return;
     
     try {
-      const userName = user.displayName || user.email?.split('@')[0] || 'Usuario';
+      const userName = user.displayName || user.email?.split('@')[0] || t('eventDetail.user');
       
       const success = await shareEvent({
         eventId: event.id,
@@ -307,17 +316,23 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
           creatorName: userName,
         });
         
-        const message = `🎉 ¡Únete a "${event.name}"!\n\n💰 Presupuesto: ${event.initialBudget} ${CurrencySymbols[event.currency]}\n\n👤 Creado por: ${userName}\n\n🔗 ${deepLink}\n\nDescarga LessMo para gestionar gastos compartidos`;
+        const message = t('eventDetail.shareMessage', {
+          name: event.name,
+          budget: event.initialBudget,
+          currency: CurrencySymbols[event.currency],
+          creator: userName,
+          link: deepLink,
+        });
 
         await Share.share({
           message: message,
-          title: `Invitación a ${event.name}`,
+          title: t('eventDetail.shareTitle', { name: event.name }),
         });
       }
     } catch (error: any) {
       if (error.message !== 'User did not share') {
         console.error('Error sharing event:', error);
-        Alert.alert('Error', 'No se pudo compartir el evento');
+        Alert.alert(t('common.error'), t('eventDetail.shareError'));
       }
     }
   };
@@ -353,7 +368,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
     return (
       <View style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text>Cargando...</Text>
+          <Text>{t('common.loading')}</Text>
         </View>
       </View>
     );
@@ -550,18 +565,18 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
               const efficiency = calculateGroupEfficiency(event, expenses, participants);
               
               Alert.alert(
-                `${efficiency.badge} Análisis Completo`,
-                `📊 Eficiencia del evento: ${efficiency.level} (${efficiency.score}/100)\n\n` +
+                t('eventDetail.fullAnalysis', { badge: efficiency.badge }),
+                `${t('eventDetail.eventEfficiency')} ${efficiency.level} (${efficiency.score}/100)\n\n` +
                 `${comparison.message}\n\n` +
-                `💡 Consejos:\n${efficiency.tips.map(tip => `• ${tip}`).join('\n')}`,
-                [{ text: 'Entendido' }]
+                `${t('eventDetail.tips')}\n${efficiency.tips.map(tip => `• ${tip}`).join('\n')}`,
+                [{ text: t('eventDetail.understood') }]
               );
             }}
           />
         )}
 
         <Button
-          title="Ver gráficos y liquidaciones"
+          title={t('eventDetail.viewChartsSettlements')}
           onPress={() => navigation.navigate('Summary', { eventId })}
           variant="outline"
           fullWidth
@@ -574,9 +589,9 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
     try {
       const { exportExpensesToExcel } = await import('../utils/exportUtils');
       await exportExpensesToExcel(event, expenses, participants);
-      Alert.alert('Éxito', 'Los datos han sido exportados correctamente');
+      Alert.alert(t('common.success'), t('eventDetail.exportSuccess'));
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'No se pudo exportar el archivo');
+      Alert.alert(t('common.error'), error.message || t('eventDetail.exportError'));
     }
   };
 
@@ -747,7 +762,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
           <View style={[styles.modalContent, { backgroundColor: theme.colors.card }]}>
             <View style={[styles.modalHeader, { borderBottomColor: theme.colors.border }]}>
               <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
-                ✏️ Editar Participantes
+                {t('eventDetail.editParticipants')}
               </Text>
               <TouchableOpacity
                 onPress={() => setEditParticipantsModalVisible(false)}
@@ -758,12 +773,61 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
             </View>
 
             <ScrollView style={styles.modalBody}>
-              <Text style={[styles.modalDescription, { color: theme.colors.textSecondary }]}>
-                Para agregar o quitar participantes del evento, ve a la pantalla de edición completa.
-              </Text>
-              
+              {/* Add participant form */}
               <Text style={[styles.modalSectionTitle, { color: theme.colors.text }]}>
-                Participantes Actuales ({participants.length})
+                {t('eventDetail.addParticipant')}
+              </Text>
+              <View style={styles.addParticipantForm}>
+                <TextInput
+                  style={[styles.modalInput, { backgroundColor: theme.colors.background, color: theme.colors.text, borderColor: theme.colors.border }]}
+                  placeholder={t('auth.namePlaceholder')}
+                  placeholderTextColor={theme.colors.textSecondary}
+                  value={newParticipantName}
+                  onChangeText={setNewParticipantName}
+                />
+                <TextInput
+                  style={[styles.modalInput, { backgroundColor: theme.colors.background, color: theme.colors.text, borderColor: theme.colors.border }]}
+                  placeholder={t('auth.emailPlaceholder')}
+                  placeholderTextColor={theme.colors.textSecondary}
+                  value={newParticipantEmail}
+                  onChangeText={setNewParticipantEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+                <TouchableOpacity
+                  style={[styles.addParticipantButton, { backgroundColor: theme.colors.primary }]}
+                  onPress={async () => {
+                    if (!newParticipantName.trim()) {
+                      Alert.alert(t('common.error'), t('createGroup.memberNameRequired'));
+                      return;
+                    }
+                    setAddingParticipant(true);
+                    try {
+                      await addParticipant(
+                        eventId,
+                        newParticipantName.trim(),
+                        0,
+                        newParticipantEmail.trim() || undefined
+                      );
+                      setNewParticipantName('');
+                      setNewParticipantEmail('');
+                      await loadData();
+                    } catch (error: any) {
+                      Alert.alert(t('common.error'), error.message);
+                    } finally {
+                      setAddingParticipant(false);
+                    }
+                  }}
+                  disabled={addingParticipant}
+                >
+                  <Text style={styles.addParticipantButtonText}>
+                    {addingParticipant ? t('common.loading') : t('eventDetail.addParticipant')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              
+              <Text style={[styles.modalSectionTitle, { color: theme.colors.text, marginTop: 16 }]}>
+                {t('eventDetail.participantsTab')} ({participants.length})
               </Text>
               
               {participants.map((participant) => (
@@ -789,23 +853,11 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
 
             <View style={[styles.modalFooter, { borderTopColor: theme.colors.border }]}>
               <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonSecondary, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+                style={[styles.modalButton, styles.modalButtonPrimary, { backgroundColor: theme.colors.primary }]}
                 onPress={() => setEditParticipantsModalVisible(false)}
               >
-                <Text style={[styles.modalButtonText, { color: theme.colors.text }]}>
-                  Cancelar
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonPrimary, { backgroundColor: theme.colors.primary }]}
-                onPress={() => {
-                  setEditParticipantsModalVisible(false);
-                  handleEditEvent();
-                }}
-              >
                 <Text style={[styles.modalButtonText, { color: theme.colors.card }]}>
-                  Ir a Editar
+                  {t('common.ok')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -1181,6 +1233,28 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   modalParticipantEmail: {
     fontSize: 13,
+  },
+  addParticipantForm: {
+    gap: 10,
+    marginBottom: 8,
+  },
+  modalInput: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    fontSize: 15,
+  },
+  addParticipantButton: {
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addParticipantButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
   },
   modalFooter: {
     flexDirection: 'row',
