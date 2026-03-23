@@ -92,16 +92,19 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
     [isIndividualExpense, user?.uid, user?.displayName, user?.email]
   );
   
-  const { participants, addExpense, editExpense, expenses, getRemainingBalance, getTotalExpenses } = useMemo(() => 
+  // Stable references: destructure hook values directly, only override for individual mode
+  const participants = useMemo(() => 
     isIndividualExpense 
-      ? { 
-          participants: individualParticipant ? [individualParticipant] : [] as any[], 
-          addExpense: null, editExpense: null, expenses: [] as any[], 
-          getRemainingBalance: () => 0, getTotalExpenses: () => 0 
-        }
-      : expenseHookResult,
-    [isIndividualExpense, individualParticipant, expenseHookResult]
+      ? (individualParticipant ? [individualParticipant] : [])
+      : expenseHookResult.participants,
+    [isIndividualExpense, individualParticipant, expenseHookResult.participants]
   );
+  
+  const addExpense = isIndividualExpense ? null : expenseHookResult.addExpense;
+  const editExpense = isIndividualExpense ? null : expenseHookResult.editExpense;
+  const expenses = isIndividualExpense ? ([] as any[]) : expenseHookResult.expenses;
+  const getRemainingBalance = isIndividualExpense ? (() => 0) : expenseHookResult.getRemainingBalance;
+  const getTotalExpenses = isIndividualExpense ? (() => 0) : expenseHookResult.getTotalExpenses;
   const { currentCurrency } = useCurrency();
   
   const { notifyNewExpense } = useNotifications();
@@ -201,6 +204,9 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
     }
   }, [isEditMode, expenseId, expenses]);
 
+  // Stable participant IDs for dependency tracking
+  const participantIds = useMemo(() => participants.map(p => p.id).join(','), [participants]);
+  
   useEffect(() => {
     
     if (participants.length > 0 && !isEditMode) {
@@ -217,7 +223,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
       });
       setCustomSplits(initialSplits);
     }
-  }, [participants, isEditMode]);
+  }, [participantIds, isEditMode]);
 
   const toggleBeneficiary = (participantId: string) => {
     if (selectedBeneficiaries.includes(participantId)) {

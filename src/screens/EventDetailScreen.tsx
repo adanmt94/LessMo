@@ -2,7 +2,7 @@
  * EventDetailScreen - Pantalla de detalle del evento con tabs
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -92,36 +92,29 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
     }, [eventId])
   );
 
-  // Migrar participantes y cargar fotos cuando cambien los participantes
-  useEffect(() => {
-    if (participants.length === 0) return;
+  // Stable serialized key for participant user IDs (for snapshot listeners)
+  const participantUserIds = useMemo(() => 
+    participants.filter(p => p.userId).map(p => p.userId!).sort().join(','),
+    [participants]
+  );
 
-    
-    
-    // Primero ejecutar migración (solo una vez)
-    const migrateAndLoadPhotos = async () => {
-      if (hasMigratedRef.current) return;
-      hasMigratedRef.current = true;
-      // Migrar participantes sin userId pero con email que coincide con usuarios
+  // Migration effect — runs once when participants first load
+  useEffect(() => {
+    if (participants.length === 0 || hasMigratedRef.current) return;
+    hasMigratedRef.current = true;
+
+    const migrateParticipants = async () => {
       try {
         const { collection, query, where, getDocs, updateDoc } = await import('firebase/firestore');
         
         let needsReload = false;
         
-        
-        participants.forEach((p, i) => {
-          
-        });
-        
         for (const participant of participants) {
-          // Solo procesar participantes sin userId
           if (!participant.userId) {
             try {
               let usersSnapshot = null;
               
-              // Estrategia 1: Buscar por email si existe
               if (participant.email) {
-                
                 const usersQuery = query(
                   collection(db, 'users'),
                   where('email', '==', participant.email.toLowerCase())
@@ -129,34 +122,23 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
                 usersSnapshot = await getDocs(usersQuery);
               }
               
-              // Estrategia 2: Si no hay email o no se encontró, buscar por nombre
               if (!usersSnapshot || usersSnapshot.empty) {
-                
-                
-                // Obtener todos los usuarios y buscar coincidencia por nombre
                 const allUsersSnapshot = await getDocs(collection(db, 'users'));
                 const normalizeString = (str: string) => 
                   str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
                 
                 const participantNameNormalized = normalizeString(participant.name);
                 
-                // Buscar coincidencia exacta o parcial
                 const matchingUsers = allUsersSnapshot.docs.filter(userDoc => {
                   const userData = userDoc.data();
                   const userName = userData.name || userData.email?.split('@')[0] || '';
                   const userNameNormalized = normalizeString(userName);
-                  
-                  // Coincidencia: nombre contiene el nombre del participante o viceversa
                   return userNameNormalized.includes(participantNameNormalized) || 
                          participantNameNormalized.includes(userNameNormalized);
                 });
                 
                 if (matchingUsers.length > 0) {
-                  
-                  usersSnapshot = { 
-                    empty: false, 
-                    docs: matchingUsers 
-                  } as any;
+                  usersSnapshot = { empty: false, docs: matchingUsers } as any;
                 }
               }
               
@@ -164,52 +146,40 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
                 const userData = usersSnapshot.docs[0].data();
                 const userId = usersSnapshot.docs[0].id;
                 
-                
-                
-                // Actualizar participante con userId y photoURL
-                const updateData: any = { 
-                  userId,
-                  email: userData.email // También guardar el email
-                };
+                const updateData: any = { userId, email: userData.email };
                 if (userData.photoURL) {
                   updateData.photoURL = userData.photoURL;
                 }
                 
-                await updateDoc(
-                  doc(db, 'participants', participant.id),
-                  updateData
-                );
-                
-                
+                await updateDoc(doc(db, 'participants', participant.id), updateData);
                 needsReload = true;
-              } else {
-                
               }
             } catch (error) {
-              
+              // Skip individual participant migration errors
             }
           }
         }
         
-        // Si se actualizó algún participante, recargar datos
         if (needsReload) {
-          
           await loadData();
         }
       } catch (error) {
-        
+        // Migration failed silently
       }
     };
 
-    migrateAndLoadPhotos();
+    migrateParticipants();
+  }, [participants.length]);
+
+  // Snapshot listeners for participant photo updates — keyed on stable user IDs
+  useEffect(() => {
+    if (!participantUserIds) return;
 
     const unsubscribers: (() => void)[] = [];
     
-    // Crear un listener para cada usuario
-    participants.forEach(participant => {
-      if (participant.userId) {
-        const userDocRef = doc(db, 'users', participant.userId);
-        
+    participantUserIds.split(',').forEach(userId => {
+      if (userId) {
+        const userDocRef = doc(db, 'users', userId);
         const unsubscribe = onSnapshot(
           userDocRef,
           (docSnapshot) => {
@@ -218,25 +188,21 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
               if (userData.photoURL) {
                 setUserPhotos(prev => ({
                   ...prev,
-                  [participant.userId!]: userData.photoURL
+                  [userId]: userData.photoURL
                 }));
               }
             }
           },
-          (error) => {
-            
-          }
+          () => {} // Ignore snapshot errors
         );
-        
         unsubscribers.push(unsubscribe);
       }
     });
 
-    // Cleanup: cancelar todos los listeners cuando el componente se desmonte
     return () => {
       unsubscribers.forEach(unsubscribe => unsubscribe());
     };
-  }, [participants]);
+  }, [participantUserIds]);
 
   const loadEvent = async () => {
     try {

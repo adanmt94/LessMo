@@ -47,7 +47,7 @@ export function AchievementsScreen({ navigation, route }: Props) {
 
   useEffect(() => {
     loadData();
-  }, [eventId, participantId, expenses, participants]);
+  }, [eventId, participantId, expenses.length, participants.length]);
 
   const loadData = async () => {
     try {
