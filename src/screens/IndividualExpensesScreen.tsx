@@ -3,7 +3,7 @@
  * Muestra los gastos que no están asociados a ningún evento
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,12 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Alert,
+  Animated,
+  ActionSheetIOS,
+  Platform,
 } from 'react-native';
+import { Swipeable } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
@@ -20,7 +25,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../hooks/useAuth';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { Expense, RootStackParamList, AllCategoryLabels } from '../types';
 import { format } from 'date-fns';
@@ -83,6 +88,64 @@ export const IndividualExpensesScreen: React.FC = () => {
     loadIndividualExpenses();
   };
 
+  const handleDeleteExpense = useCallback(async (expenseId: string) => {
+    Alert.alert(
+      t('common.confirm'),
+      t('eventDetail.deleteExpenseConfirm'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('common.delete'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteDoc(doc(db, 'expenses', expenseId));
+              setExpenses(prev => prev.filter(e => e.id !== expenseId));
+            } catch (error) {
+              Alert.alert(t('common.error'), 'No se pudo eliminar el gasto');
+            }
+          },
+        },
+      ]
+    );
+  }, [t]);
+
+  const handleEditExpense = useCallback((expenseId: string) => {
+    navigation.navigate('AddExpense', {
+      eventId: 'individual',
+      expenseId,
+      mode: 'edit',
+    });
+  }, [navigation]);
+
+  const handleLongPress = useCallback((item: Expense) => {
+    const options = [
+      t('common.edit'),
+      t('common.delete'),
+      t('common.cancel'),
+    ];
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options,
+          destructiveButtonIndex: 1,
+          cancelButtonIndex: 2,
+          title: item.description || item.name,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 0) handleEditExpense(item.id);
+          if (buttonIndex === 1) handleDeleteExpense(item.id);
+        }
+      );
+    } else {
+      Alert.alert(item.description || item.name, '', [
+        { text: t('common.edit'), onPress: () => handleEditExpense(item.id) },
+        { text: t('common.delete'), style: 'destructive', onPress: () => handleDeleteExpense(item.id) },
+        { text: t('common.cancel'), style: 'cancel' },
+      ]);
+    }
+  }, [handleEditExpense, handleDeleteExpense, t]);
+
   const formatCurrency = (amount: number, currency: string = 'EUR') => {
     return new Intl.NumberFormat('es-ES', {
       style: 'currency',
@@ -99,10 +162,82 @@ export const IndividualExpensesScreen: React.FC = () => {
     }
   };
 
+  const renderRightActions = (expenseId: string) => (
+    progress: Animated.AnimatedInterpolation<number>,
+    dragX: Animated.AnimatedInterpolation<number>
+  ) => {
+    const trans = dragX.interpolate({
+      inputRange: [-80, 0],
+      outputRange: [0, 80],
+      extrapolate: 'clamp',
+    });
+    return (
+      <TouchableOpacity
+        style={{
+          backgroundColor: '#EF4444',
+          justifyContent: 'center',
+          alignItems: 'center',
+          width: 80,
+          borderTopRightRadius: 16,
+          borderBottomRightRadius: 16,
+          marginBottom: 12,
+        }}
+        onPress={() => handleDeleteExpense(expenseId)}
+      >
+        <Animated.View style={{ transform: [{ translateX: trans }], alignItems: 'center' }}>
+          <Text style={{ fontSize: 22 }}>🗑️</Text>
+          <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '600', marginTop: 4 }}>{t('common.delete')}</Text>
+        </Animated.View>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderLeftActions = (expenseId: string) => (
+    progress: Animated.AnimatedInterpolation<number>,
+    dragX: Animated.AnimatedInterpolation<number>
+  ) => {
+    const trans = dragX.interpolate({
+      inputRange: [0, 80],
+      outputRange: [-80, 0],
+      extrapolate: 'clamp',
+    });
+    return (
+      <TouchableOpacity
+        style={{
+          backgroundColor: theme.colors.primary,
+          justifyContent: 'center',
+          alignItems: 'center',
+          width: 80,
+          borderTopLeftRadius: 16,
+          borderBottomLeftRadius: 16,
+          marginBottom: 12,
+        }}
+        onPress={() => handleEditExpense(expenseId)}
+      >
+        <Animated.View style={{ transform: [{ translateX: trans }], alignItems: 'center' }}>
+          <Text style={{ fontSize: 22 }}>✏️</Text>
+          <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '600', marginTop: 4 }}>{t('common.edit')}</Text>
+        </Animated.View>
+      </TouchableOpacity>
+    );
+  };
+
   const renderExpenseItem = ({ item }: { item: Expense }) => {
     const isIncome = item.type === 'income';
     return (
-    <TouchableOpacity style={styles.expenseCard} activeOpacity={0.7}>
+    <Swipeable
+      renderRightActions={renderRightActions(item.id)}
+      renderLeftActions={renderLeftActions(item.id)}
+      overshootRight={false}
+      overshootLeft={false}
+    >
+    <TouchableOpacity
+      style={styles.expenseCard}
+      activeOpacity={0.7}
+      onPress={() => handleEditExpense(item.id)}
+      onLongPress={() => handleLongPress(item)}
+      delayLongPress={400}
+    >
       <View style={styles.expenseHeader}>
         <View style={styles.expenseIconContainer}>
           <Text style={styles.expenseIcon}>{isIncome ? '📈' : '💰'}</Text>
@@ -123,6 +258,7 @@ export const IndividualExpensesScreen: React.FC = () => {
         </View>
       )}
     </TouchableOpacity>
+    </Swipeable>
     );
   };
 

@@ -6,6 +6,9 @@ import Constants from 'expo-constants';
 import { initializeApp } from 'firebase/app';
 import { 
   getAuth,
+  initializeAuth,
+  // @ts-ignore - exported via react-native condition in @firebase/auth
+  getReactNativePersistence,
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
@@ -17,6 +20,7 @@ import {
   signInAnonymously as firebaseSignInAnonymously,
   sendPasswordResetEmail
 } from 'firebase/auth';
+import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 import { 
   getFirestore, 
   collection, 
@@ -72,8 +76,10 @@ try {
   app = initializeApp(firebaseConfig);
   
   
-  // Step 2: Auth
-  authInstance = getAuth(app);
+  // Step 2: Auth (with AsyncStorage persistence for React Native)
+  authInstance = initializeAuth(app, {
+    persistence: getReactNativePersistence(ReactNativeAsyncStorage)
+  });
   
   
   // Step 3: DB

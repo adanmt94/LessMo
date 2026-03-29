@@ -20,7 +20,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp, useFocusEffect } from '@react-navigation/native';
 import { RootStackParamList, Event, CurrencySymbols } from '../types';
 import { Button, Card, ExpenseItem, ParticipantItem } from '../components/lovable';
-import { getEvent, addParticipant } from '../services/firebase';
+import { getEvent, addParticipant, deleteParticipant } from '../services/firebase';
 import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { useExpenses } from '../hooks/useExpenses';
@@ -813,6 +813,32 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
                       </Text>
                     )}
                   </View>
+                  <TouchableOpacity
+                    style={{ padding: 8, marginLeft: 'auto' }}
+                    onPress={() => {
+                      Alert.alert(
+                        t('common.delete'),
+                        `${t('common.delete')} ${participant.name}?`,
+                        [
+                          { text: t('common.cancel'), style: 'cancel' },
+                          {
+                            text: t('common.delete'),
+                            style: 'destructive',
+                            onPress: async () => {
+                              try {
+                                await deleteParticipant(participant.id);
+                                loadData();
+                              } catch (e) {
+                                Alert.alert('Error', String(e));
+                              }
+                            },
+                          },
+                        ]
+                      );
+                    }}
+                  >
+                    <Text style={{ color: '#EF4444', fontSize: 20 }}>✕</Text>
+                  </TouchableOpacity>
                 </View>
               ))}
             </ScrollView>

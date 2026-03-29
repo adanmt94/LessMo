@@ -19,6 +19,7 @@ interface ExpenseItemProps {
   currency: Currency;
   onPress?: () => void;
   onDelete?: () => void;
+  onEdit?: () => void;
 }
 
 const ExpenseItemComponent: React.FC<ExpenseItemProps> = ({
@@ -28,6 +29,7 @@ const ExpenseItemComponent: React.FC<ExpenseItemProps> = ({
   currency,
   onPress,
   onDelete,
+  onEdit,
 }) => {
   const { theme } = useTheme();
   const { t } = useLanguage();
@@ -91,6 +93,38 @@ const ExpenseItemComponent: React.FC<ExpenseItemProps> = ({
     );
   };
 
+  const renderLeftActions = (
+    progress: Animated.AnimatedInterpolation<number>,
+    dragX: Animated.AnimatedInterpolation<number>
+  ) => {
+    const trans = dragX.interpolate({
+      inputRange: [0, 100],
+      outputRange: [-100, 0],
+      extrapolate: 'clamp',
+    });
+
+    if (!onEdit) return null;
+
+    return (
+      <TouchableOpacity
+        style={styles.editButton}
+        onPress={onEdit}
+      >
+        <Animated.View
+          style={[
+            styles.deleteButtonInner,
+            {
+              transform: [{ translateX: trans }],
+            },
+          ]}
+        >
+          <Text style={styles.deleteButtonText}>✏️</Text>
+          <Text style={styles.editButtonLabel}>{t('common.edit')}</Text>
+        </Animated.View>
+      </TouchableOpacity>
+    );
+  };
+
   const content = (
     <TouchableOpacity onPress={onPress} activeOpacity={0.7} disabled={!onPress}>
       <Card style={styles.card}>
@@ -142,11 +176,13 @@ const ExpenseItemComponent: React.FC<ExpenseItemProps> = ({
     </TouchableOpacity>
   );
 
-  if (onDelete) {
+  if (onDelete || onEdit) {
     return (
       <Swipeable
-        renderRightActions={renderRightActions}
+        renderRightActions={onDelete ? renderRightActions : undefined}
+        renderLeftActions={onEdit ? renderLeftActions : undefined}
         overshootRight={false}
+        overshootLeft={false}
         friction={2}
       >
         {content}
@@ -246,6 +282,14 @@ const getStyles = (theme: any) => StyleSheet.create({
     marginBottom: 12,
     borderRadius: 12,
   },
+  editButton: {
+    backgroundColor: theme.colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 100,
+    marginBottom: 12,
+    borderRadius: 12,
+  },
   deleteButtonInner: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -256,6 +300,11 @@ const getStyles = (theme: any) => StyleSheet.create({
     marginBottom: 4,
   },
   deleteButtonLabel: {
+    color: theme.colors.card,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  editButtonLabel: {
     color: theme.colors.card,
     fontSize: 12,
     fontWeight: '600',
