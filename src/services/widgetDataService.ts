@@ -103,8 +103,8 @@ export async function updateWidgetData(userId: string): Promise<void> {
 
   try {
     // Importar servicios dinámicamente para evitar ciclos
-    const { getUserEventsByStatus, getEventExpenses } = await import('./firebase');
-    const { collection: firestoreCollection, query: firestoreQuery, where: firestoreWhere, getDocs: firestoreGetDocs } = await import('firebase/firestore');
+    const { getUserEventsByStatus, getEventExpenses, getEventParticipants } = await import('./firebase');
+    const { collection: firestoreCollection, query: firestoreQuery, where: firestoreWhere, getDocs: firestoreGetDocs, orderBy: firestoreOrderBy } = await import('firebase/firestore');
     const { db } = await import('./firebase');
     
     // Obtener eventos del usuario
@@ -125,17 +125,38 @@ export async function updateWidgetData(userId: string): Promise<void> {
           totalBudget += event.budget;
         }
         
+        // Obtener participantes para encontrar el ID de participante del usuario
+        const participants = await getEventParticipants(event.id);
+        const userParticipant = participants.find(p => p.userId === userId);
+        if (!userParticipant) continue; // El usuario no es participante de este evento
+        
+        const participantId = userParticipant.id;
+        
         // Calcular balance basándose en gastos del evento
         const expenses = await getEventExpenses(event.id);
+        
+        // Lo que el usuario PAGÓ (paidBy usa participant doc ID)
         const userPaid = expenses
-          .filter(e => e.paidBy === userId)
+          .filter(e => e.paidBy === participantId)
           .reduce((sum, e) => sum + e.amount, 0);
+        
+        // Lo que el usuario DEBE (su parte de cada gasto)
         const userOwes = expenses
-          .filter(e => (e.beneficiaries || e.participantIds || []).includes(userId))
+          .filter(e => (e.participantIds || []).includes(participantId))
           .reduce((sum, e) => {
-            const beneficiaries = e.beneficiaries || e.participantIds || [];
-            return sum + (e.amount / beneficiaries.length);
+            // Respetar el tipo de split
+            if (e.splitType === 'percentage' && e.percentageSplits) {
+              const pct = e.percentageSplits[participantId] || 0;
+              return sum + (e.amount * pct / 100);
+            }
+            if ((e.splitType === 'custom' || e.splitType === 'amount') && e.customSplits) {
+              return sum + (e.customSplits[participantId] || 0);
+            }
+            // equal split (default)
+            const parts = (e.participantIds || []).length;
+            return sum + (parts > 0 ? e.amount / parts : 0);
           }, 0);
+        
         totalSpentInEvents += userOwes;
         const eventBalance = userPaid - userOwes;
         totalBalance += eventBalance;
@@ -174,18 +195,21 @@ export async function updateWidgetData(userId: string): Promise<void> {
       }
     }
     
-    // Obtener gastos individuales del usuario
+    // Obtener gastos individuales del usuario (sin eventId, paidBy = auth UID)
     let individualIncome = 0;
     let individualExpenseTotal = 0;
     try {
       const individualQuery = firestoreQuery(
         firestoreCollection(db, 'expenses'),
-        firestoreWhere('userId', '==', userId),
-        firestoreWhere('isIndividual', '==', true)
+        firestoreWhere('paidBy', '==', userId),
+        firestoreOrderBy('createdAt', 'desc')
       );
       const individualSnap = await firestoreGetDocs(individualQuery);
       individualSnap.docs.forEach(doc => {
         const data = doc.data();
+        // Solo procesar gastos individuales (sin eventId)
+        if (data.eventId) return;
+        
         const expenseDate = data.date?.toDate ? data.date.toDate() : new Date(data.date);
         const amount = data.amount || 0;
         

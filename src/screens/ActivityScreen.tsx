@@ -22,7 +22,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useCurrency } from '../context/CurrencyContext';
-import { collection, query, where, limit, getDocs } from 'firebase/firestore';
+import { collection, query, where, limit, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { Gradients, Spacing, Radius, Shadows, Typography } from '../theme/designSystem';
 import * as Haptics from 'expo-haptics';
@@ -93,7 +93,7 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
   const loadDashboard = async () => {
     if (!user) return;
     try {
-      const { getUserEventsByStatus, getEventExpenses } = await import('../services/firebase');
+      const { getUserEventsByStatus, getEventExpenses, getEventParticipants } = await import('../services/firebase');
 
       const userEvents = await getUserEventsByStatus(user.uid);
       const activeEvents = userEvents.filter(e => e.status === 'active');
@@ -107,16 +107,35 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
       for (const event of activeEvents) {
         try {
           if (event.budget) totalBudget += event.budget;
+          
+          // Buscar el participant ID del usuario en este evento
+          const participants = await getEventParticipants(event.id);
+          const userParticipant = participants.find(p => p.userId === user.uid);
+          if (!userParticipant) continue;
+          
+          const pid = userParticipant.id;
           const expenses = await getEventExpenses(event.id);
+          
+          // Lo que el usuario PAGÓ (paidBy = participant doc ID)
           const userPaid = expenses
-            .filter(e => e.paidBy === user.uid)
+            .filter(e => e.paidBy === pid)
             .reduce((sum, e) => sum + e.amount, 0);
+          
+          // Lo que el usuario DEBE (su parte según tipo de split)
           const userOwes = expenses
-            .filter(e => (e.beneficiaries || e.participantIds || []).includes(user.uid))
+            .filter(e => (e.participantIds || []).includes(pid))
             .reduce((sum, e) => {
-              const bens = e.beneficiaries || e.participantIds || [];
-              return sum + (e.amount / bens.length);
+              if (e.splitType === 'percentage' && e.percentageSplits) {
+                const pct = e.percentageSplits[pid] || 0;
+                return sum + (e.amount * pct / 100);
+              }
+              if ((e.splitType === 'custom' || e.splitType === 'amount') && e.customSplits) {
+                return sum + (e.customSplits[pid] || 0);
+              }
+              const parts = (e.participantIds || []).length;
+              return sum + (parts > 0 ? e.amount / parts : 0);
             }, 0);
+          
           totalSpent += userOwes;
           const eventBal = userPaid - userOwes;
           totalBalance += eventBal;
@@ -125,7 +144,7 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
         } catch { /* skip event */ }
       }
 
-      // Individual expenses
+      // Individual expenses (paidBy = auth UID, sin eventId)
       const now = new Date();
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
       let monthExpenses = 0;
@@ -135,12 +154,13 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
       try {
         const indQ = query(
           collection(db, 'expenses'),
-          where('userId', '==', user.uid),
-          where('isIndividual', '==', true)
+          where('paidBy', '==', user.uid),
+          orderBy('createdAt', 'desc')
         );
         const snap = await getDocs(indQ);
         snap.docs.forEach(doc => {
           const d = doc.data();
+          if (d.eventId) return; // Solo individuales (sin eventId)
           const date = d.date?.toDate ? d.date.toDate() : new Date(d.date);
           const amt = d.amount || 0;
           if (d.type === 'income') {
@@ -156,13 +176,24 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
       // Event expenses for monthly totals
       for (const event of activeEvents.slice(0, 5)) {
         try {
+          const participants = await getEventParticipants(event.id);
+          const userParticipant = participants.find(p => p.userId === user.uid);
+          if (!userParticipant) continue;
+          const pid = userParticipant.id;
+          
           const expenses = await getEventExpenses(event.id);
           expenses.forEach(exp => {
             const date = exp.date instanceof Date ? exp.date : new Date(exp.date);
             if (date >= monthStart) {
-              if ((exp.beneficiaries || exp.participantIds || []).includes(user.uid)) {
-                const bens = exp.beneficiaries || exp.participantIds || [];
-                monthExpenses += exp.amount / bens.length;
+              if ((exp.participantIds || []).includes(pid)) {
+                if (exp.splitType === 'percentage' && exp.percentageSplits) {
+                  monthExpenses += exp.amount * (exp.percentageSplits[pid] || 0) / 100;
+                } else if ((exp.splitType === 'custom' || exp.splitType === 'amount') && exp.customSplits) {
+                  monthExpenses += exp.customSplits[pid] || 0;
+                } else {
+                  const parts = (exp.participantIds || []).length;
+                  monthExpenses += parts > 0 ? exp.amount / parts : 0;
+                }
               }
               monthTransactions++;
             }
