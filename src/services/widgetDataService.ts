@@ -23,7 +23,7 @@ if (Platform.OS === 'ios') {
 let WidgetCenter: any = null;
 if (Platform.OS === 'ios') {
   try {
-    WidgetCenter = NativeModules.WidgetCenter || require('react-native-widget-center');
+    WidgetCenter = NativeModules.RNWidgetCenter || require('react-native-widget-center').default;
   } catch {
     // No disponible
   }
@@ -64,9 +64,11 @@ async function writeToSharedGroup(data: WidgetData): Promise<void> {
   }
 
   try {
-    await SharedGroupPreferences.setItem(WIDGET_DATA_KEY, JSON.stringify(data), APP_GROUP);
+    const jsonString = JSON.stringify(data);
+    await SharedGroupPreferences.setItem(WIDGET_DATA_KEY, jsonString, APP_GROUP);
+    console.log('📱 Widget: datos escritos al App Group (' + jsonString.length + ' bytes)');
   } catch (error) {
-    console.error('Error escribiendo al App Group:', error);
+    console.error('❌ Error escribiendo al App Group:', error);
   }
 }
 
@@ -77,9 +79,12 @@ function reloadWidgets(): void {
   try {
     if (WidgetCenter?.reloadAllTimelines) {
       WidgetCenter.reloadAllTimelines();
+      console.log('📱 Widget: timeline reload solicitado');
+    } else {
+      console.warn('⚠️ WidgetCenter.reloadAllTimelines no disponible');
     }
-  } catch {
-    // Silencioso si no está disponible
+  } catch (error) {
+    console.warn('⚠️ Error recargando widget:', error);
   }
 }
 

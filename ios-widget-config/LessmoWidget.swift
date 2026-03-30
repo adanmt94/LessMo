@@ -130,7 +130,7 @@ struct LessmoWidgetEntryViewSmall: View {
     var body: some View {
         if entry.isEmpty {
             emptyState
-                .widgetURL(URL(string: "lessmo://event/individual/add-expense"))
+                .widgetURL(URL(string: "lessmo://add-expense"))
         } else {
             dataView
                 .widgetURL(URL(string: "lessmo://events"))
@@ -206,85 +206,89 @@ struct LessmoWidgetEntryViewMedium: View {
     var body: some View {
         if entry.isEmpty {
             emptyState
-                .widgetURL(URL(string: "lessmo://events"))
         } else {
             dataView
-                .widgetURL(URL(string: "lessmo://events"))
         }
     }
     
     private var emptyState: some View {
         HStack(spacing: 16) {
-            VStack(spacing: 8) {
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 36))
-                    .foregroundStyle(.linearGradient(
-                        colors: [.widgetAccent, .widgetAccent.opacity(0.6)],
-                        startPoint: .topLeading, endPoint: .bottomTrailing
-                    ))
-                Text("Nuevo gasto")
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
-                    .foregroundColor(.secondary)
+            Link(destination: URL(string: "lessmo://add-expense")!) {
+                VStack(spacing: 8) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 36))
+                        .foregroundStyle(.linearGradient(
+                            colors: [.widgetAccent, .widgetAccent.opacity(0.6)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        ))
+                    Text("Nuevo gasto")
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .frame(maxWidth: .infinity)
             
             RoundedRectangle(cornerRadius: 1)
                 .fill(Color.secondary.opacity(0.2))
                 .frame(width: 1)
                 .padding(.vertical, 8)
             
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Crea un evento")
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
-                Text("Gestiona gastos compartidos")
-                    .font(.system(size: 11, weight: .medium, design: .rounded))
-                    .foregroundColor(.secondary)
+            Link(destination: URL(string: "lessmo://create-event")!) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Crea un evento")
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                    Text("Gestiona gastos compartidos")
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .frame(maxWidth: .infinity)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     
     private var dataView: some View {
         HStack(spacing: 0) {
-            // Left column - Balance
-            VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: 6) {
-                    Image(systemName: "chart.pie.fill")
-                        .font(.system(size: 14))
-                        .foregroundStyle(.linearGradient(
-                            colors: [.widgetAccent, .purple],
-                            startPoint: .topLeading, endPoint: .bottomTrailing
-                        ))
-                    Text("LessMo")
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
+            // Left column - Balance → opens events
+            Link(destination: URL(string: "lessmo://events")!) {
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "chart.pie.fill")
+                            .font(.system(size: 14))
+                            .foregroundStyle(.linearGradient(
+                                colors: [.widgetAccent, .purple],
+                                startPoint: .topLeading, endPoint: .bottomTrailing
+                            ))
+                        Text("LessMo")
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                    
+                    Text(entry.eventName)
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
                         .foregroundColor(.secondary)
-                }
-                
-                Spacer()
-                
-                Text(entry.eventName)
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-                
-                HStack(alignment: .firstTextBaseline, spacing: 1) {
-                    Text(entry.userBalance >= 0 ? "+" : "")
-                        .font(.system(size: 14, weight: .medium, design: .rounded))
-                    Text(String(format: "%.2f", abs(entry.userBalance)))
-                        .font(.system(size: 28, weight: .bold, design: .rounded))
-                    Text(entry.currencySymbol)
-                        .font(.system(size: 14, weight: .semibold, design: .rounded))
-                }
-                .foregroundColor(entry.userBalance >= 0 ? .widgetPositive : .widgetNegative)
-                .padding(.top, 2)
-                
-                Text("Balance")
-                    .font(.system(size: 10, weight: .medium, design: .rounded))
-                    .foregroundColor(.secondary)
+                        .lineLimit(1)
+                    
+                    HStack(alignment: .firstTextBaseline, spacing: 1) {
+                        Text(entry.userBalance >= 0 ? "+" : "")
+                            .font(.system(size: 14, weight: .medium, design: .rounded))
+                        Text(String(format: "%.2f", abs(entry.userBalance)))
+                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                        Text(entry.currencySymbol)
+                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    }
+                    .foregroundColor(entry.userBalance >= 0 ? .widgetPositive : .widgetNegative)
                     .padding(.top, 2)
+                    
+                    Text("Balance")
+                        .font(.system(size: 10, weight: .medium, design: .rounded))
+                        .foregroundColor(.secondary)
+                        .padding(.top, 2)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
             
             // Divider
             RoundedRectangle(cornerRadius: 1)
@@ -293,39 +297,41 @@ struct LessmoWidgetEntryViewMedium: View {
                 .padding(.vertical, 8)
                 .padding(.horizontal, 12)
             
-            // Right column - Stats
-            VStack(alignment: .leading, spacing: 10) {
-                StatRow(
-                    icon: "creditcard.fill",
-                    label: "Este mes",
-                    value: String(format: "%.0f%@", entry.monthTotal, entry.currencySymbol),
-                    color: .widgetAccent
-                )
-                
-                StatRow(
-                    icon: "person.2.fill",
-                    label: "Personas",
-                    value: "\(entry.participantsCount)",
-                    color: .purple
-                )
-                
-                if entry.eventsCount > 0 {
+            // Right column - Stats → opens add expense
+            Link(destination: URL(string: "lessmo://add-expense")!) {
+                VStack(alignment: .leading, spacing: 10) {
                     StatRow(
-                        icon: "calendar",
-                        label: "Eventos",
-                        value: "\(entry.eventsCount)",
-                        color: .orange
+                        icon: "creditcard.fill",
+                        label: "Este mes",
+                        value: String(format: "%.0f%@", entry.monthTotal, entry.currencySymbol),
+                        color: .widgetAccent
                     )
-                } else {
+                    
                     StatRow(
-                        icon: "arrow.up.arrow.down",
-                        label: "Gastos",
-                        value: "\(entry.monthExpenses)",
-                        color: .orange
+                        icon: "person.2.fill",
+                        label: "Personas",
+                        value: "\(entry.participantsCount)",
+                        color: .purple
                     )
+                    
+                    if entry.eventsCount > 0 {
+                        StatRow(
+                            icon: "calendar",
+                            label: "Eventos",
+                            value: "\(entry.eventsCount)",
+                            color: .orange
+                        )
+                    } else {
+                        StatRow(
+                            icon: "arrow.up.arrow.down",
+                            label: "Gastos",
+                            value: "\(entry.monthExpenses)",
+                            color: .orange
+                        )
+                    }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(14)
     }
@@ -338,10 +344,8 @@ struct LessmoWidgetEntryViewLarge: View {
     var body: some View {
         if entry.isEmpty {
             emptyState
-                .widgetURL(URL(string: "lessmo://events"))
         } else {
             dataView
-                .widgetURL(URL(string: "lessmo://events"))
         }
     }
     
@@ -361,21 +365,25 @@ struct LessmoWidgetEntryViewLarge: View {
                 .multilineTextAlignment(.center)
             
             HStack(spacing: 12) {
-                HStack(spacing: 4) {
-                    Image(systemName: "calendar.badge.plus")
-                        .font(.system(size: 12))
-                    Text("Crear evento")
-                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                Link(destination: URL(string: "lessmo://create-event")!) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "calendar.badge.plus")
+                            .font(.system(size: 12))
+                        Text("Crear evento")
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    }
+                    .foregroundColor(.widgetAccent)
                 }
-                .foregroundColor(.widgetAccent)
                 
-                HStack(spacing: 4) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 12))
-                    Text("Gasto rápido")
-                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                Link(destination: URL(string: "lessmo://add-expense")!) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 12))
+                        Text("Gasto rápido")
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    }
+                    .foregroundColor(.widgetAccent)
                 }
-                .foregroundColor(.widgetAccent)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -383,59 +391,63 @@ struct LessmoWidgetEntryViewLarge: View {
     
     private var dataView: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Header
-            HStack {
-                HStack(spacing: 8) {
-                    Image(systemName: "chart.pie.fill")
-                        .font(.system(size: 16))
-                        .foregroundStyle(.linearGradient(
-                            colors: [.widgetAccent, .purple],
-                            startPoint: .topLeading, endPoint: .bottomTrailing
-                        ))
-                    Text("LessMo")
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
-                }
-                Spacer()
-                if entry.eventsCount > 0 {
-                    Text("\(entry.eventsCount) evento\(entry.eventsCount == 1 ? "" : "s")")
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
+            // Header → opens events
+            Link(destination: URL(string: "lessmo://events")!) {
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack {
+                        HStack(spacing: 8) {
+                            Image(systemName: "chart.pie.fill")
+                                .font(.system(size: 16))
+                                .foregroundStyle(.linearGradient(
+                                    colors: [.widgetAccent, .purple],
+                                    startPoint: .topLeading, endPoint: .bottomTrailing
+                                ))
+                            Text("LessMo")
+                                .font(.system(size: 15, weight: .bold, design: .rounded))
+                        }
+                        Spacer()
+                        if entry.eventsCount > 0 {
+                            Text("\(entry.eventsCount) evento\(entry.eventsCount == 1 ? "" : "s")")
+                                .font(.system(size: 11, weight: .medium, design: .rounded))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    
+                    // Event name + participants
+                    HStack {
+                        Text(entry.eventName)
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                        Spacer()
+                        HStack(spacing: 3) {
+                            Image(systemName: "person.2.fill")
+                                .font(.system(size: 10))
+                            Text("\(entry.participantsCount)")
+                                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        }
                         .foregroundColor(.secondary)
+                    }
+                    .padding(.top, 6)
+                    
+                    Spacer()
+                    
+                    // Balance
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Tu balance")
+                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                            .foregroundColor(.secondary)
+                        HStack(alignment: .firstTextBaseline, spacing: 2) {
+                            Text(entry.userBalance >= 0 ? "+" : "")
+                                .font(.system(size: 16, weight: .medium, design: .rounded))
+                            Text(String(format: "%.2f", abs(entry.userBalance)))
+                                .font(.system(size: 32, weight: .bold, design: .rounded))
+                            Text(entry.currencySymbol)
+                                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        }
+                        .foregroundColor(entry.userBalance >= 0 ? .widgetPositive : .widgetNegative)
+                    }
                 }
-            }
-            
-            // Event name + participants
-            HStack {
-                Text(entry.eventName)
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-                Spacer()
-                HStack(spacing: 3) {
-                    Image(systemName: "person.2.fill")
-                        .font(.system(size: 10))
-                    Text("\(entry.participantsCount)")
-                        .font(.system(size: 12, weight: .semibold, design: .rounded))
-                }
-                .foregroundColor(.secondary)
-            }
-            .padding(.top, 6)
-            
-            Spacer()
-            
-            // Balance
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Tu balance")
-                    .font(.system(size: 11, weight: .medium, design: .rounded))
-                    .foregroundColor(.secondary)
-                HStack(alignment: .firstTextBaseline, spacing: 2) {
-                    Text(entry.userBalance >= 0 ? "+" : "")
-                        .font(.system(size: 16, weight: .medium, design: .rounded))
-                    Text(String(format: "%.2f", abs(entry.userBalance)))
-                        .font(.system(size: 32, weight: .bold, design: .rounded))
-                    Text(entry.currencySymbol)
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-                }
-                .foregroundColor(entry.userBalance >= 0 ? .widgetPositive : .widgetNegative)
             }
             
             // Budget progress bar (if budget set)
@@ -471,36 +483,38 @@ struct LessmoWidgetEntryViewLarge: View {
             
             Spacer()
             
-            // Stats grid
-            HStack(spacing: 10) {
-                StatCard(
-                    icon: "creditcard.fill",
-                    label: "Gastos mes",
-                    value: String(format: "%.0f%@", entry.monthTotal, entry.currencySymbol),
-                    color: .widgetAccent
-                )
-                
-                StatCard(
-                    icon: "arrow.up.arrow.down",
-                    label: "Movimientos",
-                    value: "\(entry.monthExpenses)",
-                    color: .orange
-                )
-                
-                if entry.pendingPayments > 0 {
+            // Stats grid → opens add expense
+            Link(destination: URL(string: "lessmo://add-expense")!) {
+                HStack(spacing: 10) {
                     StatCard(
-                        icon: "exclamationmark.circle.fill",
-                        label: "Pendiente",
-                        value: String(format: "%.0f%@", entry.pendingPayments, entry.currencySymbol),
-                        color: .widgetNegative
+                        icon: "creditcard.fill",
+                        label: "Gastos mes",
+                        value: String(format: "%.0f%@", entry.monthTotal, entry.currencySymbol),
+                        color: .widgetAccent
                     )
-                } else {
+                    
                     StatCard(
-                        icon: "checkmark.circle.fill",
-                        label: "Estado",
-                        value: "Al día",
-                        color: .widgetPositive
+                        icon: "arrow.up.arrow.down",
+                        label: "Movimientos",
+                        value: "\(entry.monthExpenses)",
+                        color: .orange
                     )
+                    
+                    if entry.pendingPayments > 0 {
+                        StatCard(
+                            icon: "exclamationmark.circle.fill",
+                            label: "Pendiente",
+                            value: String(format: "%.0f%@", entry.pendingPayments, entry.currencySymbol),
+                            color: .widgetNegative
+                        )
+                    } else {
+                        StatCard(
+                            icon: "checkmark.circle.fill",
+                            label: "Estado",
+                            value: "Al día",
+                            color: .widgetPositive
+                        )
+                    }
                 }
             }
         }
