@@ -741,9 +741,19 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
                         </Text>
                       </TouchableOpacity>
                     ) : isCreditor ? (
-                      <View style={styles.creditorBadge}>
-                        <Text style={styles.creditorBadgeText}>✅ Te deben</Text>
-                      </View>
+                      <TouchableOpacity
+                        style={[
+                          styles.payButton,
+                          { backgroundColor: theme.colors.primary + '20', borderWidth: 1.5, borderColor: theme.colors.primary }
+                        ]}
+                        onPress={() => {
+                          handleMarkPayment(settlement);
+                        }}
+                      >
+                        <Text style={[styles.payButtonText, { color: theme.colors.primary }]}>
+                          🔔 Recordar pago
+                        </Text>
+                      </TouchableOpacity>
                     ) : null}
                   </View>
                 );

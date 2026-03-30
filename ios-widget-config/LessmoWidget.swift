@@ -278,6 +278,11 @@ struct LessmoWidgetEntryViewMedium: View {
                 }
                 .foregroundColor(entry.userBalance >= 0 ? .widgetPositive : .widgetNegative)
                 .padding(.top, 2)
+                
+                Text("Balance")
+                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                    .foregroundColor(.secondary)
+                    .padding(.top, 2)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             
@@ -298,18 +303,27 @@ struct LessmoWidgetEntryViewMedium: View {
                 )
                 
                 StatRow(
-                    icon: "arrow.up.arrow.down",
-                    label: "Gastos",
-                    value: "\(entry.monthExpenses)",
-                    color: .orange
-                )
-                
-                StatRow(
                     icon: "person.2.fill",
                     label: "Personas",
                     value: "\(entry.participantsCount)",
                     color: .purple
                 )
+                
+                if entry.eventsCount > 0 {
+                    StatRow(
+                        icon: "calendar",
+                        label: "Eventos",
+                        value: "\(entry.eventsCount)",
+                        color: .orange
+                    )
+                } else {
+                    StatRow(
+                        icon: "arrow.up.arrow.down",
+                        label: "Gastos",
+                        value: "\(entry.monthExpenses)",
+                        color: .orange
+                    )
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }

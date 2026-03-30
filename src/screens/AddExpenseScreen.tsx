@@ -1013,7 +1013,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
                     value={newParticipantName}
                     onChangeText={setNewParticipantName}
                     placeholder={t('createGroup.participantNamePlaceholder') || 'Nombre del participante'}
-                    style={styles.addParticipantInput}
+                    containerStyle={styles.addParticipantInput}
                   />
                   <TouchableOpacity
                     style={styles.addParticipantButton}

@@ -30,7 +30,7 @@ const parseDate = (dateField: any): Date | undefined => {
 
 export type PaymentStatus = 'pending' | 'sent_waiting_confirmation' | 'confirmed' | 'rejected' | 'cancelled';
 
-export type PaymentMethod = 'bizum' | 'paypal' | 'venmo' | 'apple_pay' | 'google_pay' | 'stripe' | 'bank_transfer' | 'cash' | 'other';
+export type PaymentMethod = 'bizum' | 'paypal' | 'venmo' | 'apple_pay' | 'google_pay' | 'stripe' | 'bank_transfer' | 'cash' | 'card' | 'zelle' | 'other';
 
 export interface Payment {
   id: string;
