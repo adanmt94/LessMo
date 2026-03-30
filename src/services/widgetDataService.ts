@@ -50,8 +50,10 @@ export interface WidgetData {
   monthTotal: number;
   monthExpenses: number;
   recentExpenses: WidgetExpense[];
-  pendingPayments: number;  budget: number;
-  eventsCount: number;  lastUpdate: string;
+  pendingPayments: number;
+  budget: number;
+  eventsCount: number;
+  lastUpdate: string;
 }
 
 /**
@@ -107,13 +109,23 @@ export async function updateWidgetData(userId: string): Promise<void> {
     const userEvents = await getUserEventsByStatus(userId);
     const activeEvents = userEvents.filter(e => e.status === 'active');
     
-    // Calcular balance total
+    // Solo contar eventos CREADOS por el usuario (no eventos de grupos ajenos)
+    const userCreatedEvents = activeEvents.filter(e => e.createdBy === userId);
+    
+    // Calcular balance total de eventos
     let totalBalance = 0;
     let totalOwed = 0;
     let totalOwing = 0;
+    let totalBudget = 0;
+    let totalSpentInEvents = 0;
     
     for (const event of activeEvents) {
       try {
+        // Acumular presupuestos
+        if (event.budget) {
+          totalBudget += event.budget;
+        }
+        
         // Calcular balance basándose en gastos del evento
         const expenses = await getEventExpenses(event.id);
         const userPaid = expenses
@@ -125,6 +137,7 @@ export async function updateWidgetData(userId: string): Promise<void> {
             const beneficiaries = e.beneficiaries || e.participantIds || [];
             return sum + (e.amount / beneficiaries.length);
           }, 0);
+        totalSpentInEvents += userOwes;
         const eventBalance = userPaid - userOwes;
         totalBalance += eventBalance;
         if (eventBalance > 0) {
@@ -163,6 +176,8 @@ export async function updateWidgetData(userId: string): Promise<void> {
     }
     
     // Obtener gastos individuales del usuario
+    let individualIncome = 0;
+    let individualExpenseTotal = 0;
     try {
       const individualQuery = firestoreQuery(
         firestoreCollection(db, 'expenses'),
@@ -173,11 +188,19 @@ export async function updateWidgetData(userId: string): Promise<void> {
       individualSnap.docs.forEach(doc => {
         const data = doc.data();
         const expenseDate = data.date?.toDate ? data.date.toDate() : new Date(data.date);
+        const amount = data.amount || 0;
+        
+        // Separar ingresos y gastos individuales
+        if (data.type === 'income') {
+          individualIncome += amount;
+        } else {
+          individualExpenseTotal += amount;
+        }
         
         if (expenseDate >= thirtyDaysAgo) {
           allExpenses.push({
-            description: data.description || 'Gasto individual',
-            amount: data.amount || 0,
+            description: data.description || 'Gasto rápido',
+            amount,
             date: expenseDate.toISOString(),
             category: data.category
           });
@@ -186,6 +209,10 @@ export async function updateWidgetData(userId: string): Promise<void> {
     } catch (error) {
       console.warn('Error obteniendo gastos individuales para widget:', error);
     }
+    
+    // Incluir balance de gastos individuales (ingresos - gastos)
+    const individualBalance = individualIncome - individualExpenseTotal;
+    totalBalance += individualBalance;
     
     // Ordenar por fecha (más recientes primero)
     allExpenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -198,9 +225,8 @@ export async function updateWidgetData(userId: string): Promise<void> {
     
     // Nombre del evento más reciente
     const latestEvent = activeEvents[0];
-    const eventName = latestEvent?.name || (allExpenses.length > 0 ? 'Gastos personales' : 'Sin eventos');
+    const eventName = latestEvent?.name || (allExpenses.length > 0 ? 'Gastos rápidos' : 'Sin eventos');
     const participantsCount = latestEvent?.participantIds?.length || 0;
-    const eventBudget = latestEvent?.budget || 0;
     
     const widgetData: WidgetData = {
       // Campos que el widget Swift lee directamente
@@ -214,8 +240,8 @@ export async function updateWidgetData(userId: string): Promise<void> {
       monthExpenses: monthExpenses.length,
       recentExpenses: allExpenses.slice(0, 10),
       pendingPayments: totalOwing > 0 ? Math.ceil(totalOwing) : 0,
-      budget: eventBudget,
-      eventsCount: activeEvents.length,
+      budget: totalBudget,
+      eventsCount: userCreatedEvents.length,
       lastUpdate: new Date().toISOString()
     };
     

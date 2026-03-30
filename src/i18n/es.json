@@ -24,9 +24,9 @@
     "you": "Tú"
   },
   "tabs": {
-    "expenses": "Gastos",
+    "expenses": "Gastos Rápidos",
     "events": "Eventos",
-    "activity": "Actividad",
+    "activity": "Resumen",
     "settings": "Ajustes"
   },
   "auth": {
@@ -555,11 +555,24 @@
     "alreadyLinked": "Ya vinculado"
   },
   "activity": {
-    "title": "Actividad Reciente",
-    "loading": "Cargando actividad...",
+    "title": "Resumen",
+    "loading": "Cargando...",
     "empty": "Sin actividad reciente",
-    "emptySubtitle": "La actividad de tus eventos y eventos aparecerá aquí",
-    "groupCreated": "Evento creado"
+    "emptySubtitle": "Tu resumen financiero aparecerá aquí",
+    "groupCreated": "Evento creado",
+    "recentActivity": "Actividad reciente",
+    "globalBalance": "Balance global",
+    "youOwe": "Tú debes",
+    "owedToYou": "Te deben",
+    "monthSpending": "Gastos del mes",
+    "quickActions": "Acciones rápidas",
+    "createQuickExpense": "Gasto Rápido",
+    "createEvent": "Crear Evento",
+    "budgetUsed": "Presupuesto usado",
+    "noBudget": "Sin presupuesto",
+    "movements": "movimientos",
+    "allCaughtUp": "Estás al día",
+    "seeAll": "Ver todo"
   },
   "eventSummary": {
     "title": "Resumen",

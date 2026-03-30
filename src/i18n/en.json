@@ -24,9 +24,9 @@
     "you": "You"
   },
   "tabs": {
-    "expenses": "Expenses",
+    "expenses": "Quick",
     "events": "Events",
-    "activity": "Activity",
+    "activity": "Summary",
     "settings": "Settings"
   },
   "auth": {
@@ -555,11 +555,24 @@
     "alreadyLinked": "Already linked"
   },
   "activity": {
-    "title": "Recent Activity",
-    "loading": "Loading activity...",
+    "title": "Summary",
+    "loading": "Loading...",
     "empty": "No recent activity",
-    "emptySubtitle": "Activity from your events and groups will appear here",
-    "groupCreated": "Group created"
+    "emptySubtitle": "Your financial summary will appear here",
+    "groupCreated": "Group created",
+    "recentActivity": "Recent activity",
+    "globalBalance": "Global balance",
+    "youOwe": "You owe",
+    "owedToYou": "Owed to you",
+    "monthSpending": "Monthly spending",
+    "quickActions": "Quick actions",
+    "createQuickExpense": "Quick Expense",
+    "createEvent": "Create Event",
+    "budgetUsed": "Budget used",
+    "noBudget": "No budget",
+    "movements": "movements",
+    "allCaughtUp": "All caught up",
+    "seeAll": "See all"
   },
   "eventSummary": {
     "title": "Summary",

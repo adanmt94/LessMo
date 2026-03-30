@@ -44,6 +44,20 @@ export const MainTabNavigator: React.FC = () => {
       }}
     >
       <Tab.Screen
+        name="Activity"
+        component={ActivityScreen}
+        options={{
+          headerShown: false,
+          tabBarLabel: t('tabs.activity'),
+          tabBarIcon: ({ color, focused }) => (
+            <ActivityIcon color={color} focused={focused} />
+          ),
+        }}
+        listeners={{
+          tabPress: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light),
+        }}
+      />
+      <Tab.Screen
         name="Expenses"
         component={IndividualExpensesScreen}
         options={{
@@ -65,20 +79,6 @@ export const MainTabNavigator: React.FC = () => {
           tabBarLabel: t('tabs.events'),
           tabBarIcon: ({ color, focused }) => (
             <GroupsIcon color={color} focused={focused} />
-          ),
-        }}
-        listeners={{
-          tabPress: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light),
-        }}
-      />
-      <Tab.Screen
-        name="Activity"
-        component={ActivityScreen}
-        options={{
-          headerShown: false,
-          tabBarLabel: t('tabs.activity'),
-          tabBarIcon: ({ color, focused }) => (
-            <ActivityIcon color={color} focused={focused} />
           ),
         }}
         listeners={{

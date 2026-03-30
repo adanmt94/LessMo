@@ -275,13 +275,13 @@ export const IndividualExpensesScreen: React.FC = () => {
 
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
-      <Text style={styles.emptyIcon}>📝</Text>
-      <Text style={styles.emptyTitle}>No tienes gastos individuales</Text>
+      <Text style={styles.emptyIcon}>⚡</Text>
+      <Text style={styles.emptyTitle}>No tienes gastos rápidos</Text>
       <Text style={styles.emptyDescription}>
-        Los gastos individuales son aquellos que no están asociados a ningún evento.
+        Los gastos rápidos son tus gastos personales del día a día, sin necesidad de crear un evento.
       </Text>
       <Text style={styles.emptyHint}>
-        Para crear gastos individuales, añádelos sin seleccionar un evento.
+        Pulsa el botón de abajo para crear tu primer gasto rápido.
       </Text>
     </View>
   );
@@ -295,7 +295,7 @@ export const IndividualExpensesScreen: React.FC = () => {
           end={{ x: 1, y: 1 }}
           style={styles.gradientHeader}
         >
-          <Text style={styles.headerTitle}>Mis Gastos</Text>
+          <Text style={styles.headerTitle}>Gastos Rápidos</Text>
         </LinearGradient>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
@@ -312,7 +312,7 @@ export const IndividualExpensesScreen: React.FC = () => {
         end={{ x: 1, y: 1 }}
         style={styles.gradientHeader}
       >
-        <Text style={styles.headerTitle}>Mis Gastos</Text>
+        <Text style={styles.headerTitle}>Gastos Rápidos</Text>
         <View style={styles.headerStats}>
           <View style={styles.statPill}>
             <Text style={styles.headerStatsText}>
@@ -375,8 +375,8 @@ export const IndividualExpensesScreen: React.FC = () => {
           });
         }}
       >
-        <Text style={styles.floatingButtonIcon}>+</Text>
-        <Text style={styles.floatingButtonText}>Añadir Gasto</Text>
+        <Text style={styles.floatingButtonIcon}>⚡</Text>
+        <Text style={styles.floatingButtonText}>Crear Gasto Rápido</Text>
       </TouchableOpacity>
     </SafeAreaView>
   );

@@ -790,11 +790,22 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
                 {
                   text: t('addExpense.addAnother') || 'Añadir otro',
                   onPress: () => {
-                    // Reset form for a new expense
+                    // Reset form completo para nuevo gasto
                     setDescription('');
                     setAmount('');
                     setCategory('food');
                     setReceiptPhoto(null);
+                    setSelectedBeneficiaries([]);
+                    setExtraParticipants([]);
+                    setNewParticipantName('');
+                    setTransactionType('expense');
+                    setSplitType('equal');
+                    setCustomSplits({});
+                    setPercentageSplits({});
+                    setOcrData(null);
+                    setShowItemSplit(false);
+                    setExpenseItems([]);
+                    setLoading(false);
                   },
                 },
                 {
