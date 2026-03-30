@@ -14,6 +14,7 @@ import {
   Alert,
   TouchableOpacity,
   ActivityIndicator,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -693,6 +694,17 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
           }
           
           await addDoc(collection(db, 'expenses'), expenseData);
+          
+          // Actualizar widget iOS
+          try {
+            const { updateWidgetData } = await import('../services/widgetDataService');
+            if (auth.currentUser?.uid) {
+              await updateWidgetData(auth.currentUser.uid);
+            }
+          } catch (widgetError) {
+            // No es crítico
+          }
+          
           success = true;
         } catch (error) {
           console.error('Error creando gasto individual:', error);
@@ -789,9 +801,10 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="always"
+          keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           nestedScrollEnabled={true}
+          onScrollBeginDrag={() => Keyboard.dismiss()}
         >
           {/* Botón para abrir plantillas */}
           {!isEditMode && (

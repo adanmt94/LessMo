@@ -80,18 +80,22 @@ export const useSiriShortcuts = () => {
     switch (path) {
       case 'add-expense':
         
-        // Necesitamos el eventId, por ahora vamos a Home
-        navigation.navigate('Home');
+        navigation.navigate('AddExpense', { eventId: 'individual', mode: 'create' });
         break;
 
       case 'summary':
         
-        navigation.navigate('Home');
+        navigation.navigate('MainTabs', { screen: 'Events' } as any);
         break;
 
       case 'create-event':
         
-        navigation.navigate('CreateEvent');
+        navigation.navigate('CreateEvent', { mode: 'create' });
+        break;
+
+      case 'events':
+        
+        navigation.navigate('MainTabs', { screen: 'Events' } as any);
         break;
 
       case 'settings':
@@ -101,7 +105,7 @@ export const useSiriShortcuts = () => {
 
       default:
         
-        navigation.navigate('Home');
+        navigation.navigate('MainTabs' as any);
     }
   };
 

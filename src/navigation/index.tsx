@@ -11,7 +11,6 @@ import { useAuthContext } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useSiriShortcuts } from '../hooks/useSiriShortcuts';
-import { SyncStatusIndicator } from '../components/SyncStatusIndicator';
 import { initializeSyncService } from '../services/syncService';
 import {
   LoginScreen,
@@ -158,7 +157,6 @@ export const Navigation: React.FC = () => {
           headerTitleStyle: {
             color: theme.colors.text,
           },
-          headerRight: () => isAuthenticated ? <SyncStatusIndicator /> : null,
         }}
       >
         {!isAuthenticated ? (

@@ -13,6 +13,7 @@ import {
   Platform,
   Alert,
   TouchableOpacity,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -292,6 +293,16 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
           console.error('Error adding participants:', participantError);
         }
 
+        // Actualizar widget iOS
+        try {
+          const { updateWidgetData } = await import('../services/widgetDataService');
+          if (user?.uid) {
+            await updateWidgetData(user.uid);
+          }
+        } catch (widgetError) {
+          // No es crítico
+        }
+
         Alert.alert(
           t('common.success'),
           t('createGroup.groupCreated'),
@@ -333,6 +344,7 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
           keyboardShouldPersistTaps="handled"
           nestedScrollEnabled={true}
           showsVerticalScrollIndicator={false}
+          onScrollBeginDrag={() => Keyboard.dismiss()}
         >
           {/* 💰 PRESUPUESTO GRUPAL - LO MÁS IMPORTANTE */}
           {!isEditMode && (

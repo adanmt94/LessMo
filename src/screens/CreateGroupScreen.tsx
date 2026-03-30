@@ -13,6 +13,7 @@ import {
   Platform,
   Alert,
   TouchableOpacity,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -276,7 +277,7 @@ export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
         style={styles.keyboardView}
         enabled={Platform.OS === 'ios'}
       >
-        <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
+        <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" onScrollBeginDrag={() => Keyboard.dismiss()}>
           {/* 💰 PRESUPUESTO GRUPAL - LO MÁS IMPORTANTE */}
           {!isEditMode && (
             <Card style={styles.budgetSection}>

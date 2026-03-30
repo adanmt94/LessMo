@@ -629,7 +629,7 @@ export const createExpense = async (
       createdAt: new Date(),
       receiptPhoto,
       currency: currency || 'EUR',
-      createdBy: createdBy || paidBy,
+      createdBy: createdBy || auth.currentUser?.uid || paidBy,
     };
     
     // Filtrar campos undefined antes de guardar

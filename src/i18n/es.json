@@ -20,7 +20,8 @@
     "cannotUndo": "Esta acción no se puede deshacer",
     "all": "Todos",
     "warning": "Advertencia",
-    "continue": "Continuar"
+    "continue": "Continuar",
+    "you": "Tú"
   },
   "tabs": {
     "expenses": "Gastos",
@@ -318,7 +319,10 @@
     "currentSum": "Suma actual:",
     "totalToDivide": "Total a dividir:",
     "itemSplitCompleted": "✅ División completada",
-    "itemSplitCompletedMessage": "Items divididos entre {{count}} personas"
+    "itemSplitCompletedMessage": "Items divididos entre {{count}} personas",
+    "participants": "Participantes",
+    "addParticipant": "Añadir participante",
+    "participantNamePlaceholder": "Nombre del participante"
   },
   "expense": {
     "add": "Agregar Gasto",

@@ -20,7 +20,8 @@
     "cannotUndo": "This action cannot be undone",
     "all": "All",
     "warning": "Warning",
-    "continue": "Continue"
+    "continue": "Continue",
+    "you": "You"
   },
   "tabs": {
     "expenses": "Expenses",
@@ -318,7 +319,10 @@
     "currentSum": "Current sum:",
     "totalToDivide": "Total to divide:",
     "itemSplitCompleted": "✅ Split completed",
-    "itemSplitCompletedMessage": "Items split among {{count}} people"
+    "itemSplitCompletedMessage": "Items split among {{count}} people",
+    "participants": "Participants",
+    "addParticipant": "Add participant",
+    "participantNamePlaceholder": "Participant name"
   },
   "expense": {
     "add": "Add Expense",

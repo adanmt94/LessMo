@@ -49,15 +49,12 @@ service cloud.firestore {
       allow delete: if isAuthenticated();
     }
     
-    // Gastos - Con validación de pertenencia al evento
+    // Gastos - Usuarios autenticados pueden gestionar gastos
     match /expenses/{expenseId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && 
-                       request.resource.data.paidBy == request.auth.uid;
-      allow update: if isAuthenticated() && 
-                       request.auth.uid == resource.data.paidBy;
-      allow delete: if isAuthenticated() && 
-                       request.auth.uid == resource.data.paidBy;
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated();
     }
     
     // PAYMENTS - Confirmaciones de pago con validación estricta

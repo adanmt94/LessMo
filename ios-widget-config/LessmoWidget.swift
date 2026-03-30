@@ -130,8 +130,10 @@ struct LessmoWidgetEntryViewSmall: View {
     var body: some View {
         if entry.isEmpty {
             emptyState
+                .widgetURL(URL(string: "lessmo://event/individual/add-expense"))
         } else {
             dataView
+                .widgetURL(URL(string: "lessmo://events"))
         }
     }
     
@@ -204,8 +206,10 @@ struct LessmoWidgetEntryViewMedium: View {
     var body: some View {
         if entry.isEmpty {
             emptyState
+                .widgetURL(URL(string: "lessmo://events"))
         } else {
             dataView
+                .widgetURL(URL(string: "lessmo://events"))
         }
     }
     
@@ -320,8 +324,10 @@ struct LessmoWidgetEntryViewLarge: View {
     var body: some View {
         if entry.isEmpty {
             emptyState
+                .widgetURL(URL(string: "lessmo://events"))
         } else {
             dataView
+                .widgetURL(URL(string: "lessmo://events"))
         }
     }
     

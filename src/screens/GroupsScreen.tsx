@@ -407,10 +407,13 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
             }]}
             onPress={(e) => {
               e.stopPropagation();
-              navigation.navigate('CreateEvent', { 
-                mode: 'create', 
-                groupId: group.id 
-              });
+              // Navegar a AddExpense con el eventId del primer evento del grupo
+              const eventId = group.eventIds?.[0];
+              if (eventId) {
+                navigation.navigate('AddExpense', { eventId, mode: 'create' });
+              } else {
+                Alert.alert('Error', 'Este evento no tiene gastos creados aún. Entra al evento primero.');
+              }
             }}
           >
             <Text style={[styles.actionIcon, { color: theme.colors.card }]}>+</Text>
