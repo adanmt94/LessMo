@@ -1343,55 +1343,42 @@ export const getUserEventsByStatus = async (
       ...doc.data() 
     } as Event));
     
+    // 2. Obtener eventos donde el usuario es participante (via colección participants)
+    const participantsQuery = query(
+      collection(db, 'participants'),
+      where('userId', '==', userId)
+    );
+    const participantsSnap = await getDocs(participantsQuery);
+    const participantEventIds = [...new Set(
+      participantsSnap.docs.map(d => d.data().eventId as string).filter(Boolean)
+    )];
     
+    // 3. Cargar esos eventos (que no estén ya en userEvents)
+    const existingIds = new Set(userEvents.map(e => e.id));
+    const missingEventIds = participantEventIds.filter(id => !existingIds.has(id));
     
-    // 2. Obtener eventos donde el usuario es miembro
-    const userGroups = await getUserGroups(userId);
-    const groupIds = userGroups.map(g => g.id);
-    
-    
-    // 3. Obtener eventos de esos eventos
-    let groupEvents: Event[] = [];
-    if (groupIds.length > 0) {
-      // Firestore tiene límite de 10 elementos en 'in', así que hacemos consultas por lotes
-      const batchSize = 10;
-      for (let i = 0; i < groupIds.length; i += batchSize) {
-        const batch = groupIds.slice(i, i + batchSize);
-        
-        let groupQuery;
-        if (status) {
-          groupQuery = query(
-            collection(db, 'events'),
-            where('groupId', 'in', batch),
-            where('status', '==', status)
-          );
-        } else {
-          groupQuery = query(
-            collection(db, 'events'),
-            where('groupId', 'in', batch)
-          );
-        }
-        
-        const groupSnapshot = await getDocs(groupQuery);
-        const batchEvents = groupSnapshot.docs.map(doc => ({ 
-          id: doc.id, 
-          ...doc.data() 
-        } as Event));
-        
-        groupEvents = [...groupEvents, ...batchEvents];
-      }
-    }    // 4. Combinar y eliminar duplicados (por si un evento está en ambas listas)
+    let participantEvents: Event[] = [];
+    // Cargar en paralelo los eventos faltantes
+    if (missingEventIds.length > 0) {
+      const loaded = await Promise.all(
+        missingEventIds.map(id => getEvent(id).catch(() => null))
+      );
+      participantEvents = loaded.filter((e): e is Event => e !== null);
+    }
+
+    // 4. Combinar y filtrar por status si es necesario
     const allEventsMap = new Map<string, Event>();
     
-    // Primero agregar eventos del usuario
     userEvents.forEach(event => {
       allEventsMap.set(event.id, event);
     });
     
-    // Luego agregar eventos de eventos (no sobrescribir si ya existe)
-    groupEvents.forEach(event => {
+    participantEvents.forEach(event => {
       if (!allEventsMap.has(event.id)) {
-        allEventsMap.set(event.id, event);
+        // Filtrar por status si se especificó (userEvents ya viene filtrado por la query)
+        if (!status || event.status === status) {
+          allEventsMap.set(event.id, event);
+        }
       }
     });
     
