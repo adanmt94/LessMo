@@ -71,8 +71,16 @@ const AppContent: React.FC<{ appKey: number }> = ({ appKey }) => {
 
       // Esperar a que Firebase restaure la sesión antes de comprobar
       console.log('🔐 [APP] Esperando a que Firebase restaure sesión...');
-      await waitForAuthReady();
-      console.log('🔐 [APP] Firebase listo, usuario actual:', auth.currentUser?.uid ?? 'null');
+      const restoredUser = await waitForAuthReady();
+      console.log('🔐 [APP] Firebase listo, usuario actual:', restoredUser?.uid ?? 'null');
+
+      // Si no hay sesión activa, no tiene sentido pedir biometría - ir a login
+      if (!restoredUser) {
+        console.log('⚠️ [APP] Sin sesión activa - desbloqueando para mostrar login');
+        setBiometricEnabled(false);
+        setIsLocked(false);
+        return;
+      }
 
       // Verificar si el usuario actual coincide con el guardado en biometría
       const isCurrentUser = await isBiometricUserCurrent();

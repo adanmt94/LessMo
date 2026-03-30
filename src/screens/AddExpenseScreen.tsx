@@ -79,6 +79,10 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
   // Always call useExpenses (Rules of Hooks) — use dummy eventId for individual expenses
   const expenseHookResult = useExpenses(isIndividualExpense ? '__individual__' : eventId!);
   
+  // State for adding participants in individual expenses
+  const [extraParticipants, setExtraParticipants] = useState<Array<{ id: string; name: string }>>([]);
+  const [newParticipantName, setNewParticipantName] = useState('');
+
   // For individual expenses, create a virtual participant from current user
   const individualParticipant = useMemo(() => 
     isIndividualExpense && user ? {
@@ -93,11 +97,22 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
   );
   
   // Stable references: destructure hook values directly, only override for individual mode
-  const participants = useMemo(() => 
-    isIndividualExpense 
-      ? (individualParticipant ? [individualParticipant] : [])
-      : expenseHookResult.participants,
-    [isIndividualExpense, individualParticipant, expenseHookResult.participants]
+  const participants = useMemo(() => {
+    if (isIndividualExpense) {
+      const base = individualParticipant ? [individualParticipant] : [];
+      const extras = extraParticipants.map(p => ({
+        id: p.id,
+        name: p.name,
+        eventId: 'individual',
+        individualBudget: 0,
+        currentBalance: 0,
+        joinedAt: new Date(),
+      }));
+      return [...base, ...extras];
+    }
+    return expenseHookResult.participants;
+  },
+    [isIndividualExpense, individualParticipant, extraParticipants, expenseHookResult.participants]
   );
   
   const addExpense = isIndividualExpense ? null : expenseHookResult.addExpense;
@@ -667,6 +682,10 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
             splitType,
             participantIds: selectedBeneficiaries,
             beneficiaries: selectedBeneficiaries,
+            participantNames: participants.reduce((acc: Record<string, string>, p) => {
+              acc[p.id] = p.name;
+              return acc;
+            }, {}),
             isIndividual: true,
           };
           if (photoURL) {
@@ -969,6 +988,54 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
                     <Text style={styles.photoButtonTextSecondary}>{t('addExpense.fromGallery')}</Text>
                   </TouchableOpacity>
                 </View>
+              </Card>
+            )}
+
+            {/* Add participants section for individual expenses */}
+            {isIndividualExpense && (
+              <Card style={styles.addParticipantCard}>
+                <Text style={styles.label}>{t('addExpense.participants') || 'Participantes'}</Text>
+                <View style={styles.addParticipantRow}>
+                  <Input
+                    value={newParticipantName}
+                    onChangeText={setNewParticipantName}
+                    placeholder={t('createGroup.participantNamePlaceholder') || 'Nombre del participante'}
+                    style={styles.addParticipantInput}
+                  />
+                  <TouchableOpacity
+                    style={styles.addParticipantButton}
+                    onPress={() => {
+                      const name = newParticipantName.trim();
+                      if (!name) return;
+                      if (participants.some(p => p.name.toLowerCase() === name.toLowerCase())) {
+                        Alert.alert(t('common.error'), t('createGroup.participantAlreadyExists') || 'El participante ya existe');
+                        return;
+                      }
+                      const newP = { id: `temp_${Date.now()}`, name };
+                      setExtraParticipants(prev => [...prev, newP]);
+                      setNewParticipantName('');
+                    }}
+                  >
+                    <Text style={styles.addParticipantButtonText}>+</Text>
+                  </TouchableOpacity>
+                </View>
+                {participants.length > 0 && (
+                  <View style={styles.participantChips}>
+                    {participants.map(p => (
+                      <View key={p.id} style={styles.participantChip}>
+                        <Text style={styles.participantChipText}>{p.name}</Text>
+                        {p.id !== user?.uid && (
+                          <TouchableOpacity
+                            onPress={() => setExtraParticipants(prev => prev.filter(ep => ep.id !== p.id))}
+                            style={styles.participantChipRemove}
+                          >
+                            <Text style={styles.participantChipRemoveText}>✕</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    ))}
+                  </View>
+                )}
               </Card>
             )}
 
@@ -1426,6 +1493,65 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   participantsList: {
     marginBottom: 16,
+  },
+  addParticipantCard: {
+    marginBottom: 16,
+    padding: 16,
+  },
+  addParticipantRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  addParticipantInput: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  addParticipantButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: theme.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addParticipantButtonText: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  participantChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  participantChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.primaryLight,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 6,
+  },
+  participantChipText: {
+    fontSize: 14,
+    color: theme.colors.primary,
+    fontWeight: '500',
+  },
+  participantChipRemove: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: theme.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  participantChipRemoveText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
   },
   participantButton: {
     paddingHorizontal: 16,

@@ -50,8 +50,8 @@ export interface WidgetData {
   monthTotal: number;
   monthExpenses: number;
   recentExpenses: WidgetExpense[];
-  pendingPayments: number;
-  lastUpdate: string;
+  pendingPayments: number;  budget: number;
+  eventsCount: number;  lastUpdate: string;
 }
 
 /**
@@ -168,6 +168,7 @@ export async function updateWidgetData(userId: string): Promise<void> {
     const latestEvent = activeEvents[0];
     const eventName = latestEvent?.name || 'Sin eventos';
     const participantsCount = latestEvent?.participantIds?.length || 0;
+    const eventBudget = latestEvent?.budget || 0;
     
     const widgetData: WidgetData = {
       // Campos que el widget Swift lee directamente
@@ -176,11 +177,13 @@ export async function updateWidgetData(userId: string): Promise<void> {
       userBalance: totalBalance,
       participantsCount,
       // Campos adicionales
-      currency: 'EUR',
+      currency: latestEvent?.currency || 'EUR',
       monthTotal,
       monthExpenses: monthExpenses.length,
       recentExpenses: allExpenses.slice(0, 10),
       pendingPayments: totalOwing > 0 ? Math.ceil(totalOwing) : 0,
+      budget: eventBudget,
+      eventsCount: activeEvents.length,
       lastUpdate: new Date().toISOString()
     };
     

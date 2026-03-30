@@ -56,6 +56,14 @@ export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
   const [budget, setBudget] = useState('');
   const [currency, setCurrency] = useState<Currency>('EUR');
 
+  // Añadir al creador como participante inicial
+  useEffect(() => {
+    if (!isEditMode && user) {
+      const creatorName = user.displayName || user.email?.split('@')[0] || 'Usuario';
+      setMembers([{ id: user.uid, name: creatorName, email: user.email || undefined }]);
+    }
+  }, [user?.uid]);
+
   // Cargar datos del evento si estamos en modo edición
   useEffect(() => {
     if (isEditMode) {
@@ -470,17 +478,21 @@ export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
                   {members.map((member) => (
                     <View key={member.id} style={styles.memberItem}>
                       <View style={styles.memberInfo}>
-                        <Text style={styles.memberName}>{member.name}</Text>
+                        <Text style={styles.memberName}>
+                          {member.name}{member.id === user?.uid ? ` (${t('common.you') || 'Tú'})` : ''}
+                        </Text>
                         {member.email && (
                           <Text style={styles.memberEmail}>{member.email}</Text>
                         )}
                       </View>
-                      <TouchableOpacity
-                        style={styles.removeMemberButton}
-                        onPress={() => handleRemoveMember(member.id, member.name)}
-                      >
-                        <Text style={styles.removeMemberButtonText}>✕</Text>
-                      </TouchableOpacity>
+                      {member.id !== user?.uid && (
+                        <TouchableOpacity
+                          style={styles.removeMemberButton}
+                          onPress={() => handleRemoveMember(member.id, member.name)}
+                        >
+                          <Text style={styles.removeMemberButtonText}>✕</Text>
+                        </TouchableOpacity>
+                      )}
                     </View>
                   ))}
                 </View>

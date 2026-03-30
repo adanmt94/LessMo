@@ -17,6 +17,8 @@ struct SimpleEntry: TimelineEntry {
     let monthTotal: Double
     let monthExpenses: Int
     let pendingPayments: Double
+    let budget: Double
+    let eventsCount: Int
     
     static var placeholder: SimpleEntry {
         SimpleEntry(
@@ -28,7 +30,9 @@ struct SimpleEntry: TimelineEntry {
             currency: "EUR",
             monthTotal: 320.0,
             monthExpenses: 12,
-            pendingPayments: 45.0
+            pendingPayments: 45.0,
+            budget: 1000.0,
+            eventsCount: 3
         )
     }
     
@@ -42,7 +46,9 @@ struct SimpleEntry: TimelineEntry {
             currency: "EUR",
             monthTotal: 0,
             monthExpenses: 0,
-            pendingPayments: 0
+            pendingPayments: 0,
+            budget: 0,
+            eventsCount: 0
         )
     }
     
@@ -53,8 +59,19 @@ struct SimpleEntry: TimelineEntry {
         case "USD": return "$"
         case "GBP": return "£"
         case "MXN": return "$"
+        case "JPY", "CNY": return "¥"
+        case "BRL": return "R$"
+        case "ARS", "COP", "CLP": return "$"
         default: return "€"
         }
+    }
+    
+    var budgetRemaining: Double {
+        budget > 0 ? max(0, budget - totalExpenses) : 0
+    }
+    
+    var budgetProgress: Double {
+        budget > 0 ? min(1.0, totalExpenses / budget) : 0
     }
 }
 
@@ -85,7 +102,9 @@ struct Provider: TimelineProvider {
                 currency: widgetData["currency"] as? String ?? "EUR",
                 monthTotal: widgetData["monthTotal"] as? Double ?? 0.0,
                 monthExpenses: widgetData["monthExpenses"] as? Int ?? 0,
-                pendingPayments: widgetData["pendingPayments"] as? Double ?? 0.0
+                pendingPayments: widgetData["pendingPayments"] as? Double ?? 0.0,
+                budget: widgetData["budget"] as? Double ?? 0.0,
+                eventsCount: widgetData["eventsCount"] as? Int ?? 0
             )
         } else {
             entry = .empty
@@ -117,15 +136,15 @@ struct LessmoWidgetEntryViewSmall: View {
     }
     
     private var emptyState: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 6) {
             Image(systemName: "plus.circle.fill")
-                .font(.system(size: 32))
+                .font(.system(size: 28))
                 .foregroundStyle(.linearGradient(
                     colors: [.widgetAccent, .widgetAccent.opacity(0.6)],
                     startPoint: .topLeading, endPoint: .bottomTrailing
                 ))
-            Text("Añadir evento")
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
+            Text("Añadir gasto")
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -192,19 +211,32 @@ struct LessmoWidgetEntryViewMedium: View {
     
     private var emptyState: some View {
         HStack(spacing: 16) {
-            Image(systemName: "plus.circle.fill")
-                .font(.system(size: 40))
-                .foregroundStyle(.linearGradient(
-                    colors: [.widgetAccent, .widgetAccent.opacity(0.6)],
-                    startPoint: .topLeading, endPoint: .bottomTrailing
-                ))
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Crea un evento")
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
-                Text("Empieza a gestionar gastos compartidos")
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
+            VStack(spacing: 8) {
+                Image(systemName: "plus.circle.fill")
+                    .font(.system(size: 36))
+                    .foregroundStyle(.linearGradient(
+                        colors: [.widgetAccent, .widgetAccent.opacity(0.6)],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    ))
+                Text("Nuevo gasto")
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
                     .foregroundColor(.secondary)
             }
+            .frame(maxWidth: .infinity)
+            
+            RoundedRectangle(cornerRadius: 1)
+                .fill(Color.secondary.opacity(0.2))
+                .frame(width: 1)
+                .padding(.vertical, 8)
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Crea un evento")
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                Text("Gestiona gastos compartidos")
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundColor(.secondary)
+            }
+            .frame(maxWidth: .infinity)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -296,17 +328,35 @@ struct LessmoWidgetEntryViewLarge: View {
     private var emptyState: some View {
         VStack(spacing: 16) {
             Image(systemName: "chart.bar.doc.horizontal.fill")
-                .font(.system(size: 48))
+                .font(.system(size: 44))
                 .foregroundStyle(.linearGradient(
                     colors: [.widgetAccent, .purple],
                     startPoint: .topLeading, endPoint: .bottomTrailing
                 ))
             Text("¡Bienvenido a LessMo!")
                 .font(.system(size: 18, weight: .bold, design: .rounded))
-            Text("Crea tu primer evento para ver\ntus gastos aquí")
+            Text("Crea tu primer evento o\nañade un gasto rápido")
                 .font(.system(size: 13, weight: .medium, design: .rounded))
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
+            
+            HStack(spacing: 12) {
+                HStack(spacing: 4) {
+                    Image(systemName: "calendar.badge.plus")
+                        .font(.system(size: 12))
+                    Text("Crear evento")
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                }
+                .foregroundColor(.widgetAccent)
+                
+                HStack(spacing: 4) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 12))
+                    Text("Gasto rápido")
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                }
+                .foregroundColor(.widgetAccent)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -317,49 +367,92 @@ struct LessmoWidgetEntryViewLarge: View {
             HStack {
                 HStack(spacing: 8) {
                     Image(systemName: "chart.pie.fill")
-                        .font(.system(size: 18))
+                        .font(.system(size: 16))
                         .foregroundStyle(.linearGradient(
                             colors: [.widgetAccent, .purple],
                             startPoint: .topLeading, endPoint: .bottomTrailing
                         ))
                     Text("LessMo")
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
                 }
                 Spacer()
-                Text(entry.date, style: .time)
-                    .font(.system(size: 11, weight: .medium, design: .rounded))
-                    .foregroundColor(.secondary)
+                if entry.eventsCount > 0 {
+                    Text("\(entry.eventsCount) evento\(entry.eventsCount == 1 ? "" : "s")")
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundColor(.secondary)
+                }
             }
             
-            // Event name
-            Text(entry.eventName)
-                .font(.system(size: 14, weight: .semibold, design: .rounded))
+            // Event name + participants
+            HStack {
+                Text(entry.eventName)
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                Spacer()
+                HStack(spacing: 3) {
+                    Image(systemName: "person.2.fill")
+                        .font(.system(size: 10))
+                    Text("\(entry.participantsCount)")
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                }
                 .foregroundColor(.secondary)
-                .lineLimit(1)
-                .padding(.top, 8)
+            }
+            .padding(.top, 6)
             
             Spacer()
             
-            // Main balance card
-            VStack(alignment: .leading, spacing: 4) {
+            // Balance
+            VStack(alignment: .leading, spacing: 2) {
                 Text("Tu balance")
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
                     .foregroundColor(.secondary)
                 HStack(alignment: .firstTextBaseline, spacing: 2) {
                     Text(entry.userBalance >= 0 ? "+" : "")
-                        .font(.system(size: 18, weight: .medium, design: .rounded))
+                        .font(.system(size: 16, weight: .medium, design: .rounded))
                     Text(String(format: "%.2f", abs(entry.userBalance)))
-                        .font(.system(size: 38, weight: .bold, design: .rounded))
+                        .font(.system(size: 32, weight: .bold, design: .rounded))
                     Text(entry.currencySymbol)
-                        .font(.system(size: 18, weight: .semibold, design: .rounded))
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
                 }
                 .foregroundColor(entry.userBalance >= 0 ? .widgetPositive : .widgetNegative)
+            }
+            
+            // Budget progress bar (if budget set)
+            if entry.budget > 0 {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text("Presupuesto")
+                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Text("\(String(format: "%.0f", entry.budgetRemaining))\(entry.currencySymbol) restante")
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .foregroundColor(entry.budgetProgress > 0.8 ? .widgetNegative : .widgetPositive)
+                    }
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Color.secondary.opacity(0.15))
+                                .frame(height: 8)
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(entry.budgetProgress > 0.8
+                                    ? Color.widgetNegative
+                                    : entry.budgetProgress > 0.5
+                                        ? Color.orange
+                                        : Color.widgetPositive)
+                                .frame(width: geo.size.width * entry.budgetProgress, height: 8)
+                        }
+                    }
+                    .frame(height: 8)
+                }
+                .padding(.top, 8)
             }
             
             Spacer()
             
             // Stats grid
-            HStack(spacing: 12) {
+            HStack(spacing: 10) {
                 StatCard(
                     icon: "creditcard.fill",
                     label: "Gastos mes",
@@ -368,10 +461,10 @@ struct LessmoWidgetEntryViewLarge: View {
                 )
                 
                 StatCard(
-                    icon: "person.2.fill",
-                    label: "Personas",
-                    value: "\(entry.participantsCount)",
-                    color: .purple
+                    icon: "arrow.up.arrow.down",
+                    label: "Movimientos",
+                    value: "\(entry.monthExpenses)",
+                    color: .orange
                 )
                 
                 if entry.pendingPayments > 0 {
