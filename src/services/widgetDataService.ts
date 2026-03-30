@@ -53,6 +53,8 @@ export interface WidgetData {
   pendingPayments: number;
   budget: number;
   eventsCount: number;
+  youOwe: number;
+  owedToYou: number;
   lastUpdate: string;
 }
 
@@ -108,9 +110,6 @@ export async function updateWidgetData(userId: string): Promise<void> {
     // Obtener eventos del usuario
     const userEvents = await getUserEventsByStatus(userId);
     const activeEvents = userEvents.filter(e => e.status === 'active');
-    
-    // Solo contar eventos CREADOS por el usuario (no eventos de grupos ajenos)
-    const userCreatedEvents = activeEvents.filter(e => e.createdBy === userId);
     
     // Calcular balance total de eventos
     let totalBalance = 0;
@@ -241,7 +240,9 @@ export async function updateWidgetData(userId: string): Promise<void> {
       recentExpenses: allExpenses.slice(0, 10),
       pendingPayments: totalOwing > 0 ? Math.ceil(totalOwing) : 0,
       budget: totalBudget,
-      eventsCount: userCreatedEvents.length,
+      eventsCount: activeEvents.length,
+      youOwe: totalOwing,
+      owedToYou: totalOwed,
       lastUpdate: new Date().toISOString()
     };
     

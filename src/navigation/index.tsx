@@ -52,6 +52,8 @@ const linking: LinkingOptions<RootStackParamList> = {
       Register: 'register',
       MainTabs: {
         screens: {
+          Activity: 'dashboard',
+          Expenses: 'expenses',
           Events: 'events',
           Groups: 'groups',
           Settings: 'settings',
@@ -66,7 +68,9 @@ const linking: LinkingOptions<RootStackParamList> = {
       Statistics: 'event/:eventId/statistics',
       CreateEvent: 'create-event',
       CreateGroup: 'create-group',
-      AddExpense: 'event/:eventId/add-expense',
+      AddExpense: {
+        path: 'add-expense',
+      },
       Summary: 'event/:eventId/summary',
       EditProfile: 'profile/edit',
     },

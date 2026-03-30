@@ -97,7 +97,6 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
 
       const userEvents = await getUserEventsByStatus(user.uid);
       const activeEvents = userEvents.filter(e => e.status === 'active');
-      const userCreatedEvents = activeEvents.filter(e => e.createdBy === user.uid);
 
       let totalBalance = 0;
       let youOwe = 0;
@@ -175,7 +174,7 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
         totalBalance, youOwe, owedToYou,
         monthExpenses, monthIncome, monthTransactions,
         totalBudget, totalSpent,
-        activeEvents: userCreatedEvents.length,
+        activeEvents: activeEvents.length,
       });
     } catch (error) {
       console.error('Error loading dashboard:', error);
