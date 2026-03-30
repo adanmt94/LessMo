@@ -17,12 +17,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
-import { RootStackParamList } from '../types';
+import { RootStackParamList, Currency } from '../types';
 import { Button, Input, Card } from '../components/lovable';
 import { createGroup } from '../services/firebase';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
+import { AVAILABLE_CURRENCIES } from '../context/CurrencyContext';
 
 type CreateGroupScreenNavigationProp = StackNavigationProp<RootStackParamList, 'CreateGroup'>;
 type CreateGroupScreenRouteProp = RouteProp<RootStackParamList, 'CreateGroup'>;
@@ -53,7 +54,7 @@ export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
   const [newMemberEmail, setNewMemberEmail] = useState('');
   // 💰 PRESUPUESTO GRUPAL (característica principal)
   const [budget, setBudget] = useState('');
-  const [currency, setCurrency] = useState<'EUR' | 'USD' | 'GBP'>('EUR');
+  const [currency, setCurrency] = useState<Currency>('EUR');
 
   // Cargar datos del evento si estamos en modo edición
   useEffect(() => {
@@ -280,25 +281,31 @@ export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
               </View>
               
               <View style={styles.budgetInputContainer}>
-                <View style={styles.currencySelector}>
-                  {(['EUR', 'USD', 'GBP'] as const).map((curr) => (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.currencySelector} contentContainerStyle={styles.currencySelectorContent}>
+                  {AVAILABLE_CURRENCIES.map((opt) => (
                     <TouchableOpacity
-                      key={curr}
+                      key={opt.code}
                       style={[
                         styles.currencyButton,
-                        currency === curr && styles.currencyButtonSelected,
+                        currency === opt.code && styles.currencyButtonSelected,
                       ]}
-                      onPress={() => setCurrency(curr)}
+                      onPress={() => setCurrency(opt.code)}
                     >
                       <Text style={[
                         styles.currencyText,
-                        currency === curr && styles.currencyTextSelected,
+                        currency === opt.code && styles.currencyTextSelected,
                       ]}>
-                        {curr === 'EUR' ? '€' : curr === 'USD' ? '$' : '£'}
+                        {opt.symbol}
+                      </Text>
+                      <Text style={[
+                        styles.currencyCode,
+                        currency === opt.code && styles.currencyTextSelected,
+                      ]}>
+                        {opt.code}
                       </Text>
                     </TouchableOpacity>
                   ))}
-                </View>
+                </ScrollView>
                 
                 <Input
                   label={t('createGroup.maxBudget')}
@@ -788,27 +795,35 @@ const getStyles = (theme: any) => StyleSheet.create({
     marginBottom: 16,
   },
   currencySelector: {
-    flexDirection: 'row',
-    gap: 8,
     marginBottom: 16,
   },
+  currencySelectorContent: {
+    gap: 8,
+  },
   currencyButton: {
-    flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
     borderRadius: 8,
     borderWidth: 2,
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.surface,
     alignItems: 'center',
+    minWidth: 60,
   },
   currencyButtonSelected: {
     borderColor: theme.colors.primary,
     backgroundColor: theme.colors.primary,
   },
   currencyText: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
     color: theme.colors.text,
+  },
+  currencyCode: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: theme.colors.textSecondary,
+    marginTop: 2,
   },
   currencyTextSelected: {
     color: theme.colors.card,

@@ -16,6 +16,7 @@ import {
   Animated,
   ActionSheetIOS,
   Platform,
+  TextInput,
 } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -44,6 +45,16 @@ export const IndividualExpensesScreen: React.FC = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredExpenses = expenses.filter((expense) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    const desc = (expense.description || '').toLowerCase();
+    const name = (expense.name || '').toLowerCase();
+    const cat = (AllCategoryLabels[expense.category] || '').toLowerCase();
+    return desc.includes(q) || name.includes(q) || cat.includes(q);
+  });
 
   useEffect(() => {
     if (user) {
@@ -310,9 +321,30 @@ export const IndividualExpensesScreen: React.FC = () => {
           </View>
         </View>
       </LinearGradient>
+
+      {/* Search bar */}
+      <View style={styles.searchContainer}>
+        <View style={styles.searchInputWrapper}>
+          <Text style={styles.searchIcon}>🔍</Text>
+          <TextInput
+            style={styles.searchInput}
+            placeholder={t('common.search') || 'Buscar...'}
+            placeholderTextColor={theme.colors.textTertiary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCorrect={false}
+            clearButtonMode="while-editing"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.searchClear}>
+              <Text style={{ color: theme.colors.textSecondary, fontSize: 16 }}>✕</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
       
       <FlatList
-        data={expenses}
+        data={filteredExpenses}
         renderItem={renderExpenseItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={[
@@ -386,6 +418,34 @@ const getStyles = (theme: any) => StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  searchContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 4,
+  },
+  searchInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.card,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  searchIcon: {
+    fontSize: 16,
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 10,
+    fontSize: 15,
+    color: theme.colors.text,
+  },
+  searchClear: {
+    padding: 4,
+    marginLeft: 4,
   },
   listContent: {
     padding: 16,

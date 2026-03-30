@@ -206,6 +206,23 @@ export const onAuthChange = (callback: (user: FirebaseUser | null) => void) => {
 };
 
 /**
+ * Espera a que Firebase restaure la sesión desde AsyncStorage.
+ * Resuelve con el usuario actual (o null si no hay sesión).
+ */
+export const waitForAuthReady = (): Promise<FirebaseUser | null> => {
+  return new Promise((resolve) => {
+    if (!auth) {
+      resolve(null);
+      return;
+    }
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      unsubscribe();
+      resolve(user);
+    });
+  });
+};
+
+/**
  * Iniciar sesión con Google usando Firebase Authentication
  */
 export const signInWithGoogle = async (): Promise<User> => {
@@ -986,7 +1003,7 @@ export const createGroup = async (
   icon?: string,
   type?: 'project' | 'recurring',
   budget?: number,
-  currency?: 'EUR' | 'USD' | 'GBP'
+  currency?: Currency
 ): Promise<string> => {
   try {
     const inviteCode = generateInviteCode();

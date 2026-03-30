@@ -11,7 +11,17 @@
  */
 
 // Tipos de monedas soportadas
-export type Currency = 'EUR' | 'USD' | 'GBP' | 'JPY' | 'CNY' | 'MXN' | 'ARS' | 'COP' | 'CLP' | 'BRL';
+export type Currency = 
+  | 'EUR' | 'USD' | 'GBP' | 'JPY' | 'CNY'   // Major world currencies
+  | 'CHF' | 'CAD' | 'AUD' | 'NZD' | 'SEK'   // European / Oceania
+  | 'NOK' | 'DKK' | 'PLN' | 'CZK' | 'HUF'   // Nordic / Central Europe
+  | 'RON' | 'BGN' | 'HRK' | 'ISK' | 'TRY'   // Europe continued
+  | 'MXN' | 'ARS' | 'COP' | 'CLP' | 'BRL'   // Latin America
+  | 'PEN' | 'UYU' | 'BOB' | 'PYG' | 'DOP'   // Latin America continued
+  | 'INR' | 'KRW' | 'THB' | 'SGD' | 'MYR'   // Asia
+  | 'IDR' | 'PHP' | 'VND' | 'HKD' | 'TWD'   // Asia continued
+  | 'ILS' | 'AED' | 'SAR' | 'ZAR' | 'MAD'   // Middle East / Africa
+  | 'EGP' | 'NGN' | 'KES' | 'RUB' | 'UAH';  // Africa / Eastern Europe
 
 // Tipo de transacción: gasto o ingreso
 export type TransactionType = 'expense' | 'income';
@@ -280,16 +290,61 @@ export type TabParamList = {
 
 // Símbolos de monedas
 export const CurrencySymbols: Record<Currency, string> = {
+  // Major
   EUR: '€',
   USD: '$',
   GBP: '£',
   JPY: '¥',
   CNY: '¥',
+  CHF: 'Fr',
+  CAD: 'C$',
+  AUD: 'A$',
+  NZD: 'NZ$',
+  // Nordic / Central Europe
+  SEK: 'kr',
+  NOK: 'kr',
+  DKK: 'kr',
+  PLN: 'zł',
+  CZK: 'Kč',
+  HUF: 'Ft',
+  RON: 'lei',
+  BGN: 'лв',
+  HRK: 'kn',
+  ISK: 'kr',
+  TRY: '₺',
+  // Latin America
   MXN: '$',
   ARS: '$',
   COP: '$',
   CLP: '$',
   BRL: 'R$',
+  PEN: 'S/',
+  UYU: '$U',
+  BOB: 'Bs',
+  PYG: '₲',
+  DOP: 'RD$',
+  // Asia
+  INR: '₹',
+  KRW: '₩',
+  THB: '฿',
+  SGD: 'S$',
+  MYR: 'RM',
+  IDR: 'Rp',
+  PHP: '₱',
+  VND: '₫',
+  HKD: 'HK$',
+  TWD: 'NT$',
+  // Middle East / Africa
+  ILS: '₪',
+  AED: 'د.إ',
+  SAR: '﷼',
+  ZAR: 'R',
+  MAD: 'د.م.',
+  EGP: 'E£',
+  NGN: '₦',
+  KES: 'KSh',
+  RUB: '₽',
+  UAH: '₴',
 };
 
 // Etiquetas de categorías de gastos en español

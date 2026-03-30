@@ -18,7 +18,7 @@ import { Navigation } from './src/navigation';
 import { BiometricLockScreen } from './src/screens/BiometricLockScreen';
 import { globalEmitter, GlobalEvents } from './src/utils/globalEvents';
 import { isBiometricUserCurrent } from './src/services/biometricAuthService';
-import { auth } from './src/services/firebase';
+import { auth, waitForAuthReady } from './src/services/firebase';
 import { initDeepLinkListener, DeepLinkConfig } from './src/services/deepLinkService';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import { initializeStripe } from './src/services/stripeService';
@@ -68,6 +68,11 @@ const AppContent: React.FC<{ appKey: number }> = ({ appKey }) => {
         setIsLocked(false);
         return;
       }
+
+      // Esperar a que Firebase restaure la sesión antes de comprobar
+      console.log('🔐 [APP] Esperando a que Firebase restaure sesión...');
+      await waitForAuthReady();
+      console.log('🔐 [APP] Firebase listo, usuario actual:', auth.currentUser?.uid ?? 'null');
 
       // Verificar si el usuario actual coincide con el guardado en biometría
       const isCurrentUser = await isBiometricUserCurrent();

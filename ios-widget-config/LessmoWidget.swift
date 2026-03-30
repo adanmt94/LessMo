@@ -101,7 +101,7 @@ extension Color {
     static let widgetAccent = Color(red: 0.35, green: 0.47, blue: 1.0)
     static let widgetPositive = Color(red: 0.2, green: 0.78, blue: 0.55)
     static let widgetNegative = Color(red: 0.95, green: 0.3, blue: 0.35)
-    static let widgetCard = Color(UIColor.secondarySystemGroupedBackground)
+    static let widgetCard = Color(red: 0.949, green: 0.949, blue: 0.969)
 }
 
 // MARK: - Small Widget
