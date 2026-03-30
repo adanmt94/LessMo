@@ -245,6 +245,7 @@
     "customSplitInvalid": "Invalid amount for {{name}}",
     "customSplitTotal": "Sum of splits ({{total}}) doesn't match total amount ({{amount}})",
     "expenseAdded": "Expense added successfully",
+    "addAnother": "Add another",
     "expenseUpdated": "Expense updated successfully",
     "expenseDeleted": "Expense deleted successfully",
     "errorAdding": "Could not add expense",

@@ -61,8 +61,19 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
   // Añadir al creador como participante inicial
   useEffect(() => {
     if (!isEditMode && user) {
-      const creatorName = user.displayName || user.email?.split('@')[0] || 'Usuario';
-      setMembers([{ id: user.uid, name: creatorName, email: user.email || undefined }]);
+      // Leer nombre actualizado de Firestore
+      const loadCreatorName = async () => {
+        try {
+          const { getUserInfo } = await import('../services/firebase');
+          const info = await getUserInfo(user.uid);
+          const creatorName = info?.name || user.displayName || user.email?.split('@')[0] || 'Usuario';
+          setMembers([{ id: user.uid, name: creatorName, email: user.email || undefined }]);
+        } catch {
+          const creatorName = user.displayName || user.email?.split('@')[0] || 'Usuario';
+          setMembers([{ id: user.uid, name: creatorName, email: user.email || undefined }]);
+        }
+      };
+      loadCreatorName();
     }
   }, [user?.uid]);
 
@@ -267,10 +278,11 @@ export const CreateEventScreen: React.FC<Props> = ({ navigation, route }) => {
               ? budgetNumber / (members.length + 1) 
               : 0;
             
-            // Add creator as participant
+            // Add creator as participant — use the name from members list (already fetched from Firestore)
+            const creatorMember = members.find(m => m.id === user!.uid);
             await addParticipant(
               targetEventId,
-              user!.displayName || user!.email?.split('@')[0] || t('eventDetail.user'),
+              creatorMember?.name || user!.displayName || user!.email?.split('@')[0] || t('eventDetail.user'),
               budgetPerPerson,
               user!.email || undefined,
               user!.uid

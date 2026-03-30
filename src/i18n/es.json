@@ -245,6 +245,7 @@
     "customSplitInvalid": "Monto inválido para {{name}}",
     "customSplitTotal": "La suma de las divisiones ({{total}}) no coincide con el monto total ({{amount}})",
     "expenseAdded": "Gasto agregado exitosamente",
+    "addAnother": "Añadir otro",
     "expenseUpdated": "Gasto actualizado exitosamente",
     "expenseDeleted": "Gasto eliminado correctamente",
     "errorAdding": "No se pudo agregar el gasto",

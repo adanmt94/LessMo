@@ -60,8 +60,18 @@ export const CreateGroupScreen: React.FC<Props> = ({ navigation, route }) => {
   // Añadir al creador como participante inicial
   useEffect(() => {
     if (!isEditMode && user) {
-      const creatorName = user.displayName || user.email?.split('@')[0] || 'Usuario';
-      setMembers([{ id: user.uid, name: creatorName, email: user.email || undefined }]);
+      const loadCreatorName = async () => {
+        try {
+          const { getUserInfo } = await import('../services/firebase');
+          const info = await getUserInfo(user.uid);
+          const creatorName = info?.name || user.displayName || user.email?.split('@')[0] || 'Usuario';
+          setMembers([{ id: user.uid, name: creatorName, email: user.email || undefined }]);
+        } catch {
+          const creatorName = user.displayName || user.email?.split('@')[0] || 'Usuario';
+          setMembers([{ id: user.uid, name: creatorName, email: user.email || undefined }]);
+        }
+      };
+      loadCreatorName();
     }
   }, [user?.uid]);
 

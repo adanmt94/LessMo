@@ -95,6 +95,8 @@ export async function updateWidgetData(userId: string): Promise<void> {
   try {
     // Importar servicios dinámicamente para evitar ciclos
     const { getUserEventsByStatus, getEventExpenses } = await import('./firebase');
+    const { collection: firestoreCollection, query: firestoreQuery, where: firestoreWhere, getDocs: firestoreGetDocs } = await import('firebase/firestore');
+    const { db } = await import('./firebase');
     
     // Obtener eventos del usuario
     const userEvents = await getUserEventsByStatus(userId);
@@ -130,7 +132,7 @@ export async function updateWidgetData(userId: string): Promise<void> {
       }
     }
     
-    // Obtener gastos recientes (últimos 30 días)
+    // Obtener gastos recientes (últimos 30 días) — incluyendo individuales
     const allExpenses: WidgetExpense[] = [];
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -155,6 +157,31 @@ export async function updateWidgetData(userId: string): Promise<void> {
       }
     }
     
+    // Obtener gastos individuales del usuario
+    try {
+      const individualQuery = firestoreQuery(
+        firestoreCollection(db, 'expenses'),
+        firestoreWhere('userId', '==', userId),
+        firestoreWhere('isIndividual', '==', true)
+      );
+      const individualSnap = await firestoreGetDocs(individualQuery);
+      individualSnap.docs.forEach(doc => {
+        const data = doc.data();
+        const expenseDate = data.date?.toDate ? data.date.toDate() : new Date(data.date);
+        
+        if (expenseDate >= thirtyDaysAgo) {
+          allExpenses.push({
+            description: data.description || 'Gasto individual',
+            amount: data.amount || 0,
+            date: expenseDate.toISOString(),
+            category: data.category
+          });
+        }
+      });
+    } catch (error) {
+      console.warn('Error obteniendo gastos individuales para widget:', error);
+    }
+    
     // Ordenar por fecha (más recientes primero)
     allExpenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     
@@ -166,7 +193,7 @@ export async function updateWidgetData(userId: string): Promise<void> {
     
     // Nombre del evento más reciente
     const latestEvent = activeEvents[0];
-    const eventName = latestEvent?.name || 'Sin eventos';
+    const eventName = latestEvent?.name || (allExpenses.length > 0 ? 'Gastos personales' : 'Sin eventos');
     const participantsCount = latestEvent?.participantIds?.length || 0;
     const eventBudget = latestEvent?.budget || 0;
     

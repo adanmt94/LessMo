@@ -83,18 +83,32 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
   // State for adding participants in individual expenses
   const [extraParticipants, setExtraParticipants] = useState<Array<{ id: string; name: string }>>([]);
   const [newParticipantName, setNewParticipantName] = useState('');
+  const [firestoreDisplayName, setFirestoreDisplayName] = useState<string | null>(null);
+
+  // Fetch the user's actual name from Firestore (may differ from Auth displayName)
+  useEffect(() => {
+    if (user?.uid) {
+      import('../services/firebase').then(({ getUserInfo }) => {
+        getUserInfo(user.uid).then(info => {
+          if (info?.name) {
+            setFirestoreDisplayName(info.name);
+          }
+        }).catch(() => {});
+      }).catch(() => {});
+    }
+  }, [user?.uid]);
 
   // For individual expenses, create a virtual participant from current user
   const individualParticipant = useMemo(() => 
     isIndividualExpense && user ? {
       id: user.uid,
-      name: user.displayName || user.email?.split('@')[0] || t('settings.user'),
+      name: firestoreDisplayName || user.displayName || user.email?.split('@')[0] || t('settings.user'),
       eventId: 'individual',
       individualBudget: 0,
       currentBalance: 0,
       joinedAt: new Date(),
     } : null,
-    [isIndividualExpense, user?.uid, user?.displayName, user?.email]
+    [isIndividualExpense, user?.uid, user?.displayName, user?.email, firestoreDisplayName]
   );
   
   // Stable references: destructure hook values directly, only override for individual mode
@@ -695,14 +709,11 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
           
           await addDoc(collection(db, 'expenses'), expenseData);
           
-          // Actualizar widget iOS
-          try {
-            const { updateWidgetData } = await import('../services/widgetDataService');
-            if (auth.currentUser?.uid) {
-              await updateWidgetData(auth.currentUser.uid);
-            }
-          } catch (widgetError) {
-            // No es crítico
+          // Actualizar widget iOS (en background, no bloqueante)
+          if (auth.currentUser?.uid) {
+            import('../services/widgetDataService').then(({ updateWidgetData }) => {
+              updateWidgetData(auth.currentUser!.uid).catch(() => {});
+            }).catch(() => {});
           }
           
           success = true;
@@ -774,12 +785,29 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
           isEditMode
             ? (transactionType === 'income' ? t('addExpense.incomeUpdated') : t('addExpense.expenseUpdated'))
             : (transactionType === 'income' ? t('addExpense.incomeAdded') : t('addExpense.expenseAdded')),
-          [
-            {
-              text: 'OK',
-              onPress: () => navigation.goBack(),
-            },
-          ]
+          isIndividualExpense && !isEditMode
+            ? [
+                {
+                  text: t('addExpense.addAnother') || 'Añadir otro',
+                  onPress: () => {
+                    // Reset form for a new expense
+                    setDescription('');
+                    setAmount('');
+                    setCategory('food');
+                    setReceiptPhoto(null);
+                  },
+                },
+                {
+                  text: 'OK',
+                  onPress: () => navigation.goBack(),
+                },
+              ]
+            : [
+                {
+                  text: 'OK',
+                  onPress: () => navigation.goBack(),
+                },
+              ]
         );
       } else {
         Alert.alert(t('common.error'), isEditMode ? t('addExpense.errorUpdating') : t('addExpense.errorAdding'));

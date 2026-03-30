@@ -20,7 +20,8 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import * as ImagePicker from 'expo-image-picker';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { doc, updateDoc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { db, storage } from '../services/firebase';
+import { updateProfile } from 'firebase/auth';
+import { db, storage, auth } from '../services/firebase';
 import { RootStackParamList } from '../types';
 import { Button, Input, Card } from '../components/lovable';
 import { useAuth } from '../hooks/useAuth';
@@ -203,6 +204,14 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
         photoURL: photoURL || '',
         updatedAt: new Date(),
       }, { merge: true });
+
+      // Sincronizar displayName en Firebase Auth
+      if (auth.currentUser) {
+        await updateProfile(auth.currentUser, {
+          displayName: name.trim(),
+          photoURL: photoURL || undefined,
+        });
+      }
 
       // Actualizar también todos los participantes con este userId
       try {
