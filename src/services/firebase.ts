@@ -1322,7 +1322,7 @@ export const getUserEventsByStatus = async (
 ): Promise<Event[]> => {
   try {
     
-    // 1. Obtener eventos creados por el usuario
+    // Obtener eventos creados por el usuario
     let q;
     if (status) {
       q = query(
@@ -1343,49 +1343,8 @@ export const getUserEventsByStatus = async (
       ...doc.data() 
     } as Event));
     
-    // 2. Obtener eventos donde el usuario es participante (via colección participants)
-    const participantsQuery = query(
-      collection(db, 'participants'),
-      where('userId', '==', userId)
-    );
-    const participantsSnap = await getDocs(participantsQuery);
-    const participantEventIds = [...new Set(
-      participantsSnap.docs.map(d => d.data().eventId as string).filter(Boolean)
-    )];
-    
-    // 3. Cargar esos eventos (que no estén ya en userEvents)
-    const existingIds = new Set(userEvents.map(e => e.id));
-    const missingEventIds = participantEventIds.filter(id => !existingIds.has(id));
-    
-    let participantEvents: Event[] = [];
-    // Cargar en paralelo los eventos faltantes
-    if (missingEventIds.length > 0) {
-      const loaded = await Promise.all(
-        missingEventIds.map(id => getEvent(id).catch(() => null))
-      );
-      participantEvents = loaded.filter((e): e is Event => e !== null);
-    }
-
-    // 4. Combinar y filtrar por status si es necesario
-    const allEventsMap = new Map<string, Event>();
-    
-    userEvents.forEach(event => {
-      allEventsMap.set(event.id, event);
-    });
-    
-    participantEvents.forEach(event => {
-      if (!allEventsMap.has(event.id)) {
-        // Filtrar por status si se especificó (userEvents ya viene filtrado por la query)
-        if (!status || event.status === status) {
-          allEventsMap.set(event.id, event);
-        }
-      }
-    });
-    
-    const allEvents = Array.from(allEventsMap.values());
-    
-    // 5. Ordenar por fecha de creación
-    return allEvents.sort((a, b) => {
+    // Ordenar por fecha de creación
+    return userEvents.sort((a, b) => {
       const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
       const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
       return dateB.getTime() - dateA.getTime();

@@ -512,6 +512,13 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
           </Text>
         </Card>
 
+        <Button
+          title={t('eventDetail.viewChartsSettlements')}
+          onPress={() => navigation.navigate('Summary', { eventId })}
+          variant="outline"
+          fullWidth
+        />
+
         {/* Recomendaciones Contextuales */}
         {expenses.length >= 1 && event && (
           <RecommendationsCard
@@ -540,13 +547,6 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
             }}
           />
         )}
-
-        <Button
-          title={t('eventDetail.viewChartsSettlements')}
-          onPress={() => navigation.navigate('Summary', { eventId })}
-          variant="outline"
-          fullWidth
-        />
       </ScrollView>
     );
   };

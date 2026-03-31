@@ -131,8 +131,9 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
     
     const settlementData = {
       ...settlement,
-      from: fromParticipant.id,
-      to: toParticipant.id,
+      // Usar auth UIDs para Firestore rules (fromUserId/toUserId deben ser auth UIDs)
+      from: fromParticipant.userId || fromParticipant.id,
+      to: toParticipant.userId || toParticipant.id,
       fromName: fromParticipant.name,
       toName: toParticipant.name,
     };
@@ -385,6 +386,182 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
           </TouchableOpacity>
         </View>
 
+        {/* Liquidaciones sugeridas */}
+        {settlements.length > 0 && (
+          <Card style={styles.card}>
+            <Text style={styles.cardTitle}>{t('eventSummary.settlements')}</Text>
+            <Text style={styles.cardSubtitle}>
+              {t('eventSummary.settlementsSubtitle')}
+            </Text>
+
+            {/* Selector de tipo de liquidación */}
+            <View style={styles.settlementTypeSelector}>
+              <TouchableOpacity
+                style={[
+                  styles.settlementTypeButton,
+                  settlementType === 'traditional' && styles.settlementTypeButtonActive,
+                  { borderColor: theme.colors.border, backgroundColor: settlementType === 'traditional' ? theme.colors.primary : 'transparent' }
+                ]}
+                onPress={() => setSettlementType('traditional')}
+              >
+                <Text style={[
+                  styles.settlementTypeButtonText,
+                  { color: settlementType === 'traditional' ? '#FFFFFF' : theme.colors.text }
+                ]}>
+                  📋 Tradicional
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[
+                  styles.settlementTypeButton,
+                  settlementType === 'optimized' && styles.settlementTypeButtonActive,
+                  { borderColor: theme.colors.border, backgroundColor: settlementType === 'optimized' ? theme.colors.primary : 'transparent' }
+                ]}
+                onPress={() => setSettlementType('optimized')}
+              >
+                <Text style={[
+                  styles.settlementTypeButtonText,
+                  { color: settlementType === 'optimized' ? '#FFFFFF' : theme.colors.text }
+                ]}>
+                  ⚡ Optimizada
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Mostrar liquidaciones según el tipo seleccionado */}
+            {(() => {
+              const optimizationResult = optimizeSettlements(expenses, participants);
+              const displaySettlements = settlementType === 'optimized' 
+                ? (optimizationResult?.optimized || [])
+                : (optimizationResult?.traditional || settlements);
+
+              if (!displaySettlements || displaySettlements.length === 0) {
+                return (
+                  <View style={styles.emptySettlements}>
+                    <Text style={styles.emptySettlementsText}>
+                      No hay liquidaciones pendientes
+                    </Text>
+                  </View>
+                );
+              }
+
+              return displaySettlements.map((settlement, index) => {
+                const fromParticipant = typeof settlement.from === 'string' 
+                  ? getParticipantById(settlement.from)
+                  : settlement.from;
+                const toParticipant = typeof settlement.to === 'string'
+                  ? getParticipantById(settlement.to)
+                  : settlement.to;
+                
+                if (!fromParticipant || !toParticipant) return null;
+
+                const fromId = fromParticipant.id;
+                const toId = toParticipant.id;
+                
+                const relatedPayment = payments.find(p => 
+                  p.fromUserId === fromId && 
+                  p.toUserId === toId &&
+                  (p.status === 'pending' || p.status === 'sent_waiting_confirmation')
+                );
+                
+                const paymentStatus = relatedPayment?.status;
+                
+                const userEmail = user?.email?.toLowerCase();
+                const userEmailPrefix = user?.email?.split('@')[0]?.toLowerCase();
+                const userDisplayName = user?.displayName?.toLowerCase();
+                const userFirstName = user?.displayName?.split(' ')[0]?.toLowerCase();
+                
+                const normalizeString = (str: string) => 
+                  str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                
+                const participantNameNormalized = normalizeString(fromParticipant?.name || '');
+                const toParticipantNameNormalized = normalizeString(toParticipant?.name || '');
+                
+                const emailMatchesName = userEmailPrefix && (
+                  userEmailPrefix.includes(participantNameNormalized) || 
+                  participantNameNormalized.includes(userEmailPrefix.substring(0, 4))
+                );
+                
+                const emailMatchesToName = userEmailPrefix && (
+                  userEmailPrefix.includes(toParticipantNameNormalized) || 
+                  toParticipantNameNormalized.includes(userEmailPrefix.substring(0, 4))
+                );
+                
+                const isDebtor = 
+                  fromParticipant?.userId === user?.uid ||
+                  fromParticipant?.email?.toLowerCase() === userEmail ||
+                  fromParticipant?.name.toLowerCase() === userDisplayName ||
+                  fromParticipant?.name.toLowerCase() === userFirstName ||
+                  emailMatchesName;
+                
+                const isCreditor = 
+                  toParticipant?.userId === user?.uid || 
+                  toParticipant?.email?.toLowerCase() === userEmail ||
+                  toParticipant?.name.toLowerCase() === userDisplayName ||
+                  toParticipant?.name.toLowerCase() === userFirstName ||
+                  emailMatchesToName;
+
+                return (
+                  <View key={`settlement-${settlementType}-${index}`} style={styles.settlementItem}>
+                    <View style={styles.settlementInfo}>
+                      <Text style={styles.settlementText}>
+                        <Text style={styles.settlementName}>{fromParticipant.name}</Text>
+                        {' → '}
+                        <Text style={styles.settlementName}>{toParticipant.name}</Text>
+                      </Text>
+                      <Text style={styles.settlementAmount}>
+                        {currencySymbol}{settlement.amount.toFixed(2)}
+                      </Text>
+                      {paymentStatus === 'sent_waiting_confirmation' && (
+                        <Text style={styles.paymentStatusBadge}>⏳ Pendiente confirmación</Text>
+                      )}
+                    </View>
+                    
+                    {isDebtor ? (
+                      <TouchableOpacity
+                        style={[styles.payButton, { backgroundColor: theme.colors.primary }]}
+                        onPress={() => handleMarkPayment(settlement)}
+                      >
+                        <Text style={[styles.payButtonText, { color: theme.colors.card }]}>
+                          💰 Realizar Pago
+                        </Text>
+                      </TouchableOpacity>
+                    ) : isCreditor && paymentStatus === 'sent_waiting_confirmation' ? (
+                      <TouchableOpacity
+                        style={[styles.payButton, { backgroundColor: theme.colors.success || '#10B981' }]}
+                        onPress={() => handleMarkPayment(settlement)}
+                      >
+                        <Text style={[styles.payButtonText, { color: theme.colors.card }]}>
+                          ✓ Confirmar
+                        </Text>
+                      </TouchableOpacity>
+                    ) : isCreditor ? (
+                      <TouchableOpacity
+                        style={[
+                          styles.payButton,
+                          { backgroundColor: theme.colors.primary + '20', borderWidth: 1.5, borderColor: theme.colors.primary }
+                        ]}
+                        onPress={async () => {
+                          const amount = `${currencySymbol}${settlement.amount.toFixed(2)}`;
+                          const message = `Hola ${fromParticipant.name}, te recuerdo que tienes un pago pendiente de ${amount} del evento "${event?.name}". ¡Gracias!`;
+                          try {
+                            await Share.share({ message, title: `Recordatorio de pago - ${amount}` });
+                          } catch {}
+                        }}
+                      >
+                        <Text style={[styles.payButtonText, { color: theme.colors.primary }]}>
+                          🔔 Recordar pago
+                        </Text>
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
+                );
+              });
+            })()}
+          </Card>
+        )}
+
         {/* Gráfico de gastos por categoría */}
         {chartData.length > 0 && (
           <Card style={styles.card}>
@@ -548,219 +725,6 @@ export const SummaryScreen: React.FC<Props> = ({ navigation, route }) => {
           />
         )} */}
 
-        {/* Liquidaciones sugeridas */}
-        {settlements.length > 0 && (
-          <Card style={styles.card}>
-            <Text style={styles.cardTitle}>{t('eventSummary.settlements')}</Text>
-            <Text style={styles.cardSubtitle}>
-              {t('eventSummary.settlementsSubtitle')}
-            </Text>
-
-            {/* Selector de tipo de liquidación */}
-            <View style={styles.settlementTypeSelector}>
-              <TouchableOpacity
-                style={[
-                  styles.settlementTypeButton,
-                  settlementType === 'traditional' && styles.settlementTypeButtonActive,
-                  { borderColor: theme.colors.border, backgroundColor: settlementType === 'traditional' ? theme.colors.primary : 'transparent' }
-                ]}
-                onPress={() => setSettlementType('traditional')}
-              >
-                <Text style={[
-                  styles.settlementTypeButtonText,
-                  { color: settlementType === 'traditional' ? '#FFFFFF' : theme.colors.text }
-                ]}>
-                  📋 Tradicional
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[
-                  styles.settlementTypeButton,
-                  settlementType === 'optimized' && styles.settlementTypeButtonActive,
-                  { borderColor: theme.colors.border, backgroundColor: settlementType === 'optimized' ? theme.colors.primary : 'transparent' }
-                ]}
-                onPress={() => setSettlementType('optimized')}
-              >
-                <Text style={[
-                  styles.settlementTypeButtonText,
-                  { color: settlementType === 'optimized' ? '#FFFFFF' : theme.colors.text }
-                ]}>
-                  ⚡ Optimizada
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Mostrar liquidaciones según el tipo seleccionado */}
-            {(() => {
-              const optimizationResult = optimizeSettlements(expenses, participants);
-              const displaySettlements = settlementType === 'optimized' 
-                ? (optimizationResult?.optimized || [])
-                : (optimizationResult?.traditional || settlements);
-
-              console.log('🔍 Display Settlements:', {
-                type: settlementType,
-                count: displaySettlements?.length || 0,
-                optimized: optimizationResult?.optimized?.length || 0,
-                traditional: optimizationResult?.traditional?.length || 0,
-                settlements: displaySettlements
-              });
-
-              if (!displaySettlements || displaySettlements.length === 0) {
-                return (
-                  <View style={styles.emptySettlements}>
-                    <Text style={styles.emptySettlementsText}>
-                      No hay liquidaciones pendientes
-                    </Text>
-                  </View>
-                );
-              }
-
-              return displaySettlements.map((settlement, index) => {
-                // El servicio optimizado retorna objetos Participant, no IDs
-                const fromParticipant = typeof settlement.from === 'string' 
-                  ? getParticipantById(settlement.from)
-                  : settlement.from;
-                const toParticipant = typeof settlement.to === 'string'
-                  ? getParticipantById(settlement.to)
-                  : settlement.to;
-                
-                if (!fromParticipant || !toParticipant) {
-                  
-                  return null;
-                }
-
-                // Asegurar que tenemos los IDs
-                const fromId = fromParticipant.id;
-                const toId = toParticipant.id;
-                
-                // Buscar si hay un pago asociado a este settlement
-                const relatedPayment = payments.find(p => 
-                  p.fromUserId === fromId && 
-                  p.toUserId === toId &&
-                  (p.status === 'pending' || p.status === 'sent_waiting_confirmation')
-                );
-                
-                const paymentStatus = relatedPayment?.status;
-                
-                // Determinar si el usuario actual es el deudor (from) o acreedor (to)
-                // PRIORIDAD: 1. userId, 2. email del participante, 3. match por nombre flexible
-                const userEmail = user?.email?.toLowerCase();
-                const userEmailPrefix = user?.email?.split('@')[0]?.toLowerCase();
-                const userDisplayName = user?.displayName?.toLowerCase();
-                const userFirstName = user?.displayName?.split(' ')[0]?.toLowerCase();
-                
-                // Normalizar nombres (quitar acentos para comparar)
-                const normalizeString = (str: string) => 
-                  str.toLowerCase()
-                    .normalize('NFD')
-                    .replace(/[\u0300-\u036f]/g, '');
-                
-                const participantNameNormalized = normalizeString(fromParticipant?.name || '');
-                const toParticipantNameNormalized = normalizeString(toParticipant?.name || '');
-                
-                // Comparar: el prefijo del email contiene el nombre del participante O viceversa
-                const emailMatchesName = userEmailPrefix && (
-                  userEmailPrefix.includes(participantNameNormalized) || 
-                  participantNameNormalized.includes(userEmailPrefix.substring(0, 4))
-                );
-                
-                const emailMatchesToName = userEmailPrefix && (
-                  userEmailPrefix.includes(toParticipantNameNormalized) || 
-                  toParticipantNameNormalized.includes(userEmailPrefix.substring(0, 4))
-                );
-                
-                // Verificar si el usuario actual es el deudor o acreedor
-                const isDebtor = 
-                  fromParticipant?.userId === user?.uid ||
-                  fromParticipant?.email?.toLowerCase() === userEmail ||
-                  fromParticipant?.name.toLowerCase() === userDisplayName ||
-                  fromParticipant?.name.toLowerCase() === userFirstName ||
-                  emailMatchesName;
-                
-                const isCreditor = 
-                  toParticipant?.userId === user?.uid || 
-                  toParticipant?.email?.toLowerCase() === userEmail ||
-                  toParticipant?.name.toLowerCase() === userDisplayName ||
-                  toParticipant?.name.toLowerCase() === userFirstName ||
-                  emailMatchesToName;
-                
-                // Determinar si el botón debe mostrarse y ser clickeable
-                const canPay = isDebtor || (isCreditor && paymentStatus === 'sent_waiting_confirmation');
-                const buttonText = paymentStatus === 'sent_waiting_confirmation' && isCreditor
-                  ? '✓ Confirmar' 
-                  : '💰 Realizar Pago';
-
-                
-
-                return (
-                  <View key={`settlement-${settlementType}-${index}`} style={styles.settlementItem}>
-                    <View style={styles.settlementInfo}>
-                      <Text style={styles.settlementText}>
-                        <Text style={styles.settlementName}>{fromParticipant.name}</Text>
-                        {' → '}
-                        <Text style={styles.settlementName}>{toParticipant.name}</Text>
-                      </Text>
-                      <Text style={styles.settlementAmount}>
-                        {currencySymbol}{settlement.amount.toFixed(2)}
-                      </Text>
-                      {paymentStatus === 'sent_waiting_confirmation' && (
-                        <Text style={styles.paymentStatusBadge}>⏳ Pendiente confirmación</Text>
-                      )}
-                    </View>
-                    
-                    {/* Botón SOLO si eres deudor, badge si eres acreedor */}
-                    {isDebtor ? (
-                      <TouchableOpacity
-                        style={[
-                          styles.payButton,
-                          { backgroundColor: theme.colors.primary }
-                        ]}
-                        onPress={() => {
-                          
-                          handleMarkPayment(settlement);
-                        }}
-                      >
-                        <Text style={[styles.payButtonText, { color: theme.colors.card }]}>
-                          💰 Realizar Pago
-                        </Text>
-                      </TouchableOpacity>
-                    ) : isCreditor && paymentStatus === 'sent_waiting_confirmation' ? (
-                      <TouchableOpacity
-                        style={[
-                          styles.payButton,
-                          { backgroundColor: theme.colors.success || '#10B981' }
-                        ]}
-                        onPress={() => {
-                          
-                          handleMarkPayment(settlement);
-                        }}
-                      >
-                        <Text style={[styles.payButtonText, { color: theme.colors.card }]}>
-                          ✓ Confirmar
-                        </Text>
-                      </TouchableOpacity>
-                    ) : isCreditor ? (
-                      <TouchableOpacity
-                        style={[
-                          styles.payButton,
-                          { backgroundColor: theme.colors.primary + '20', borderWidth: 1.5, borderColor: theme.colors.primary }
-                        ]}
-                        onPress={() => {
-                          handleMarkPayment(settlement);
-                        }}
-                      >
-                        <Text style={[styles.payButtonText, { color: theme.colors.primary }]}>
-                          🔔 Recordar pago
-                        </Text>
-                      </TouchableOpacity>
-                    ) : null}
-                  </View>
-                );
-              });
-            })()}
-          </Card>
-        )}
         </ViewShot>
 
         {/* Botones de compartir - DENTRO del ScrollView */}
