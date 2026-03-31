@@ -148,6 +148,11 @@ export const GroupEventsScreen: React.FC<Props> = ({ navigation, route }) => {
               const { deleteEvent } = await import('../services/firebase');
               const deletePromises = Array.from(selectedEvents).map(id => deleteEvent(id));
               await Promise.all(deletePromises);
+              // Actualizar widget después de eliminar
+              if (user?.uid) {
+                const { updateWidgetData } = await import('../services/widgetDataService');
+                await updateWidgetData(user.uid);
+              }
               Alert.alert('Éxito', `${selectedEvents.size} evento${selectedEvents.size > 1 ? 's' : ''} eliminado${selectedEvents.size > 1 ? 's' : ''} correctamente`);
               exitSelectionMode();
               loadEvents();
@@ -176,6 +181,11 @@ export const GroupEventsScreen: React.FC<Props> = ({ navigation, route }) => {
             try {
               const { deleteEvent: deleteEventFn } = await import('../services/firebase');
               await deleteEventFn(eventId);
+              // Actualizar widget después de eliminar
+              if (user?.uid) {
+                const { updateWidgetData } = await import('../services/widgetDataService');
+                await updateWidgetData(user.uid);
+              }
               Alert.alert('Éxito', 'Evento eliminado correctamente');
               loadEvents();
             } catch (error: any) {

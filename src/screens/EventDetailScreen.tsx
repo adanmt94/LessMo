@@ -247,6 +247,11 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
             try {
               const { deleteEvent } = await import('../services/firebase');
               await deleteEvent(eventId);
+              // Actualizar widget después de eliminar
+              if (user?.uid) {
+                const { updateWidgetData } = await import('../services/widgetDataService');
+                await updateWidgetData(user.uid);
+              }
               Alert.alert(t('common.success'), t('event.deleteEvent'), [
                 {
                   text: t('common.ok'),

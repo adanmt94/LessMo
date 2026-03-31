@@ -230,6 +230,12 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
               const deletePromises = Array.from(selectedEvents).map(id => deleteEvent(id));
               await Promise.all(deletePromises);
               
+              // Actualizar widget después de eliminar
+              if (user?.uid) {
+                const { updateWidgetData } = await import('../services/widgetDataService');
+                await updateWidgetData(user.uid);
+              }
+              
               exitSelectionMode();
               await loadEvents();
               
@@ -256,6 +262,11 @@ export const EventsScreen: React.FC<Props> = ({ navigation, route }) => {
             try {
               const { deleteEvent: deleteEventFn } = await import('../services/firebase');
               await deleteEventFn(eventId);
+              // Actualizar widget después de eliminar
+              if (user?.uid) {
+                const { updateWidgetData } = await import('../services/widgetDataService');
+                await updateWidgetData(user.uid);
+              }
               await loadEvents();
               Alert.alert('Éxito', 'Evento eliminado');
             } catch (error: any) {

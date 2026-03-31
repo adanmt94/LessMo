@@ -6,6 +6,30 @@ import SwiftUI
  * Muestra balance, deudas, presupuesto y acciones rápidas
  */
 
+// MARK: - Recent Expense Model
+struct RecentExpense: Identifiable {
+    let id = UUID()
+    let description: String
+    let amount: Double
+    let date: Date
+    let category: String
+    
+    var categoryIcon: String {
+        switch category.lowercased() {
+        case "comida", "food", "restaurante", "restaurant": return "fork.knife"
+        case "transporte", "transport", "taxi", "uber": return "car.fill"
+        case "alojamiento", "hotel", "accommodation": return "bed.double.fill"
+        case "compras", "shopping": return "bag.fill"
+        case "ocio", "entertainment", "diversión": return "gamecontroller.fill"
+        case "salud", "health": return "heart.fill"
+        case "educación", "education": return "book.fill"
+        case "hogar", "home": return "house.fill"
+        case "suscripción", "subscription": return "repeat"
+        default: return "eurosign.circle.fill"
+        }
+    }
+}
+
 // MARK: - Data Model
 struct SimpleEntry: TimelineEntry {
     let date: Date
@@ -21,6 +45,8 @@ struct SimpleEntry: TimelineEntry {
     let eventsCount: Int
     let youOwe: Double
     let owedToYou: Double
+    let recentExpenses: [RecentExpense]
+    let lastUpdate: Date?
     
     static var placeholder: SimpleEntry {
         SimpleEntry(
@@ -36,7 +62,13 @@ struct SimpleEntry: TimelineEntry {
             budget: 1000.0,
             eventsCount: 3,
             youOwe: 125.30,
-            owedToYou: 0
+            owedToYou: 0,
+            recentExpenses: [
+                RecentExpense(description: "Cena grupo", amount: 65.00, date: Date(), category: "comida"),
+                RecentExpense(description: "Taxi", amount: 12.50, date: Date().addingTimeInterval(-3600), category: "transporte"),
+                RecentExpense(description: "Supermercado", amount: 34.20, date: Date().addingTimeInterval(-7200), category: "compras")
+            ],
+            lastUpdate: Date()
         )
     }
     
@@ -54,7 +86,9 @@ struct SimpleEntry: TimelineEntry {
             budget: 0,
             eventsCount: 0,
             youOwe: 0,
-            owedToYou: 0
+            owedToYou: 0,
+            recentExpenses: [],
+            lastUpdate: nil
         )
     }
     
@@ -87,6 +121,15 @@ struct SimpleEntry: TimelineEntry {
         }
         return String(format: "%.2f%@", amount, currencySymbol)
     }
+    
+    var lastUpdateText: String {
+        guard let lastUpdate = lastUpdate else { return "" }
+        let diff = Date().timeIntervalSince(lastUpdate)
+        if diff < 60 { return "ahora" }
+        if diff < 3600 { return "hace \(Int(diff / 60))min" }
+        if diff < 86400 { return "hace \(Int(diff / 3600))h" }
+        return "hace \(Int(diff / 86400))d"
+    }
 }
 
 // MARK: - Provider
@@ -107,6 +150,29 @@ struct Provider: TimelineProvider {
            let jsonData = rawValue.data(using: .utf8),
            let widgetData = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any] {
             
+            // Parse recent expenses
+            var expenses: [RecentExpense] = []
+            if let rawExpenses = widgetData["recentExpenses"] as? [[String: Any]] {
+                let dateFormatter = ISO8601DateFormatter()
+                dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                for raw in rawExpenses.prefix(5) {
+                    let desc = raw["description"] as? String ?? "Gasto"
+                    let amount = raw["amount"] as? Double ?? 0
+                    let dateStr = raw["date"] as? String ?? ""
+                    let cat = raw["category"] as? String ?? ""
+                    let date = dateFormatter.date(from: dateStr) ?? Date()
+                    expenses.append(RecentExpense(description: desc, amount: amount, date: date, category: cat))
+                }
+            }
+            
+            // Parse last update
+            var lastUpdate: Date? = nil
+            if let lastUpdateStr = widgetData["lastUpdate"] as? String {
+                let df = ISO8601DateFormatter()
+                df.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                lastUpdate = df.date(from: lastUpdateStr)
+            }
+            
             entry = SimpleEntry(
                 date: Date(),
                 eventName: widgetData["eventName"] as? String ?? "Sin eventos",
@@ -120,7 +186,9 @@ struct Provider: TimelineProvider {
                 budget: widgetData["budget"] as? Double ?? 0.0,
                 eventsCount: widgetData["eventsCount"] as? Int ?? 0,
                 youOwe: widgetData["youOwe"] as? Double ?? 0.0,
-                owedToYou: widgetData["owedToYou"] as? Double ?? 0.0
+                owedToYou: widgetData["owedToYou"] as? Double ?? 0.0,
+                recentExpenses: expenses,
+                lastUpdate: lastUpdate
             )
         } else {
             entry = .empty
@@ -181,13 +249,10 @@ struct LessmoWidgetEntryViewSmall: View {
                     .font(.system(size: 11, weight: .bold, design: .rounded))
                     .foregroundColor(.secondary)
                 Spacer()
-                if entry.eventsCount > 0 {
-                    Text("\(entry.eventsCount)")
-                        .font(.system(size: 10, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
-                        .frame(width: 18, height: 18)
-                        .background(Color.widgetAccent)
-                        .cornerRadius(9)
+                if !entry.lastUpdateText.isEmpty {
+                    Text(entry.lastUpdateText)
+                        .font(.system(size: 8, weight: .medium, design: .rounded))
+                        .foregroundColor(.secondary.opacity(0.7))
                 }
             }
             
@@ -209,8 +274,17 @@ struct LessmoWidgetEntryViewSmall: View {
             .foregroundColor(entry.userBalance >= 0 ? .widgetPositive : .widgetNegative)
             .padding(.top, 1)
             
-            // Debt summary
-            if entry.youOwe > 0 {
+            // Month total
+            if entry.monthTotal > 0 {
+                HStack(spacing: 3) {
+                    Image(systemName: "creditcard.fill")
+                        .font(.system(size: 8))
+                    Text("Este mes: \(entry.formatAmount(entry.monthTotal))")
+                        .font(.system(size: 10, weight: .medium, design: .rounded))
+                }
+                .foregroundColor(.secondary)
+                .padding(.top, 3)
+            } else if entry.youOwe > 0 {
                 HStack(spacing: 3) {
                     Image(systemName: "arrow.up.right")
                         .font(.system(size: 8))
@@ -514,61 +588,77 @@ struct LessmoWidgetEntryViewLarge: View {
                             .font(.system(size: 15, weight: .bold, design: .rounded))
                     }
                     Spacer()
-                    if entry.eventsCount > 0 {
-                        Text("\(entry.eventsCount) evento\(entry.eventsCount == 1 ? "" : "s")")
-                            .font(.system(size: 11, weight: .medium, design: .rounded))
-                            .foregroundColor(.secondary)
+                    if !entry.lastUpdateText.isEmpty {
+                        Text(entry.lastUpdateText)
+                            .font(.system(size: 10, weight: .medium, design: .rounded))
+                            .foregroundColor(.secondary.opacity(0.7))
                     }
                 }
             }
             
-            // Balance section
+            // Balance + month summary row
             Link(destination: URL(string: "lessmo://dashboard")!) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Balance global")
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
-                        .foregroundColor(.secondary)
-                        .padding(.top, 10)
-                    HStack(alignment: .firstTextBaseline, spacing: 2) {
-                        Text(entry.userBalance >= 0 ? "+" : "-")
-                            .font(.system(size: 16, weight: .medium, design: .rounded))
-                        Text(String(format: "%.2f", abs(entry.userBalance)))
-                            .font(.system(size: 32, weight: .bold, design: .rounded))
-                        Text(entry.currencySymbol)
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                HStack(alignment: .bottom) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Balance global")
+                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                            .foregroundColor(.secondary)
+                            .padding(.top, 8)
+                        HStack(alignment: .firstTextBaseline, spacing: 2) {
+                            Text(entry.userBalance >= 0 ? "+" : "-")
+                                .font(.system(size: 14, weight: .medium, design: .rounded))
+                            Text(String(format: "%.2f", abs(entry.userBalance)))
+                                .font(.system(size: 28, weight: .bold, design: .rounded))
+                            Text(entry.currencySymbol)
+                                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        }
+                        .foregroundColor(entry.userBalance >= 0 ? .widgetPositive : .widgetNegative)
                     }
-                    .foregroundColor(entry.userBalance >= 0 ? .widgetPositive : .widgetNegative)
+                    
+                    Spacer()
+                    
+                    // Right side: month total
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("Este mes")
+                            .font(.system(size: 10, weight: .medium, design: .rounded))
+                            .foregroundColor(.secondary)
+                        Text(entry.formatAmount(entry.monthTotal))
+                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                        if entry.eventsCount > 0 {
+                            Text("\(entry.eventsCount) evento\(entry.eventsCount == 1 ? "" : "s")")
+                                .font(.system(size: 10, weight: .medium, design: .rounded))
+                                .foregroundColor(.secondary)
+                        }
+                    }
                 }
             }
             
             // Debts row
             HStack(spacing: 16) {
                 if entry.owedToYou > 0 {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Te deben")
-                            .font(.system(size: 10, weight: .medium, design: .rounded))
-                            .foregroundColor(.secondary)
-                        Text("+\(entry.formatAmount(entry.owedToYou))")
-                            .font(.system(size: 14, weight: .bold, design: .rounded))
-                            .foregroundColor(.widgetPositive)
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.down.left")
+                            .font(.system(size: 9))
+                        Text("Te deben \(entry.formatAmount(entry.owedToYou))")
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
                     }
+                    .foregroundColor(.widgetPositive)
                 }
                 if entry.youOwe > 0 {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Tú debes")
-                            .font(.system(size: 10, weight: .medium, design: .rounded))
-                            .foregroundColor(.secondary)
-                        Text("-\(entry.formatAmount(entry.youOwe))")
-                            .font(.system(size: 14, weight: .bold, design: .rounded))
-                            .foregroundColor(.widgetNegative)
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.up.right")
+                            .font(.system(size: 9))
+                        Text("Debes \(entry.formatAmount(entry.youOwe))")
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
                     }
+                    .foregroundColor(.widgetNegative)
                 }
                 if entry.youOwe == 0 && entry.owedToYou == 0 {
                     HStack(spacing: 4) {
                         Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 12))
-                        Text("Estás al día con todos")
-                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .font(.system(size: 10))
+                        Text("Estás al día")
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
                     }
                     .foregroundColor(.widgetPositive)
                 }
@@ -580,61 +670,117 @@ struct LessmoWidgetEntryViewLarge: View {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Text("Presupuesto")
-                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                            .font(.system(size: 10, weight: .medium, design: .rounded))
                             .foregroundColor(.secondary)
                         Spacer()
                         Text("\(entry.formatAmount(entry.budgetRemaining)) restante")
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .font(.system(size: 10, weight: .semibold, design: .rounded))
                             .foregroundColor(entry.budgetProgress > 0.8 ? .widgetNegative : .widgetPositive)
                     }
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 4)
+                            RoundedRectangle(cornerRadius: 3)
                                 .fill(Color.secondary.opacity(0.15))
-                                .frame(height: 8)
-                            RoundedRectangle(cornerRadius: 4)
+                                .frame(height: 6)
+                            RoundedRectangle(cornerRadius: 3)
                                 .fill(entry.budgetProgress > 0.8
                                     ? Color.widgetNegative
                                     : entry.budgetProgress > 0.5
                                         ? Color.orange
                                         : Color.widgetPositive)
-                                .frame(width: geo.size.width * entry.budgetProgress, height: 8)
+                                .frame(width: geo.size.width * entry.budgetProgress, height: 6)
                         }
                     }
-                    .frame(height: 8)
+                    .frame(height: 6)
                 }
+                .padding(.top, 8)
+            }
+            
+            // Divider
+            RoundedRectangle(cornerRadius: 1)
+                .fill(Color.secondary.opacity(0.15))
+                .frame(height: 1)
                 .padding(.top, 10)
+            
+            // Recent expenses section
+            if !entry.recentExpenses.isEmpty {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("Últimos gastos")
+                        .font(.system(size: 10, weight: .semibold, design: .rounded))
+                        .foregroundColor(.secondary)
+                        .padding(.top, 8)
+                        .padding(.bottom, 6)
+                    
+                    ForEach(entry.recentExpenses.prefix(3)) { expense in
+                        HStack(spacing: 8) {
+                            Image(systemName: expense.categoryIcon)
+                                .font(.system(size: 10))
+                                .foregroundColor(.widgetAccent)
+                                .frame(width: 16, height: 16)
+                            
+                            Text(expense.description)
+                                .font(.system(size: 11, weight: .medium, design: .rounded))
+                                .lineLimit(1)
+                            
+                            Spacer()
+                            
+                            Text(entry.formatAmount(expense.amount))
+                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                        }
+                        .padding(.vertical, 3)
+                    }
+                }
+            } else {
+                Spacer()
+                HStack {
+                    Spacer()
+                    VStack(spacing: 4) {
+                        Image(systemName: "tray")
+                            .font(.system(size: 16))
+                            .foregroundColor(.secondary.opacity(0.5))
+                        Text("Sin gastos recientes")
+                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                            .foregroundColor(.secondary.opacity(0.5))
+                    }
+                    Spacer()
+                }
             }
             
             Spacer()
             
-            // Stats grid
-            HStack(spacing: 10) {
-                Link(destination: URL(string: "lessmo://dashboard")!) {
-                    StatCard(
-                        icon: "creditcard.fill",
-                        label: "Gastos mes",
-                        value: entry.formatAmount(entry.monthTotal),
-                        color: .widgetAccent
+            // Bottom action bar
+            HStack(spacing: 8) {
+                Link(destination: URL(string: "lessmo://add-expense")!) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "bolt.fill")
+                            .font(.system(size: 11))
+                        Text("Añadir gasto")
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    .background(
+                        LinearGradient(
+                            colors: [.widgetAccent, .purple],
+                            startPoint: .leading, endPoint: .trailing
+                        )
                     )
+                    .cornerRadius(8)
                 }
                 
                 Link(destination: URL(string: "lessmo://events")!) {
-                    StatCard(
-                        icon: "calendar",
-                        label: "Eventos",
-                        value: "\(entry.eventsCount)",
-                        color: .orange
-                    )
-                }
-                
-                Link(destination: URL(string: "lessmo://add-expense")!) {
-                    StatCard(
-                        icon: "bolt.fill",
-                        label: "Gasto rápido",
-                        value: "+",
-                        color: .purple
-                    )
+                    HStack(spacing: 4) {
+                        Image(systemName: "calendar")
+                            .font(.system(size: 11))
+                        Text("Eventos")
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    }
+                    .foregroundColor(.widgetAccent)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    .background(Color.widgetAccent.opacity(0.12))
+                    .cornerRadius(8)
                 }
             }
         }
