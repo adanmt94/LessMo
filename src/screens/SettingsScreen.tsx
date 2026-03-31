@@ -2,7 +2,7 @@
  * SettingsScreen - Pantalla de ajustes y configuración
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -28,7 +28,7 @@ import { useNotifications } from '../hooks/useNotifications';
 import { useBiometricAuth } from '../hooks/useBiometricAuth';
 import { useDailyReminder } from '../hooks/useDailyReminder';
 import { useSpendingAlerts } from '../hooks/useSpendingAlerts';
-import { AVAILABLE_SHORTCUTS } from '../hooks/useSiriShortcuts';
+import { AVAILABLE_SHORTCUTS, SIRI_PHRASES } from '../hooks/useSiriShortcuts';
 import { useForceUpdate } from '../utils/globalEvents';
 import { CommonActions } from '@react-navigation/native';
 import { Gradients, Spacing, Radius, Typography } from '../theme/designSystem';
@@ -86,6 +86,7 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
   // Estado para la foto de perfil y nombre
   const [photoURL, setPhotoURL] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>('');
+  const [siriExpanded, setSiriExpanded] = useState(false);
   
   // Hook para forzar re-render cuando cambien idioma/moneda
   useForceUpdate();
@@ -617,25 +618,81 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
             icon="🗣️"
             title={t('settings.siriShortcuts')}
             subtitle={t('settings.siriShortcutsSubtitle')}
-            onPress={() => {
-              const shortcuts = AVAILABLE_SHORTCUTS.map(s => 
-                `• "${s.suggestedPhrase}"\n  → ${s.title}`
-              ).join('\n\n');
-              
-              Alert.alert(
-                t('settings.siriShortcutsTitle'),
-                t('settings.siriShortcutsMessage') + '\n\n' + shortcuts + '\n\n' +
-                t('settings.siriInstructions') + '\n' +
-                t('settings.siriStep1') + '\n' +
-                t('settings.siriStep2') + '\n' +
-                t('settings.siriStep3') + '\n' +
-                t('settings.siriStep4') + '\n' +
-                t('settings.siriStep5') + '\n' +
-                t('settings.siriStep6'),
-                [{ text: t('settings.understood'), style: 'default' }]
-              );
-            }}
+            onPress={() => setSiriExpanded(!siriExpanded)}
+            rightElement={
+              <Text style={{ fontSize: 16, color: theme.colors.textSecondary }}>
+                {siriExpanded ? '▼' : '▶'}
+              </Text>
+            }
+            showArrow={false}
           />
+          {siriExpanded && (
+            <View style={{ paddingHorizontal: 12, paddingBottom: 16 }}>
+              <Text style={{
+                fontSize: 13,
+                color: theme.colors.textSecondary,
+                marginBottom: 12,
+                lineHeight: 18,
+              }}>
+                Di estas frases a Siri para usar LessMo con la voz. Las funciones marcadas con 🔊 responden sin abrir la app.
+              </Text>
+              {SIRI_PHRASES.map((group, idx) => (
+                <View key={idx} style={{
+                  marginBottom: 12,
+                  backgroundColor: theme.isDark ? theme.colors.surface : theme.colors.primary + '08',
+                  borderRadius: 12,
+                  padding: 12,
+                }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                    <Text style={{ fontSize: 18, marginRight: 8 }}>{group.icon}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{
+                        fontSize: 15,
+                        fontWeight: '700',
+                        color: theme.colors.text,
+                      }}>
+                        {group.title}
+                      </Text>
+                      <Text style={{
+                        fontSize: 12,
+                        color: group.opensApp ? theme.colors.textTertiary : theme.colors.primary,
+                        fontWeight: group.opensApp ? '400' : '600',
+                      }}>
+                        {group.opensApp ? '📱 ' : '🔊 '}{group.description}
+                      </Text>
+                    </View>
+                  </View>
+                  {group.phrases.map((phrase, pIdx) => (
+                    <Text key={pIdx} style={{
+                      fontSize: 13,
+                      color: theme.colors.textSecondary,
+                      marginLeft: 26,
+                      marginTop: 3,
+                      lineHeight: 18,
+                    }}>
+                      {phrase}
+                    </Text>
+                  ))}
+                </View>
+              ))}
+              <View style={{
+                marginTop: 4,
+                padding: 12,
+                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+                borderRadius: 10,
+              }}>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: theme.colors.text, marginBottom: 4 }}>
+                  💡 También puedes crear atajos personalizados:
+                </Text>
+                <Text style={{ fontSize: 12, color: theme.colors.textSecondary, lineHeight: 18 }}>
+                  {t('settings.siriStep1')}{'\n'}
+                  {t('settings.siriStep2')}{'\n'}
+                  {t('settings.siriStep3')}{'\n'}
+                  {t('settings.siriStep4')}
+                </Text>
+              </View>
+            </View>
+          )}
         </Card>
 
         {/* Datos y privacidad */}

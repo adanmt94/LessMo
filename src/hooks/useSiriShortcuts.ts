@@ -54,6 +54,104 @@ export const AVAILABLE_SHORTCUTS: SiriShortcut[] = [
 ];
 
 /**
+ * Frases reales que Siri reconoce (definidas en LessmoIntents.swift)
+ * Agrupadas por categoría para mostrar en Settings
+ */
+export interface SiriPhraseGroup {
+  icon: string;
+  title: string;
+  description: string;
+  opensApp: boolean;
+  phrases: string[];
+}
+
+export const SIRI_PHRASES: SiriPhraseGroup[] = [
+  {
+    icon: '➕',
+    title: 'Añadir gasto',
+    description: 'Siri te pedirá importe, descripción y categoría',
+    opensApp: true,
+    phrases: [
+      '"Oye Siri, añadir gasto en LessMo"',
+      '"Oye Siri, gasto rápido en LessMo"',
+      '"Oye Siri, registrar gasto en LessMo"',
+      '"Oye Siri, nuevo gasto en LessMo"',
+      '"Oye Siri, apuntar gasto en LessMo"',
+      '"Oye Siri, anotar gasto en LessMo"',
+    ],
+  },
+  {
+    icon: '📊',
+    title: 'Gastos del mes',
+    description: 'Siri te responde sin abrir la app',
+    opensApp: false,
+    phrases: [
+      '"Oye Siri, ¿cuánto he gastado en LessMo?"',
+      '"Oye Siri, ¿cuánto llevo gastado este mes en LessMo?"',
+      '"Oye Siri, resumen de gastos en LessMo"',
+      '"Oye Siri, mis gastos en LessMo"',
+      '"Oye Siri, gastos del mes en LessMo"',
+    ],
+  },
+  {
+    icon: '💸',
+    title: 'Consultar deudas',
+    description: 'Siri te responde sin abrir la app',
+    opensApp: false,
+    phrases: [
+      '"Oye Siri, ¿cuánto debo en LessMo?"',
+      '"Oye Siri, mis deudas en LessMo"',
+      '"Oye Siri, ¿me deben algo en LessMo?"',
+      '"Oye Siri, deudas pendientes en LessMo"',
+    ],
+  },
+  {
+    icon: '🎯',
+    title: 'Estado del presupuesto',
+    description: 'Siri te responde sin abrir la app',
+    opensApp: false,
+    phrases: [
+      '"Oye Siri, ¿cómo va mi presupuesto en LessMo?"',
+      '"Oye Siri, estado del presupuesto en LessMo"',
+      '"Oye Siri, ¿cuánto me queda de presupuesto en LessMo?"',
+    ],
+  },
+  {
+    icon: '📋',
+    title: 'Ver resumen',
+    description: 'Abre el dashboard de LessMo',
+    opensApp: true,
+    phrases: [
+      '"Oye Siri, abrir resumen en LessMo"',
+      '"Oye Siri, ver balance en LessMo"',
+      '"Oye Siri, abrir LessMo"',
+    ],
+  },
+  {
+    icon: '📅',
+    title: 'Crear evento',
+    description: 'Abre la pantalla de crear evento',
+    opensApp: true,
+    phrases: [
+      '"Oye Siri, crear evento en LessMo"',
+      '"Oye Siri, nuevo evento en LessMo"',
+      '"Oye Siri, nuevo viaje en LessMo"',
+    ],
+  },
+  {
+    icon: '📆',
+    title: 'Ver eventos',
+    description: 'Abre la lista de eventos activos',
+    opensApp: true,
+    phrases: [
+      '"Oye Siri, mis eventos en LessMo"',
+      '"Oye Siri, ver eventos en LessMo"',
+      '"Oye Siri, eventos activos en LessMo"',
+    ],
+  },
+];
+
+/**
  * Parsea query params de una URL string
  */
 const parseQueryParams = (url: string): Record<string, string> => {

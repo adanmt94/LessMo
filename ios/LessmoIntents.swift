@@ -3,7 +3,7 @@ import Foundation
 
 /**
  * LessMo App Intents - Integración completa con Siri y Atajos
- * 
+ *
  * Intents disponibles:
  * - AddExpenseIntent: Añadir gasto con importe, descripción, categoría
  * - MonthlySpendingIntent: Consultar gasto mensual sin abrir la app
@@ -11,7 +11,7 @@ import Foundation
  * - ViewDebtsIntent: Consultar deudas pendientes sin abrir la app
  * - CreateEventIntent: Crear un evento nuevo
  * - OpenEventIntent: Abrir un evento por nombre
- * 
+ *
  * Requiere iOS 16+
  */
 
