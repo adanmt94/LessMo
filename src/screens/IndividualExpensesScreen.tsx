@@ -26,9 +26,9 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../hooks/useAuth';
-import { collection, query, where, getDocs, orderBy, deleteDoc, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
-import { Expense, RootStackParamList, AllCategoryLabels } from '../types';
+import { Expense, RootStackParamList, AllCategoryLabels, Event } from '../types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Gradients, Spacing, Radius, Shadows, Typography } from '../theme/designSystem';
@@ -47,6 +47,7 @@ export const IndividualExpensesScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [userEvents, setUserEvents] = useState<Event[]>([]);
 
   const filteredExpenses = expenses.filter((expense) => {
     if (!searchQuery.trim()) return true;
@@ -60,8 +61,26 @@ export const IndividualExpensesScreen: React.FC = () => {
   useEffect(() => {
     if (user) {
       loadIndividualExpenses();
+      loadUserEvents();
     }
   }, [user]);
+
+  const loadUserEvents = async () => {
+    if (!user) return;
+    try {
+      const eventsRef = collection(db, 'events');
+      const q = query(
+        eventsRef,
+        where('participantIds', 'array-contains', user.uid),
+        where('isActive', '==', true)
+      );
+      const snapshot = await getDocs(q);
+      const events = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Event[];
+      setUserEvents(events);
+    } catch (error) {
+      // Silently fail - events are optional for move feature
+    }
+  };
 
   const loadIndividualExpenses = async () => {
     if (!user) return;
@@ -131,33 +150,98 @@ export const IndividualExpensesScreen: React.FC = () => {
     });
   }, [navigation]);
 
+  const handleMoveToEvent = useCallback((item: Expense) => {
+    if (userEvents.length === 0) {
+      Alert.alert('Sin eventos', 'Crea un evento primero para poder mover gastos.');
+      return;
+    }
+    if (Platform.OS === 'ios') {
+      const eventOptions = userEvents.map(e => `${e.icon || '📁'} ${e.name}`);
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: [...eventOptions, t('common.cancel')],
+          cancelButtonIndex: eventOptions.length,
+          title: 'Mover a evento',
+          message: `Mover "${item.description || item.name}" a:`,
+        },
+        async (buttonIndex) => {
+          if (buttonIndex < userEvents.length) {
+            const selectedEvent = userEvents[buttonIndex];
+            try {
+              await updateDoc(doc(db, 'expenses', item.id), {
+                eventId: selectedEvent.id,
+                groupId: selectedEvent.id,
+              });
+              setExpenses(prev => prev.filter(e => e.id !== item.id));
+              if (user) updateWidgetData(user.uid);
+              Alert.alert('Movido', `Gasto movido a "${selectedEvent.name}"`);
+            } catch (error) {
+              Alert.alert(t('common.error'), 'No se pudo mover el gasto');
+            }
+          }
+        }
+      );
+    } else {
+      Alert.alert(
+        'Mover a evento',
+        `Mover "${item.description || item.name}" a:`,
+        [
+          ...userEvents.map(event => ({
+            text: `${event.icon || '📁'} ${event.name}`,
+            onPress: async () => {
+              try {
+                await updateDoc(doc(db, 'expenses', item.id), {
+                  eventId: event.id,
+                  groupId: event.id,
+                });
+                setExpenses(prev => prev.filter(e => e.id !== item.id));
+                if (user) updateWidgetData(user.uid);
+                Alert.alert('Movido', `Gasto movido a "${event.name}"`);
+              } catch (error) {
+                Alert.alert(t('common.error'), 'No se pudo mover el gasto');
+              }
+            },
+          })),
+          { text: t('common.cancel'), style: 'cancel' },
+        ]
+      );
+    }
+  }, [userEvents, t, user]);
+
   const handleLongPress = useCallback((item: Expense) => {
-    const options = [
-      t('common.edit'),
-      t('common.delete'),
-      t('common.cancel'),
-    ];
+    const hasEvents = userEvents.length > 0;
+    const options = hasEvents
+      ? [t('common.edit'), '📁 Mover a evento', t('common.delete'), t('common.cancel')]
+      : [t('common.edit'), t('common.delete'), t('common.cancel')];
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
         {
           options,
-          destructiveButtonIndex: 1,
-          cancelButtonIndex: 2,
+          destructiveButtonIndex: hasEvents ? 2 : 1,
+          cancelButtonIndex: hasEvents ? 3 : 2,
           title: item.description || item.name,
         },
         (buttonIndex) => {
-          if (buttonIndex === 0) handleEditExpense(item.id);
-          if (buttonIndex === 1) handleDeleteExpense(item.id);
+          if (hasEvents) {
+            if (buttonIndex === 0) handleEditExpense(item.id);
+            if (buttonIndex === 1) handleMoveToEvent(item);
+            if (buttonIndex === 2) handleDeleteExpense(item.id);
+          } else {
+            if (buttonIndex === 0) handleEditExpense(item.id);
+            if (buttonIndex === 1) handleDeleteExpense(item.id);
+          }
         }
       );
     } else {
-      Alert.alert(item.description || item.name, '', [
+      const alertOptions = [
         { text: t('common.edit'), onPress: () => handleEditExpense(item.id) },
-        { text: t('common.delete'), style: 'destructive', onPress: () => handleDeleteExpense(item.id) },
-        { text: t('common.cancel'), style: 'cancel' },
-      ]);
+        ...(hasEvents ? [{ text: '📁 Mover a evento', onPress: () => handleMoveToEvent(item) }] : []),
+        { text: t('common.delete'), style: 'destructive' as const, onPress: () => handleDeleteExpense(item.id) },
+        { text: t('common.cancel'), style: 'cancel' as const },
+      ];
+      Alert.alert(item.description || item.name, '', alertOptions);
     }
-  }, [handleEditExpense, handleDeleteExpense, t]);
+  }, [handleEditExpense, handleDeleteExpense, handleMoveToEvent, t, userEvents]);
 
   const formatCurrency = (amount: number, currency: string = 'EUR') => {
     return new Intl.NumberFormat('es-ES', {
@@ -366,15 +450,11 @@ export const IndividualExpensesScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
       />
       
-      {/* Botón flotante para añadir gasto individual */}
+      {/* Botón flotante para añadir gasto rápido */}
       <TouchableOpacity
         style={styles.floatingButton}
         onPress={() => {
-          // Navegar a AddExpense SIN eventId para crear gasto individual
-          navigation.navigate('AddExpense', { 
-            eventId: 'individual',
-            mode: 'create'
-          });
+          navigation.navigate('QuickExpense' as any);
         }}
       >
         <Text style={styles.floatingButtonIcon}>⚡</Text>

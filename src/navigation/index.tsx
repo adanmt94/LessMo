@@ -11,6 +11,7 @@ import { useAuthContext } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useSiriShortcuts } from '../hooks/useSiriShortcuts';
+import { useSmartExpenseDetection } from '../hooks/useSmartExpenseDetection';
 import { initializeSyncService } from '../services/syncService';
 import {
   LoginScreen,
@@ -95,6 +96,7 @@ const linking: LinkingOptions<RootStackParamList> = {
 // Componente interno que maneja los deep links DENTRO del NavigationContainer
 const DeepLinkHandler: React.FC = () => {
   useSiriShortcuts();
+  useSmartExpenseDetection();
   return null;
 };
 
