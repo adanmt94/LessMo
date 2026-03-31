@@ -279,6 +279,12 @@ export type RootStackParamList = {
   };
   Analytics: { eventId: string };
   PaymentHistory: { eventId: string; eventName: string };
+  QuickExpense: {
+    amount?: number;
+    description?: string;
+    category?: string;
+    eventId?: string;
+  } | undefined;
 };
 
 export type TabParamList = {

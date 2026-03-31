@@ -35,6 +35,7 @@ import {
   OnboardingScreen,
   shouldShowOnboarding,
   markOnboardingComplete,
+  QuickExpenseScreen,
 } from '../screens';
 import { AchievementsScreen } from '../screens/AchievementsScreen';
 import { AnalyticsScreen } from '../screens/AnalyticsScreen';
@@ -70,6 +71,20 @@ const linking: LinkingOptions<RootStackParamList> = {
       CreateGroup: 'create-group',
       AddExpense: {
         path: 'add-expense',
+        parse: {
+          prefilledData: (data: string) => {
+            try { return JSON.parse(decodeURIComponent(data)); } catch { return undefined; }
+          },
+        },
+      },
+      QuickExpense: {
+        path: 'quick-expense',
+        parse: {
+          amount: Number,
+          description: (d: string) => decodeURIComponent(d || ''),
+          category: (c: string) => c || undefined,
+          eventId: (e: string) => e || undefined,
+        },
       },
       Summary: 'event/:eventId/summary',
       EditProfile: 'profile/edit',
@@ -364,6 +379,14 @@ export const Navigation: React.FC = () => {
                 headerShown: true,
                 title: t('editProfile.title'),
                 headerBackTitle: t('common.back')
+              }}
+            />
+            <Stack.Screen 
+              name="QuickExpense" 
+              component={QuickExpenseScreen}
+              options={{ 
+                headerShown: false,
+                presentation: 'modal',
               }}
             />
           </>

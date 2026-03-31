@@ -31,3 +31,4 @@ export { ItineraryScreen } from './ItineraryScreen';
 export { AnalyticsScreen } from './AnalyticsScreen';
 export { PaymentHistoryScreen } from './PaymentHistoryScreen';
 export { OnboardingScreen, shouldShowOnboarding, resetOnboarding, markOnboardingComplete } from './OnboardingScreen';
+export { QuickExpenseScreen } from './QuickExpenseScreen';

@@ -214,7 +214,7 @@ struct LessmoWidgetEntryViewSmall: View {
     var body: some View {
         if entry.isEmpty {
             emptyState
-                .widgetURL(URL(string: "lessmo://add-expense"))
+                .widgetURL(URL(string: "lessmo://quick-expense"))
         } else {
             dataView
                 .widgetURL(URL(string: "lessmo://dashboard"))
@@ -229,7 +229,7 @@ struct LessmoWidgetEntryViewSmall: View {
                     colors: [.widgetAccent, .widgetAccent.opacity(0.6)],
                     startPoint: .topLeading, endPoint: .bottomTrailing
                 ))
-            Text("Añadir gasto")
+            Text("Gasto rápido")
                 .font(.system(size: 12, weight: .semibold, design: .rounded))
                 .foregroundColor(.secondary)
         }
@@ -321,7 +321,7 @@ struct LessmoWidgetEntryViewMedium: View {
     
     private var emptyState: some View {
         HStack(spacing: 16) {
-            Link(destination: URL(string: "lessmo://add-expense")!) {
+            Link(destination: URL(string: "lessmo://quick-expense")!) {
                 VStack(spacing: 8) {
                     Image(systemName: "bolt.circle.fill")
                         .font(.system(size: 36))
@@ -484,7 +484,7 @@ struct LessmoWidgetEntryViewMedium: View {
                         }
                     }
                 } else {
-                    Link(destination: URL(string: "lessmo://add-expense")!) {
+                    Link(destination: URL(string: "lessmo://quick-expense")!) {
                         HStack(spacing: 6) {
                             Image(systemName: "bolt.fill")
                                 .font(.system(size: 11))
@@ -545,7 +545,7 @@ struct LessmoWidgetEntryViewLarge: View {
                     .foregroundColor(.widgetAccent)
                 }
                 
-                Link(destination: URL(string: "lessmo://add-expense")!) {
+                Link(destination: URL(string: "lessmo://quick-expense")!) {
                     HStack(spacing: 4) {
                         Image(systemName: "bolt.circle.fill")
                             .font(.system(size: 12))
@@ -732,7 +732,7 @@ struct LessmoWidgetEntryViewLarge: View {
             
             // Bottom action bar
             HStack(spacing: 8) {
-                Link(destination: URL(string: "lessmo://add-expense")!) {
+                Link(destination: URL(string: "lessmo://quick-expense")!) {
                     HStack(spacing: 4) {
                         Image(systemName: "bolt.fill")
                             .font(.system(size: 11))

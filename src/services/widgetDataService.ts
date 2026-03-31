@@ -276,6 +276,20 @@ export async function updateWidgetData(userId: string): Promise<void> {
     // Notificar al widget que hay datos nuevos
     reloadWidgets();
     
+    // Donar eventos al Spotlight de iOS
+    try {
+      const { donateEventsToSpotlight, donateQuickExpenseActivity } = await import('./spotlightService');
+      const spotlightEvents = activeEvents.map(e => ({
+        id: e.id,
+        name: e.name || '',
+        budget: e.budget || 0,
+        participantsCount: e.participantIds?.length || 0,
+        currency: e.currency || 'EUR',
+      }));
+      donateEventsToSpotlight(spotlightEvents).catch(() => {});
+      donateQuickExpenseActivity().catch(() => {});
+    } catch {}
+    
     console.log('✅ Datos del widget actualizados:', {
       eventName: widgetData.eventName,
       balance: widgetData.userBalance,

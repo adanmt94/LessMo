@@ -1,14 +1,15 @@
 /**
- * useSiriShortcuts - Hook para gestionar Atajos de Siri mediante Deep Links
+ * useSiriShortcuts - Hook para gestionar Deep Links con soporte para query params
  * Compatible con Expo Go ✅
  * 
- * Los usuarios pueden crear atajos de Siri que abren la app en acciones específicas:
- * - "Añadir gasto" → Abre pantalla de añadir gasto
- * - "Ver mis gastos" → Abre pantalla de resumen
- * - "Crear evento" → Abre pantalla de crear evento
+ * Soporta:
+ * - lessmo://quick-expense?amount=15&description=Café&category=food&eventId=xxx
+ * - lessmo://add-expense?amount=15&description=Café
+ * - lessmo://event/EVENT_ID (abre detalle de evento)
+ * - Rutas básicas: summary, create-event, events, settings, dashboard
  */
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import * as Linking from 'expo-linking';
 import { useNavigation } from '@react-navigation/native';
 
@@ -20,6 +21,12 @@ export interface SiriShortcut {
 }
 
 export const AVAILABLE_SHORTCUTS: SiriShortcut[] = [
+  {
+    id: 'quick-expense',
+    title: 'Gasto Rápido',
+    deepLink: 'lessmo://quick-expense',
+    suggestedPhrase: 'Añadir gasto rápido en LessMo',
+  },
   {
     id: 'add-expense',
     title: 'Añadir Gasto',
@@ -46,19 +53,42 @@ export const AVAILABLE_SHORTCUTS: SiriShortcut[] = [
   },
 ];
 
+/**
+ * Parsea query params de una URL string
+ */
+const parseQueryParams = (url: string): Record<string, string> => {
+  const params: Record<string, string> = {};
+  try {
+    const questionMark = url.indexOf('?');
+    if (questionMark === -1) return params;
+    const queryString = url.substring(questionMark + 1);
+    const pairs = queryString.split('&');
+    for (const pair of pairs) {
+      const [key, value] = pair.split('=');
+      if (key && value) {
+        params[decodeURIComponent(key)] = decodeURIComponent(value);
+      }
+    }
+  } catch {}
+  return params;
+};
+
 export const useSiriShortcuts = () => {
   const navigation = useNavigation<any>();
+  const handledInitialUrl = useRef(false);
 
   useEffect(() => {
-    // Listener para deep links cuando la app está abierta
     const subscription = Linking.addEventListener('url', handleDeepLink);
 
-    // Manejar deep link si la app se abrió desde uno
-    Linking.getInitialURL().then((url) => {
-      if (url) {
-        handleDeepLink({ url });
-      }
-    });
+    // Handle initial URL only once
+    if (!handledInitialUrl.current) {
+      handledInitialUrl.current = true;
+      Linking.getInitialURL().then((url) => {
+        if (url) {
+          handleDeepLink({ url });
+        }
+      });
+    }
 
     return () => {
       subscription.remove();
@@ -66,46 +96,73 @@ export const useSiriShortcuts = () => {
   }, []);
 
   const handleDeepLink = ({ url }: { url: string }) => {
-    
-
-    // Parsear la URL
     const { path } = Linking.parse(url);
+    const queryParams = parseQueryParams(url);
 
-    if (!path) {
-      
-      return;
-    }
+    if (!path) return;
 
-    // Navegar según el path
-    switch (path) {
-      case 'add-expense':
-        
-        navigation.navigate('AddExpense', { eventId: 'individual', mode: 'create' });
+    // Extract cleaned path (remove leading slashes)
+    const cleanPath = path.replace(/^\/+/, '');
+
+    switch (cleanPath) {
+      case 'quick-expense': {
+        // lessmo://quick-expense?amount=15&description=Café&category=food&eventId=xxx
+        navigation.navigate('QuickExpense', {
+          amount: queryParams.amount ? parseFloat(queryParams.amount) : undefined,
+          description: queryParams.description || undefined,
+          category: queryParams.category || undefined,
+          eventId: queryParams.eventId || undefined,
+        });
         break;
+      }
+
+      case 'add-expense': {
+        // If has params → QuickExpense for faster flow, else → full AddExpense
+        if (queryParams.amount || queryParams.description) {
+          navigation.navigate('QuickExpense', {
+            amount: queryParams.amount ? parseFloat(queryParams.amount) : undefined,
+            description: queryParams.description || undefined,
+            category: queryParams.category || undefined,
+            eventId: queryParams.eventId || undefined,
+          });
+        } else {
+          navigation.navigate('AddExpense', { eventId: 'individual', mode: 'create' });
+        }
+        break;
+      }
 
       case 'summary':
-        
-        navigation.navigate('MainTabs', { screen: 'Events' } as any);
+      case 'dashboard':
+        navigation.navigate('MainTabs', { screen: 'Activity' } as any);
         break;
 
       case 'create-event':
-        
         navigation.navigate('CreateEvent', { mode: 'create' });
         break;
 
       case 'events':
-        
         navigation.navigate('MainTabs', { screen: 'Events' } as any);
         break;
 
       case 'settings':
-        
         navigation.navigate('Settings');
         break;
 
-      default:
-        
+      case 'expenses':
+        navigation.navigate('MainTabs', { screen: 'Expenses' } as any);
+        break;
+
+      default: {
+        // Handle lessmo://event/EVENT_ID
+        if (cleanPath.startsWith('event/')) {
+          const eventId = cleanPath.replace('event/', '');
+          if (eventId) {
+            navigation.navigate('EventDetail', { eventId });
+            break;
+          }
+        }
         navigation.navigate('MainTabs' as any);
+      }
     }
   };
 
