@@ -3,12 +3,12 @@ import Foundation
 
 /**
  * LessMo App Intents - Integración con Siri y Atajos
- * 
+ *
  * Permite:
  * - "Oye Siri, añade un gasto de 15€ en comida"
  * - "Oye Siri, gasto rápido en LessMo"
  * - "Oye Siri, ¿cuánto he gastado este mes?"
- * 
+ *
  * Requiere iOS 16+
  */
 
