@@ -258,33 +258,22 @@ struct LessmoWidgetEntryViewSmall: View {
             
             Spacer()
             
-            // Balance
-            Text("Balance")
+            // Gastado este mes - main number
+            Text("Gastado este mes")
                 .font(.system(size: 10, weight: .medium, design: .rounded))
                 .foregroundColor(.secondary)
             
             HStack(alignment: .firstTextBaseline, spacing: 1) {
-                Text(entry.userBalance >= 0 ? "+" : "-")
-                    .font(.system(size: 11, weight: .medium, design: .rounded))
-                Text(String(format: "%.2f", abs(entry.userBalance)))
+                Text(String(format: "%.2f", entry.monthTotal))
                     .font(.system(size: 22, weight: .bold, design: .rounded))
                 Text(entry.currencySymbol)
                     .font(.system(size: 11, weight: .semibold, design: .rounded))
             }
-            .foregroundColor(entry.userBalance >= 0 ? .widgetPositive : .widgetNegative)
+            .foregroundColor(.primary)
             .padding(.top, 1)
             
-            // Month total
-            if entry.monthTotal > 0 {
-                HStack(spacing: 3) {
-                    Image(systemName: "creditcard.fill")
-                        .font(.system(size: 8))
-                    Text("Este mes: \(entry.formatAmount(entry.monthTotal))")
-                        .font(.system(size: 10, weight: .medium, design: .rounded))
-                }
-                .foregroundColor(.secondary)
-                .padding(.top, 3)
-            } else if entry.youOwe > 0 {
+            // Event debts summary
+            if entry.youOwe > 0 {
                 HStack(spacing: 3) {
                     Image(systemName: "arrow.up.right")
                         .font(.system(size: 8))
@@ -302,7 +291,7 @@ struct LessmoWidgetEntryViewSmall: View {
                 }
                 .foregroundColor(.widgetPositive)
                 .padding(.top, 3)
-            } else {
+            } else if entry.eventsCount > 0 {
                 HStack(spacing: 3) {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 8))
@@ -389,19 +378,17 @@ struct LessmoWidgetEntryViewMedium: View {
                     
                     Spacer()
                     
-                    Text("Balance global")
+                    Text("Gastado este mes")
                         .font(.system(size: 10, weight: .medium, design: .rounded))
                         .foregroundColor(.secondary)
                     
                     HStack(alignment: .firstTextBaseline, spacing: 1) {
-                        Text(entry.userBalance >= 0 ? "+" : "-")
-                            .font(.system(size: 13, weight: .medium, design: .rounded))
-                        Text(String(format: "%.2f", abs(entry.userBalance)))
+                        Text(String(format: "%.2f", entry.monthTotal))
                             .font(.system(size: 26, weight: .bold, design: .rounded))
                         Text(entry.currencySymbol)
                             .font(.system(size: 13, weight: .semibold, design: .rounded))
                     }
-                    .foregroundColor(entry.userBalance >= 0 ? .widgetPositive : .widgetNegative)
+                    .foregroundColor(.primary)
                     .padding(.top, 1)
                     
                     // Owe/Owed summary
@@ -410,7 +397,7 @@ struct LessmoWidgetEntryViewMedium: View {
                             HStack(spacing: 2) {
                                 Image(systemName: "arrow.up.right")
                                     .font(.system(size: 8))
-                                Text(entry.formatAmount(entry.youOwe))
+                                Text("Debes \(entry.formatAmount(entry.youOwe))")
                                     .font(.system(size: 10, weight: .semibold, design: .rounded))
                             }
                             .foregroundColor(.widgetNegative)
@@ -419,12 +406,12 @@ struct LessmoWidgetEntryViewMedium: View {
                             HStack(spacing: 2) {
                                 Image(systemName: "arrow.down.left")
                                     .font(.system(size: 8))
-                                Text(entry.formatAmount(entry.owedToYou))
+                                Text("Te deben \(entry.formatAmount(entry.owedToYou))")
                                     .font(.system(size: 10, weight: .semibold, design: .rounded))
                             }
                             .foregroundColor(.widgetPositive)
                         }
-                        if entry.youOwe == 0 && entry.owedToYou == 0 {
+                        if entry.youOwe == 0 && entry.owedToYou == 0 && entry.eventsCount > 0 {
                             HStack(spacing: 2) {
                                 Image(systemName: "checkmark.circle.fill")
                                     .font(.system(size: 8))
@@ -596,39 +583,34 @@ struct LessmoWidgetEntryViewLarge: View {
                 }
             }
             
-            // Balance + month summary row
+            // Gastado este mes + events info
             Link(destination: URL(string: "lessmo://dashboard")!) {
                 HStack(alignment: .bottom) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Balance global")
+                        Text("Gastado este mes")
                             .font(.system(size: 11, weight: .medium, design: .rounded))
                             .foregroundColor(.secondary)
                             .padding(.top, 8)
                         HStack(alignment: .firstTextBaseline, spacing: 2) {
-                            Text(entry.userBalance >= 0 ? "+" : "-")
-                                .font(.system(size: 14, weight: .medium, design: .rounded))
-                            Text(String(format: "%.2f", abs(entry.userBalance)))
+                            Text(String(format: "%.2f", entry.monthTotal))
                                 .font(.system(size: 28, weight: .bold, design: .rounded))
                             Text(entry.currencySymbol)
                                 .font(.system(size: 14, weight: .semibold, design: .rounded))
                         }
-                        .foregroundColor(entry.userBalance >= 0 ? .widgetPositive : .widgetNegative)
+                        .foregroundColor(.primary)
                     }
                     
                     Spacer()
                     
-                    // Right side: month total
+                    // Right side: events info
                     VStack(alignment: .trailing, spacing: 2) {
-                        Text("Este mes")
-                            .font(.system(size: 10, weight: .medium, design: .rounded))
-                            .foregroundColor(.secondary)
-                        Text(entry.formatAmount(entry.monthTotal))
-                            .font(.system(size: 16, weight: .bold, design: .rounded))
                         if entry.eventsCount > 0 {
                             Text("\(entry.eventsCount) evento\(entry.eventsCount == 1 ? "" : "s")")
-                                .font(.system(size: 10, weight: .medium, design: .rounded))
+                                .font(.system(size: 11, weight: .medium, design: .rounded))
                                 .foregroundColor(.secondary)
                         }
+                        Text("\(entry.monthExpenses) gasto\(entry.monthExpenses == 1 ? "" : "s")")
+                            .font(.system(size: 14, weight: .bold, design: .rounded))
                     }
                 }
             }

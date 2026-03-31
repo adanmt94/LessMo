@@ -1037,10 +1037,10 @@ export const createGroup = async (
     const docRef = await addDoc(collection(db, 'groups'), groupData);
     
     
-    // Create default "General" event for all group types
+    // Create default event with the group's name
     try {
       const defaultEventId = await createEvent(
-        'General',
+        name,
         budget || 0,
         currency || 'EUR',
         createdBy,

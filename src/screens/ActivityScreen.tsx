@@ -16,6 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { useFocusEffect } from '@react-navigation/native';
 import { RootStackParamList } from '../types';
 import { Card } from '../components/lovable';
 import { useAuth } from '../hooks/useAuth';
@@ -75,9 +76,11 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (user) loadAll();
-  }, [user]);
+  useFocusEffect(
+    useCallback(() => {
+      if (user) loadAll();
+    }, [user])
+  );
 
   const loadAll = useCallback(async () => {
     if (!user) return;
@@ -250,21 +253,53 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
         });
       }
 
-      // Recent expenses
-      const expSnap = await getDocs(query(collection(db, 'expenses'), limit(30)));
-      for (const doc of expSnap.docs) {
+      // Recent expenses - individual (paidBy = auth UID, no eventId)
+      const indExpSnap = await getDocs(query(
+        collection(db, 'expenses'),
+        where('paidBy', '==', user.uid),
+        orderBy('createdAt', 'desc'),
+        limit(20)
+      ));
+      for (const doc of indExpSnap.docs) {
         const d = doc.data();
-        if (d.paidBy === user.uid || (d.beneficiaries && d.beneficiaries.includes(user.uid))) {
-          const info = await getUserInfo(d.paidBy);
-          allActivities.push({
-            id: `exp_${doc.id}`, type: 'expense_added',
-            title: d.isIndividual ? 'Gasto rápido' : 'Gasto en evento',
-            description: d.description, amount: d.amount, currency: d.currency,
-            date: d.date?.toDate() || new Date(),
-            icon: d.type === 'income' ? '📈' : '💸', eventId: d.eventId,
-            userName: info.name, userPhoto: info.photo, userId: d.paidBy,
-          });
-        }
+        if (d.eventId) continue; // Skip event expenses here
+        const info = await getUserInfo(d.paidBy);
+        allActivities.push({
+          id: `exp_${doc.id}`, type: 'expense_added',
+          title: 'Gasto rápido',
+          description: d.description, amount: d.amount, currency: d.currency,
+          date: d.date?.toDate() || new Date(),
+          icon: d.type === 'income' ? '📈' : '💸',
+          userName: info.name, userPhoto: info.photo, userId: d.paidBy,
+        });
+      }
+
+      // Recent expenses - from events (paidBy = participant doc ID)
+      const { getUserEventsByStatus, getEventExpenses, getEventParticipants } = await import('../services/firebase');
+      const userEvents = await getUserEventsByStatus(user.uid);
+      const activeEvents = userEvents.filter(e => e.status === 'active');
+      for (const event of activeEvents.slice(0, 5)) {
+        try {
+          const participants = await getEventParticipants(event.id);
+          const userParticipant = participants.find((p: any) => p.userId === user.uid);
+          if (!userParticipant) continue;
+          const pid = userParticipant.id;
+          const expenses = await getEventExpenses(event.id);
+          for (const exp of expenses.slice(0, 10)) {
+            if (exp.paidBy === pid || (exp.participantIds || []).includes(pid)) {
+              const payerParticipant = participants.find((p: any) => p.id === exp.paidBy);
+              const payerName = payerParticipant ? (payerParticipant.name || 'Usuario') : 'Usuario';
+              allActivities.push({
+                id: `exp_${exp.id}`, type: 'expense_added',
+                title: event.name || 'Evento',
+                description: exp.description || exp.name || 'Gasto', amount: exp.amount, currency: event.currency,
+                date: exp.date instanceof Date ? exp.date : new Date(exp.date),
+                icon: '💸', eventId: event.id,
+                userName: payerName, userId: exp.paidBy,
+              });
+            }
+          }
+        } catch { /* skip event */ }
       }
 
       allActivities.sort((a, b) => b.date.getTime() - a.date.getTime());
@@ -490,6 +525,21 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
                           <Text style={[styles.activityUser, { color: theme.colors.textSecondary }]} numberOfLines={1}>
                             {activity.userName || activity.title}
                           </Text>
+                          {activity.type === 'expense_added' && (
+                            <View style={[styles.activityTag, {
+                              backgroundColor: activity.eventId
+                                ? theme.colors.primary + '20'
+                                : '#F59E0B20'
+                            }]}>
+                              <Text style={[styles.activityTagText, {
+                                color: activity.eventId
+                                  ? theme.colors.primary
+                                  : '#F59E0B'
+                              }]} numberOfLines={1}>
+                                {activity.title}
+                              </Text>
+                            </View>
+                          )}
                         </View>
                         {activity.amount != null && (
                           <Text style={[
@@ -744,6 +794,17 @@ const getStyles = (theme: any) => StyleSheet.create({
   activityUser: {
     ...Typography.caption1,
     fontWeight: '500',
+  },
+  activityTag: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 6,
+  },
+  activityTagText: {
+    fontSize: 10,
+    fontWeight: '600',
+    maxWidth: 80,
   },
   activityAmount: {
     ...Typography.subhead,

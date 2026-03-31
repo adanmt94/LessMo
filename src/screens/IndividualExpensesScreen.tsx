@@ -32,6 +32,7 @@ import { Expense, RootStackParamList, AllCategoryLabels } from '../types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Gradients, Spacing, Radius, Shadows, Typography } from '../theme/designSystem';
+import { updateWidgetData } from '../services/widgetDataService';
 
 type NavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -112,6 +113,7 @@ export const IndividualExpensesScreen: React.FC = () => {
             try {
               await deleteDoc(doc(db, 'expenses', expenseId));
               setExpenses(prev => prev.filter(e => e.id !== expenseId));
+              if (user) updateWidgetData(user.uid);
             } catch (error) {
               Alert.alert(t('common.error'), 'No se pudo eliminar el gasto');
             }
