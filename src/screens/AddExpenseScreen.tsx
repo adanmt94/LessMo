@@ -76,6 +76,13 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
   const isEditMode = mode === 'edit' && expenseId;
   const isIndividualExpense = eventId === 'individual';
   const { user } = useAuth();
+
+  // Actualizar título de navegación según modo
+  useEffect(() => {
+    navigation.setOptions({
+      title: isEditMode ? t('addExpense.editTitle') : t('addExpense.title'),
+    });
+  }, [isEditMode, navigation, t]);
   
   // Always call useExpenses (Rules of Hooks) — use dummy eventId for individual expenses
   const expenseHookResult = useExpenses(isIndividualExpense ? '__individual__' : eventId!);

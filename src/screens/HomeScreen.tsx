@@ -84,7 +84,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
     
     return (
       <TouchableOpacity
-        onPress={() => navigation.navigate('EventDetail', { eventId: item.id })}
+        onPress={() => navigation.navigate('EventDetail', { eventId: item.id, eventName: item.name })}
         activeOpacity={0.7}
       >
         <Card style={styles.eventCard}>

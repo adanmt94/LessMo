@@ -2,9 +2,9 @@
  * ThemeContext - Contexto para manejar el tema de la aplicación (claro/oscuro)
  */
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useColorScheme } from 'react-native';
+import { useColorScheme, Appearance } from 'react-native';
 import { emitGlobalUpdate } from '../utils/globalEvents';
 
 export type ThemeMode = 'light' | 'dark' | 'auto';
@@ -133,7 +133,11 @@ interface ThemeProviderProps {
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const systemColorScheme = useColorScheme();
   const [themeMode, setThemeModeState] = useState<ThemeMode>('auto');
-  const [currentTheme, setCurrentTheme] = useState<Theme>(lightTheme);
+  const [currentTheme, setCurrentTheme] = useState<Theme>(() => {
+    // Inicializar con el esquema del sistema si está disponible
+    const scheme = Appearance.getColorScheme();
+    return scheme === 'dark' ? darkTheme : lightTheme;
+  });
 
   // Cargar preferencia de tema guardada
   useEffect(() => {
@@ -150,18 +154,30 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     loadThemePreference();
   }, []);
 
+  const applyTheme = useCallback((mode: ThemeMode, colorScheme: string | null | undefined) => {
+    let isDark = false;
+    if (mode === 'auto') {
+      isDark = colorScheme === 'dark';
+    } else {
+      isDark = mode === 'dark';
+    }
+    setCurrentTheme(isDark ? darkTheme : lightTheme);
+  }, []);
+
   // Actualizar tema cuando cambia el modo o el esquema del sistema
   useEffect(() => {
-    let isDark = false;
+    applyTheme(themeMode, systemColorScheme);
+  }, [themeMode, systemColorScheme, applyTheme]);
 
-    if (themeMode === 'auto') {
-      isDark = systemColorScheme === 'dark';
-    } else {
-      isDark = themeMode === 'dark';
-    }
-
-    setCurrentTheme(isDark ? darkTheme : lightTheme);
-  }, [themeMode, systemColorScheme]);
+  // Listener adicional para cambios de Appearance (cubre cambios en background)
+  useEffect(() => {
+    const listener = Appearance.addChangeListener(({ colorScheme }) => {
+      if (themeMode === 'auto') {
+        applyTheme('auto', colorScheme);
+      }
+    });
+    return () => listener.remove();
+  }, [themeMode, applyTheme]);
 
   const setThemeMode = async (mode: ThemeMode) => {
     try {

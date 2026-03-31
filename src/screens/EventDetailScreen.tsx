@@ -207,16 +207,35 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   const loadEvent = async () => {
     try {
       const eventData = await getEvent(eventId);
-      // Si el evento tiene nombre "General" y tenemos el nombre real del grupo, corregir
-      if (eventData && eventData.name === 'General' && routeEventName && routeEventName !== 'General') {
-        eventData.name = routeEventName;
-        // Corregir también en Firestore para futuras cargas
-        try {
-          const { doc: firestoreDoc, updateDoc: firestoreUpdateDoc } = await import('firebase/firestore');
-          const { db: firestoreDb } = await import('../services/firebase');
-          await firestoreUpdateDoc(firestoreDoc(firestoreDb, 'events', eventId), { name: routeEventName });
-        } catch (e) {
-          // No bloquear si falla la actualización
+      // Si el evento tiene nombre "General", corregir con nombre real
+      if (eventData && eventData.name === 'General') {
+        let realName = routeEventName;
+        // Si no tenemos nombre de ruta, buscar en el grupo padre
+        if ((!realName || realName === 'General') && eventData.groupId) {
+          try {
+            const { doc: firestoreDoc, getDoc: firestoreGetDoc } = await import('firebase/firestore');
+            const { db: firestoreDb } = await import('../services/firebase');
+            const groupSnap = await firestoreGetDoc(firestoreDoc(firestoreDb, 'groups', eventData.groupId));
+            if (groupSnap.exists()) {
+              const groupData = groupSnap.data();
+              if (groupData.name && groupData.name !== 'General') {
+                realName = groupData.name;
+              }
+            }
+          } catch (e) {
+            // No bloquear
+          }
+        }
+        if (realName && realName !== 'General') {
+          eventData.name = realName;
+          // Corregir también en Firestore para futuras cargas
+          try {
+            const { doc: firestoreDoc, updateDoc: firestoreUpdateDoc } = await import('firebase/firestore');
+            const { db: firestoreDb } = await import('../services/firebase');
+            await firestoreUpdateDoc(firestoreDoc(firestoreDb, 'events', eventId), { name: realName });
+          } catch (e) {
+            // No bloquear
+          }
         }
       }
       setEvent(eventData);

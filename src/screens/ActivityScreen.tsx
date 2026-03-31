@@ -499,7 +499,7 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
               <TouchableOpacity
                 key={activity.id}
                 onPress={() => {
-                  if (activity.eventId) navigation.navigate('EventDetail', { eventId: activity.eventId });
+                  if (activity.eventId) navigation.navigate('EventDetail', { eventId: activity.eventId, eventName: activity.title });
                 }}
                 activeOpacity={0.7}
               >
