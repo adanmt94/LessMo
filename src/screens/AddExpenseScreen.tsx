@@ -211,28 +211,64 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
 
   // Cargar datos del gasto en modo edición
   useEffect(() => {
-    if (isEditMode && expenses.length > 0) {
-      const expense = expenses.find(e => e.id === expenseId);
-      if (expense) {
-        setDescription(expense.description || '');
-        setAmount(expense.amount.toString());
-        setPaidBy(expense.paidBy);
-        setCategory(expense.category as ExpenseCategory);
-        setTransactionType(expense.type || 'expense');
-        setSelectedBeneficiaries(expense.beneficiaries || expense.participantIds || []);
-        setSplitType(expense.splitType || 'equal');
-        setReceiptPhoto(expense.receiptPhoto || null);
-        
-        if (expense.splitType === 'custom' && expense.customSplits) {
-          const splitsString: { [key: string]: string } = {};
-          Object.entries(expense.customSplits).forEach(([id, amount]: [string, unknown]) => {
-            splitsString[id] = String(amount);
-          });
-          setCustomSplits(splitsString);
+    const loadExpenseData = async () => {
+      if (!isEditMode || !expenseId) return;
+
+      // Para gastos individuales, cargar directamente de Firestore
+      if (isIndividualExpense) {
+        try {
+          const { doc: firestoreDoc, getDoc: firestoreGetDoc } = await import('firebase/firestore');
+          const { db } = await import('../services/firebase');
+          const snap = await firestoreGetDoc(firestoreDoc(db, 'expenses', expenseId));
+          if (snap.exists()) {
+            const data = snap.data();
+            setDescription(data.description || '');
+            setAmount((data.amount || 0).toString());
+            setPaidBy(data.paidBy || '');
+            setCategory((data.category || 'other') as ExpenseCategory);
+            setTransactionType(data.type || 'expense');
+            setSelectedBeneficiaries(data.beneficiaries || data.participantIds || []);
+            setSplitType(data.splitType || 'equal');
+            setReceiptPhoto(data.receiptPhoto || null);
+            if (data.splitType === 'custom' && data.customSplits) {
+              const splitsString: { [key: string]: string } = {};
+              Object.entries(data.customSplits).forEach(([id, amt]: [string, unknown]) => {
+                splitsString[id] = String(amt);
+              });
+              setCustomSplits(splitsString);
+            }
+          }
+        } catch (error) {
+          console.error('Error cargando gasto individual para edición:', error);
+        }
+        return;
+      }
+
+      // Para gastos de evento, buscar en la lista de expenses del hook
+      if (expenses.length > 0) {
+        const expense = expenses.find(e => e.id === expenseId);
+        if (expense) {
+          setDescription(expense.description || '');
+          setAmount(expense.amount.toString());
+          setPaidBy(expense.paidBy);
+          setCategory(expense.category as ExpenseCategory);
+          setTransactionType(expense.type || 'expense');
+          setSelectedBeneficiaries(expense.beneficiaries || expense.participantIds || []);
+          setSplitType(expense.splitType || 'equal');
+          setReceiptPhoto(expense.receiptPhoto || null);
+          
+          if (expense.splitType === 'custom' && expense.customSplits) {
+            const splitsString: { [key: string]: string } = {};
+            Object.entries(expense.customSplits).forEach(([id, amount]: [string, unknown]) => {
+              splitsString[id] = String(amount);
+            });
+            setCustomSplits(splitsString);
+          }
         }
       }
-    }
-  }, [isEditMode, expenseId, expenses]);
+    };
+    loadExpenseData();
+  }, [isEditMode, expenseId, expenses, isIndividualExpense]);
 
   // Stable participant IDs for dependency tracking
   const participantIds = useMemo(() => participants.map(p => p.id).join(','), [participants]);
@@ -676,11 +712,11 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
       let success: boolean;
       
       if (isIndividualExpense) {
-        // Crear gasto individual sin evento
+        // Gasto individual: crear o actualizar
         
         try {
           const firebaseModule = await import('../services/firebase');
-          const { addDoc, collection } = await import('firebase/firestore');
+          const { addDoc, collection, doc: firestoreDoc, updateDoc: firestoreUpdateDoc } = await import('firebase/firestore');
           const { db } = firebaseModule;
           const { auth } = firebaseModule;
           
@@ -692,8 +728,6 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
             category,
             type: transactionType,
             currency: currentCurrency.code,
-            date: new Date(),
-            createdAt: new Date(),
             splitType,
             participantIds: selectedBeneficiaries,
             beneficiaries: selectedBeneficiaries,
@@ -706,8 +740,17 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
           if (photoURL) {
             expenseData.receiptPhoto = photoURL;
           }
-          
-          await addDoc(collection(db, 'expenses'), expenseData);
+
+          if (isEditMode && expenseId) {
+            // Editar gasto individual existente
+            expenseData.updatedAt = new Date();
+            await firestoreUpdateDoc(firestoreDoc(db, 'expenses', expenseId), expenseData);
+          } else {
+            // Crear gasto individual nuevo
+            expenseData.date = new Date();
+            expenseData.createdAt = new Date();
+            await addDoc(collection(db, 'expenses'), expenseData);
+          }
           
           // Actualizar widget iOS (en background, no bloqueante)
           if (auth.currentUser?.uid) {
@@ -718,7 +761,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
           
           success = true;
         } catch (error) {
-          console.error('Error creando gasto individual:', error);
+          console.error('Error guardando gasto individual:', error);
           success = false;
         }
       } else if (isEditMode) {

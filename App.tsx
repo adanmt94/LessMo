@@ -31,8 +31,6 @@ initSentry();
 // Inicializar Stripe
 initializeStripe();
 
-console.log('🚀 [APP] Iniciando aplicación LessMo...');
-
 const BIOMETRIC_ENABLED_KEY = 'biometric_auth_enabled';
 
 // Componente interno que tiene acceso al ThemeContext
@@ -43,40 +41,27 @@ const AppContent: React.FC<{ appKey: number }> = ({ appKey }) => {
   const [checkingBiometric, setCheckingBiometric] = useState(true);
 
   useEffect(() => {
-    console.log('🔐 [APP] Iniciando verificación de biometría...');
     checkBiometricStatus();
-    
-    // Timeout de seguridad: si después de 3 segundos no se resolvió, desbloquear
-    const timeout = setTimeout(() => {
-      console.log('⚠️ [APP] Timeout verificando biometría - desbloqueando app');
-      setCheckingBiometric(false);
-      setIsLocked(false);
-    }, 3000);
-    
-    return () => clearTimeout(timeout);
   }, []);
 
   const checkBiometricStatus = async () => {
     try {
-      console.log('🔐 [APP] Verificando estado de biometría en SecureStore...');
       const enabled = await SecureStore.getItemAsync(BIOMETRIC_ENABLED_KEY);
-      console.log('🔐 [APP] Biometría habilitada:', enabled);
       
       if (enabled !== 'true') {
-        console.log('✅ [APP] Biometría no habilitada - desbloqueando');
         setBiometricEnabled(false);
         setIsLocked(false);
         return;
       }
 
-      // Esperar a que Firebase restaure la sesión antes de comprobar
-      console.log('🔐 [APP] Esperando a que Firebase restaure sesión...');
-      const restoredUser = await waitForAuthReady();
-      console.log('🔐 [APP] Firebase listo, usuario actual:', restoredUser?.uid ?? 'null');
+      // Esperar a que Firebase restaure la sesión (máx 2s)
+      const restoredUser = await Promise.race([
+        waitForAuthReady(),
+        new Promise<null>(resolve => setTimeout(() => resolve(null), 2000))
+      ]);
 
       // Si no hay sesión activa, no tiene sentido pedir biometría - ir a login
       if (!restoredUser) {
-        console.log('⚠️ [APP] Sin sesión activa - desbloqueando para mostrar login');
         setBiometricEnabled(false);
         setIsLocked(false);
         return;
@@ -86,19 +71,16 @@ const AppContent: React.FC<{ appKey: number }> = ({ appKey }) => {
       const isCurrentUser = await isBiometricUserCurrent();
       
       if (!isCurrentUser) {
-        console.log('⚠️ [APP] Usuario actual no coincide con el guardado - requiere autenticación');
         setBiometricEnabled(true);
-        setIsLocked(true); // Mantener bloqueado para que autentique con biometría
+        setIsLocked(true);
       } else {
-        console.log('✅ [APP] Usuario ya autenticado correctamente - desbloqueando');
         setBiometricEnabled(true);
-        setIsLocked(false); // Desbloquear porque ya está autenticado con el usuario correcto
+        setIsLocked(false);
       }
     } catch (error) {
       console.error('❌ [APP] Error verificando biometría:', error);
-      setIsLocked(false); // En caso de error, desbloquear
+      setIsLocked(false);
     } finally {
-      console.log('✅ [APP] Verificación de biometría completada');
       setCheckingBiometric(false);
     }
   };
@@ -138,11 +120,8 @@ function App() {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    console.log('🚀 App iniciando...');
-    
     // Escuchar cambios de idioma/moneda y forzar remount
     const handleForceRemount = () => {
-      console.log('🔄 FORZANDO REMOUNT COMPLETO DE LA APP');
       setAppKey(prev => prev + 1);
     };
 

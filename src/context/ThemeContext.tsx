@@ -137,26 +137,21 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 
   // Cargar preferencia de tema guardada
   useEffect(() => {
+    const loadThemePreference = async () => {
+      try {
+        const savedMode = await AsyncStorage.getItem(THEME_STORAGE_KEY);
+        if (savedMode && (savedMode === 'light' || savedMode === 'dark' || savedMode === 'auto')) {
+          setThemeModeState(savedMode as ThemeMode);
+        }
+      } catch (error) {
+        // Ignorar error de lectura
+      }
+    };
     loadThemePreference();
   }, []);
 
   // Actualizar tema cuando cambia el modo o el esquema del sistema
   useEffect(() => {
-    updateTheme();
-  }, [themeMode, systemColorScheme]);
-
-  const loadThemePreference = async () => {
-    try {
-      const savedMode = await AsyncStorage.getItem(THEME_STORAGE_KEY);
-      if (savedMode && (savedMode === 'light' || savedMode === 'dark' || savedMode === 'auto')) {
-        setThemeModeState(savedMode as ThemeMode);
-      }
-    } catch (error) {
-      
-    }
-  };
-
-  const updateTheme = () => {
     let isDark = false;
 
     if (themeMode === 'auto') {
@@ -166,7 +161,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     }
 
     setCurrentTheme(isDark ? darkTheme : lightTheme);
-  };
+  }, [themeMode, systemColorScheme]);
 
   const setThemeMode = async (mode: ThemeMode) => {
     try {

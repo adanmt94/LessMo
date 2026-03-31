@@ -458,10 +458,10 @@ struct LessmoWidgetEntryViewMedium: View {
                             .foregroundColor(.widgetAccent)
                             .frame(width: 14)
                         VStack(alignment: .leading, spacing: 0) {
-                            Text("Este mes")
+                            Text("Gastos")
                                 .font(.system(size: 9, weight: .medium, design: .rounded))
                                 .foregroundColor(.secondary)
-                            Text(entry.formatAmount(entry.monthTotal))
+                            Text("\(entry.monthExpenses) este mes")
                                 .font(.system(size: 12, weight: .bold, design: .rounded))
                         }
                     }
