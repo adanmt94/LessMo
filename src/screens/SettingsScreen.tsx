@@ -14,6 +14,7 @@ import {
   Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -30,6 +31,7 @@ import { useSpendingAlerts } from '../hooks/useSpendingAlerts';
 import { AVAILABLE_SHORTCUTS } from '../hooks/useSiriShortcuts';
 import { useForceUpdate } from '../utils/globalEvents';
 import { CommonActions } from '@react-navigation/native';
+import { Gradients, Spacing, Radius, Typography } from '../theme/designSystem';
 
 type SettingsScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -371,33 +373,37 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <SafeAreaView edges={['top']} style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>{t('settings.title')}</Text>
-      </View>
+      <LinearGradient
+        colors={theme.isDark ? Gradients.primaryDark : Gradients.primary}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.heroSection}
+      >
+        <Text style={styles.heroTitle}>{t('settings.title')}</Text>
+        <View style={styles.profileRow}>
+          <View style={styles.avatarGradient}>
+            {photoURL ? (
+              <Image 
+                source={{ uri: photoURL }} 
+                style={styles.avatarImage}
+              />
+            ) : (
+              <Text style={styles.avatarText}>
+                {userName.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
+              </Text>
+            )}
+          </View>
+          <View style={styles.profileTextGradient}>
+            <Text style={styles.profileNameGradient}>{userName}</Text>
+            <Text style={styles.profileEmailGradient}>{user?.email || t('settings.anonymousUser')}</Text>
+          </View>
+        </View>
+      </LinearGradient>
 
       <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
         {/* Perfil */}
         <Card style={styles.section}>
           <Text style={styles.sectionTitle}>{t('auth.name')}</Text>
-          
-          <View style={styles.profileInfo}>
-            <View style={styles.avatar}>
-              {photoURL ? (
-                <Image 
-                  source={{ uri: photoURL }} 
-                  style={styles.avatarImage}
-                />
-              ) : (
-                <Text style={styles.avatarText}>
-                  {userName.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
-                </Text>
-              )}
-            </View>
-            <View style={styles.profileText}>
-              <Text style={styles.profileName}>{userName}</Text>
-              <Text style={styles.profileEmail}>{user?.email || t('settings.anonymousUser')}</Text>
-            </View>
-          </View>
 
           <SettingItem styles={styles}
             icon="✏️"
@@ -860,16 +866,49 @@ const getStyles = (theme: any) => StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.surface,
   },
-  header: {
-    padding: 16,
-    backgroundColor: theme.colors.card,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+  heroSection: {
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.xxl,
+    borderBottomLeftRadius: Radius.xl,
+    borderBottomRightRadius: Radius.xl,
   },
-  title: {
-    fontSize: 24,
+  heroTitle: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: -1,
+    marginBottom: Spacing.lg,
+  },
+  profileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+  },
+  avatarGradient: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: Spacing.md,
+    overflow: 'hidden',
+  },
+  profileTextGradient: {
+    flex: 1,
+  },
+  profileNameGradient: {
+    ...Typography.headline,
     fontWeight: '700',
-    color: theme.colors.text,
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  profileEmailGradient: {
+    ...Typography.caption1,
+    color: 'rgba(255,255,255,0.8)',
   },
   content: {
     flex: 1,

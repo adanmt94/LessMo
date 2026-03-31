@@ -24,10 +24,12 @@ import { getEvent, addParticipant, deleteParticipant } from '../services/firebas
 import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { useExpenses } from '../hooks/useExpenses';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { formatCurrency } from '../utils/numberUtils';
 import { BudgetPredictionCard } from '../components/BudgetPredictionCard';
+import { Gradients, Spacing, Radius, Typography } from '../theme/designSystem';
 import { RecommendationsCard } from '../components/RecommendationsCard';
 import { 
   predictBudgetExceedance, 
@@ -599,47 +601,78 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
 
   return (
     <SafeAreaView edges={['top']} style={styles.container}>
-      {/* Header con acciones */}
-      <View style={[styles.header, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.border }]}>
+      {/* Header con gradiente */}
+      <LinearGradient
+        colors={theme.isDark ? Gradients.primaryDark : Gradients.primary}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.heroSection}
+      >
         <TouchableOpacity
           onPress={() => navigation.goBack()}
-          style={[styles.headerButton, { backgroundColor: theme.colors.primary + '15' }]}
+          style={styles.backButton}
         >
-          <Text style={[styles.headerButtonText, { color: theme.colors.primary }]}>←</Text>
+          <Text style={styles.backButtonText}>←</Text>
         </TouchableOpacity>
         
-        <Text style={[styles.eventTitle, { color: theme.colors.text }]} numberOfLines={1}>
+        <Text style={styles.heroTitle} numberOfLines={1}>
           {event?.name}
         </Text>
-        
-        <View style={styles.headerActions}>
+
+        {/* Budget display */}
+        <Text style={styles.heroLabel}>{t('eventDetail.initialBudget')}</Text>
+        <Text style={styles.heroBalance}>
+          {formatCurrency(event.initialBudget, event.currency as any)}
+        </Text>
+        <View style={styles.balanceCards}>
+          <View style={[styles.balanceCard, styles.balanceCardNegative]}>
+            <Text style={styles.balanceCardLabel}>{t('eventDetail.totalSpent')}</Text>
+            <Text style={[styles.balanceCardAmount, { color: '#FF6B6B' }]}>
+              -{formatCurrency(totalExpenses, event.currency as any)}
+            </Text>
+          </View>
+          <View style={[styles.balanceCard, styles.balanceCardPositive]}>
+            <Text style={styles.balanceCardLabel}>{t('eventDetail.remainingBalance')}</Text>
+            <Text style={[styles.balanceCardAmount, { color: remainingBalance >= 0 ? '#4ADE80' : '#FF6B6B' }]}>
+              {formatCurrency(remainingBalance, event.currency as any)}
+            </Text>
+          </View>
+        </View>
+
+        {/* Action buttons */}
+        <View style={styles.actionButtonsRow}>
           <TouchableOpacity
-            style={[styles.headerButton, { backgroundColor: theme.colors.primary + '15' }]}
+            style={styles.actionBtn}
             onPress={() => navigation.navigate('Statistics', { 
               eventId: eventId, 
               eventName: event?.name || '',
               currency: event?.currency || 'EUR'
             })}
           >
-            <Text style={[styles.headerButtonText, { color: theme.colors.primary }]}>📊</Text>
+            <Text style={styles.actionBtnIcon}>📊</Text>
+            <Text style={styles.actionBtnLabel}>{t('eventDetail.stats')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.headerButton, { backgroundColor: theme.colors.primary + '15' }]}
+            style={styles.actionBtn}
             onPress={handleShareEvent}
           >
-            <Text style={[styles.headerButtonText, { color: theme.colors.primary }]}>⤴</Text>
+            <Text style={styles.actionBtnIcon}>⤴</Text>
+            <Text style={styles.actionBtnLabel}>{t('common.share')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.headerButton, { backgroundColor: theme.colors.primary + '15' }]}
+            style={styles.actionBtn}
+            onPress={() => navigation.navigate('Chat', { eventId, title: event?.name || 'Chat' })}
+          >
+            <Text style={styles.actionBtnIcon}>💬</Text>
+            <Text style={styles.actionBtnLabel}>{t('eventDetail.chat')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionBtn}
             onPress={() => {
               Alert.alert(
                 event?.name || '',
                 '',
                 [
-                  {
-                    text: `💬 ${t('eventDetail.chat')}`,
-                    onPress: () => navigation.navigate('Chat', { eventId, title: event?.name || 'Chat' }),
-                  },
                   {
                     text: `✏️ ${t('common.edit')}`,
                     onPress: handleEditEvent,
@@ -654,10 +687,11 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
               );
             }}
           >
-            <Text style={[styles.headerButtonText, { color: theme.colors.primary }]}>⋯</Text>
+            <Text style={styles.actionBtnIcon}>⋯</Text>
+            <Text style={styles.actionBtnLabel}>Más</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </LinearGradient>
 
       <View style={[styles.tabs, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.border }]}>
         <TouchableOpacity
@@ -906,35 +940,93 @@ const getStyles = (theme: any) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
+  heroSection: {
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.xl,
+    borderBottomLeftRadius: Radius.xl,
+    borderBottomRightRadius: Radius.xl,
   },
-  eventTitle: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginHorizontal: 12,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    marginBottom: Spacing.sm,
   },
-  headerButtonText: {
+  backButtonText: {
     fontSize: 18,
+    color: '#FFFFFF',
+  },
+  heroTitle: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: -0.5,
+    marginBottom: Spacing.md,
+  },
+  heroLabel: {
+    ...Typography.subhead,
+    color: 'rgba(255,255,255,0.8)',
+    fontWeight: '600',
+    marginBottom: Spacing.xs,
+  },
+  heroBalance: {
+    fontSize: 36,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -1,
+    marginBottom: Spacing.lg,
+  },
+  balanceCards: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+  },
+  balanceCard: {
+    flex: 1,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    paddingVertical: Spacing.sm + 2,
+  },
+  balanceCardPositive: {
+    backgroundColor: 'rgba(255,255,255,0.18)',
+  },
+  balanceCardNegative: {
+    backgroundColor: 'rgba(255,255,255,0.18)',
+  },
+  balanceCardLabel: {
+    ...Typography.caption1,
+    color: 'rgba(255,255,255,0.8)',
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  balanceCardAmount: {
+    ...Typography.headline,
+    fontWeight: '700',
+  },
+  actionButtonsRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginTop: Spacing.lg,
+  },
+  actionBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderRadius: Radius.md,
+    paddingVertical: Spacing.sm + 2,
+    gap: 4,
+  },
+  actionBtnIcon: {
+    fontSize: 20,
+  },
+  actionBtnLabel: {
+    ...Typography.caption1,
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   exportButton: {
     width: 40,

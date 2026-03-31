@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { RootStackParamList, Group } from '../types';
@@ -27,6 +28,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useDebounce } from '../hooks/useDebounce';
+import { Gradients, Spacing, Radius, Typography } from '../theme/designSystem';
 
 type GroupsScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -517,37 +519,33 @@ export const GroupsScreen: React.FC<Props> = ({ navigation }) => {
             </TouchableOpacity>
           </View>
         )}
-        <View style={[styles.header, { backgroundColor: theme.colors.background, shadowColor: theme.colors.text }]}>
-        <View style={styles.headerTop}>
-          <Text style={[styles.greeting, { color: theme.colors.textSecondary }]}>
+        <LinearGradient
+          colors={theme.isDark ? Gradients.primaryDark : Gradients.primary}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.heroSection}
+        >
+          <Text style={styles.heroLabel}>
             {t('groups.hello')} {userName.split(' ')[0]} 👋
           </Text>
-          <Text style={[styles.title, { color: theme.colors.text }]}>Mis Eventos</Text>
-        </View>
-        <View style={styles.headerButtons}>
-          <TouchableOpacity
-            style={[styles.joinButton, { 
-              backgroundColor: theme.colors.primary + '15',
-              borderColor: theme.colors.primary,
-              shadowColor: theme.colors.primary 
-            }]}
-            onPress={() => navigation.navigate('JoinGroup', {})}
-          >
-            <Text style={[styles.buttonIcon, { color: theme.colors.primary }]}>🔗</Text>
-            <Text style={[styles.buttonLabel, { color: theme.colors.primary }]}>Unirse</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.createButton, { 
-              backgroundColor: theme.colors.primary,
-              shadowColor: theme.colors.primary 
-            }]}
-            onPress={() => navigation.navigate('CreateGroup', { mode: 'create' })}
-          >
-            <Text style={[styles.buttonIcon, { color: theme.colors.card }]}>+</Text>
-            <Text style={[styles.buttonLabel, { color: theme.colors.card }]}>Crear</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+          <Text style={styles.heroTitle}>Mis Eventos</Text>
+          <View style={styles.quickActionsRow}>
+            <TouchableOpacity
+              style={styles.quickActionBtn}
+              onPress={() => navigation.navigate('JoinGroup', {})}
+            >
+              <Text style={styles.quickActionIcon}>🔗</Text>
+              <Text style={styles.quickActionText}>Unirse</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.quickActionBtn}
+              onPress={() => navigation.navigate('CreateGroup', { mode: 'create' })}
+            >
+              <Text style={styles.quickActionIcon}>+</Text>
+              <Text style={styles.quickActionText}>Crear</Text>
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
 
       {/* Search Bar */}
       <View style={[styles.searchContainer, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.border }]}>
@@ -591,71 +589,48 @@ const getStyles = (theme: any) => StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  header: {
-    padding: 20,
-    paddingBottom: 12,
-    backgroundColor: theme.colors.background,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
+  heroSection: {
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.xxl,
+    borderBottomLeftRadius: Radius.xl,
+    borderBottomRightRadius: Radius.xl,
   },
-  headerTop: {
-    marginBottom: 12,
-  },
-  greeting: {
-    fontSize: 15,
+  heroLabel: {
+    ...Typography.subhead,
+    color: 'rgba(255,255,255,0.8)',
     fontWeight: '600',
-    color: theme.colors.textSecondary,
-    marginBottom: 4,
-    letterSpacing: 0.3,
+    marginBottom: Spacing.xs,
   },
-  title: {
+  heroTitle: {
     fontSize: 32,
     fontWeight: '900',
-    color: theme.colors.text,
+    color: '#FFFFFF',
     letterSpacing: -1,
+    marginBottom: Spacing.lg,
   },
-  headerButtons: {
+  quickActionsRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: Spacing.md,
   },
-  joinButton: {
+  quickActionBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    borderRadius: 14,
-    gap: 8,
-    borderWidth: 2,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 3,
+    padding: Spacing.md,
+    borderRadius: Radius.md,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    gap: Spacing.sm,
   },
-  createButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    borderRadius: 14,
-    gap: 8,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  buttonIcon: {
+  quickActionIcon: {
     fontSize: 20,
+    color: '#FFFFFF',
   },
-  buttonLabel: {
-    fontSize: 16,
+  quickActionText: {
+    ...Typography.subhead,
     fontWeight: '700',
-    letterSpacing: 0.3,
+    color: '#FFFFFF',
   },
   content: {
     flex: 1,

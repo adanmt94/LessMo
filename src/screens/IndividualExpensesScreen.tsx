@@ -292,7 +292,7 @@ export const IndividualExpensesScreen: React.FC = () => {
     return (
       <SafeAreaView style={styles.container}>
         <LinearGradient
-          colors={theme.isDark ? [theme.colors.card, theme.colors.background] : Gradients.primary}
+          colors={theme.isDark ? Gradients.primaryDark : Gradients.primary}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.gradientHeader}
@@ -309,7 +309,7 @@ export const IndividualExpensesScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <LinearGradient
-        colors={theme.isDark ? [theme.colors.card, theme.colors.background] : Gradients.primary}
+        colors={theme.isDark ? Gradients.primaryDark : Gradients.primary}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.gradientHeader}
@@ -391,14 +391,16 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   gradientHeader: {
     paddingHorizontal: Spacing.xl,
-    paddingTop: Spacing.lg,
-    paddingBottom: Spacing.xl,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.xxl,
     borderBottomLeftRadius: Radius.xl,
     borderBottomRightRadius: Radius.xl,
   },
   headerTitle: {
-    ...Typography.title1,
-    color: theme.isDark ? theme.colors.text : '#FFFFFF',
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: -1,
     marginBottom: Spacing.sm,
   },
   headerStats: {
@@ -413,7 +415,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   headerStatsText: {
     ...Typography.subhead,
-    color: theme.isDark ? theme.colors.textSecondary : 'rgba(255,255,255,0.9)',
+    color: 'rgba(255,255,255,0.9)',
     fontWeight: '600',
   },
   loadingContainer: {

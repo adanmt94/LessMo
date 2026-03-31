@@ -345,6 +345,7 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
           end={{ x: 1, y: 1 }}
           style={styles.heroSection}
         >
+          <Text style={styles.heroTitle}>{t('activity.title')}</Text>
           <Text style={styles.heroLabel}>{t('activity.globalBalance')}</Text>
           <Text style={styles.heroBalance}>
             {dashboard.totalBalance >= 0 ? '+' : ''}{formatMoney(dashboard.totalBalance)}
@@ -575,6 +576,13 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingBottom: Spacing.xxl,
     borderBottomLeftRadius: Radius.xl,
     borderBottomRightRadius: Radius.xl,
+  },
+  heroTitle: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: -1,
+    marginBottom: Spacing.lg,
   },
   heroLabel: {
     ...Typography.subhead,
