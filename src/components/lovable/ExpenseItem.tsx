@@ -20,6 +20,7 @@ interface ExpenseItemProps {
   onPress?: () => void;
   onDelete?: () => void;
   onEdit?: () => void;
+  onReceiptPress?: (photoUrl: string) => void;
 }
 
 const ExpenseItemComponent: React.FC<ExpenseItemProps> = ({
@@ -30,6 +31,7 @@ const ExpenseItemComponent: React.FC<ExpenseItemProps> = ({
   onPress,
   onDelete,
   onEdit,
+  onReceiptPress,
 }) => {
   const { theme } = useTheme();
   const { t } = useLanguage();
@@ -148,7 +150,9 @@ const ExpenseItemComponent: React.FC<ExpenseItemProps> = ({
           <TouchableOpacity 
             style={styles.receiptPhotoContainer}
             onPress={() => {
-              // Modal o navegación para ver foto completa
+              if (onReceiptPress && expense.receiptPhoto) {
+                onReceiptPress(expense.receiptPhoto);
+              }
             }}
           >
             <Image 

@@ -235,20 +235,37 @@ async function processOperation(operation: SyncOperation): Promise<void> {
       entity: operation.entity,
     });
     
-    // Aquí se ejecutaría la operación real en Firebase
-    // Por ahora simulamos éxito
-    await new Promise(resolve => setTimeout(resolve, 100));
+    const { collection: firestoreCollection, doc: firestoreDoc, addDoc, updateDoc, deleteDoc, Timestamp } = await import('firebase/firestore');
+    const { db } = await import('./firebase');
     
-    // TODO: Implementar lógica específica por tipo de entidad
-    // switch (operation.entity) {
-    //   case EntityType.EXPENSE:
-    //     await syncExpense(operation);
-    //     break;
-    //   case EntityType.COMMENT:
-    //     await syncComment(operation);
-    //     break;
-    //   // ... otros casos
-    // }
+    const collectionName = getCollectionName(operation.entity);
+    
+    switch (operation.type) {
+      case OperationType.CREATE: {
+        const data = { ...operation.data };
+        // Convert date strings back to Timestamps
+        if (data.createdAt && typeof data.createdAt === 'string') {
+          data.createdAt = Timestamp.fromDate(new Date(data.createdAt));
+        }
+        if (data.date && typeof data.date === 'string') {
+          data.date = Timestamp.fromDate(new Date(data.date));
+        }
+        await addDoc(firestoreCollection(db, collectionName), data);
+        break;
+      }
+      case OperationType.UPDATE: {
+        const data = { ...operation.data };
+        if (data.updatedAt && typeof data.updatedAt === 'string') {
+          data.updatedAt = Timestamp.fromDate(new Date(data.updatedAt));
+        }
+        await updateDoc(firestoreDoc(db, collectionName, operation.entityId), data);
+        break;
+      }
+      case OperationType.DELETE: {
+        await deleteDoc(firestoreDoc(db, collectionName, operation.entityId));
+        break;
+      }
+    }
     
     logger.info(LogCategory.SYNC, 'Operation processed successfully', {
       id: operation.id,
@@ -259,6 +276,19 @@ async function processOperation(operation: SyncOperation): Promise<void> {
       error,
     });
     throw error;
+  }
+}
+
+function getCollectionName(entity: EntityType): string {
+  switch (entity) {
+    case EntityType.EXPENSE: return 'expenses';
+    case EntityType.EVENT: return 'events';
+    case EntityType.PARTICIPANT: return 'participants';
+    case EntityType.COMMENT: return 'expense_comments';
+    case EntityType.PAYMENT: return 'payments';
+    case EntityType.TEMPLATE: return 'expense_templates';
+    case EntityType.REMINDER: return 'reminders';
+    default: return 'expenses';
   }
 }
 

@@ -27,6 +27,8 @@ import { collection, query, where, limit, getDocs, orderBy } from 'firebase/fire
 import { db } from '../services/firebase';
 import { Gradients, Spacing, Radius, Shadows, Typography } from '../theme/designSystem';
 import * as Haptics from 'expo-haptics';
+import { GlobalSearchModal } from '../components/GlobalSearchModal';
+import { FeatureTooltip } from '../components/FeatureTooltip';
 
 type ActivityScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -75,6 +77,7 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [searchVisible, setSearchVisible] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -87,6 +90,10 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
     try {
       setLoading(true);
       await Promise.all([loadDashboard(), loadActivities()]);
+      // Process recurring expenses in background
+      import('../services/recurringExpenseService').then(({ processRecurringExpenses }) => {
+        processRecurringExpenses(user.uid).catch(() => {});
+      }).catch(() => {});
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -345,7 +352,19 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
           end={{ x: 1, y: 1 }}
           style={styles.heroSection}
         >
-          <Text style={styles.heroTitle}>{t('activity.title')}</Text>
+          <View style={styles.heroHeader}>
+            <Text style={styles.heroTitle}>{t('activity.title')}</Text>
+            <TouchableOpacity
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setSearchVisible(true);
+              }}
+              style={styles.searchButton}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Text style={styles.searchIcon}>🔍</Text>
+            </TouchableOpacity>
+          </View>
           <Text style={styles.heroLabel}>{t('activity.globalBalance')}</Text>
           <Text style={styles.heroBalance}>
             {dashboard.totalBalance >= 0 ? '+' : ''}{formatMoney(dashboard.totalBalance)}
@@ -368,6 +387,12 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
         </LinearGradient>
 
         {/* Acciones rápidas */}
+        <FeatureTooltip
+          id="activity_new_features"
+          title="🆕 Nuevas funcionalidades"
+          message="Ahora puedes buscar gastos con 🔍, añadir etiquetas, notas, gastos recurrentes y mucho más. ¡Explora!"
+          position="bottom"
+        >
         <View style={styles.quickActionsSection}>
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('activity.quickActions')}</Text>
           <View style={styles.quickActionsRow}>
@@ -397,6 +422,7 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
             </TouchableOpacity>
           </View>
         </View>
+        </FeatureTooltip>
 
         {/* Gastos del mes */}
         <View style={styles.section}>
@@ -561,6 +587,7 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+      <GlobalSearchModal visible={searchVisible} onClose={() => setSearchVisible(false)} />
     </SafeAreaView>
   );
 };
@@ -577,12 +604,28 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderBottomLeftRadius: Radius.xl,
     borderBottomRightRadius: Radius.xl,
   },
+  heroHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+  },
   heroTitle: {
     fontSize: 32,
     fontWeight: '900',
     color: '#FFFFFF',
     letterSpacing: -1,
-    marginBottom: Spacing.lg,
+  },
+  searchButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  searchIcon: {
+    fontSize: 20,
   },
   heroLabel: {
     ...Typography.subhead,

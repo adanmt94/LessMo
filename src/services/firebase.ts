@@ -609,7 +609,8 @@ export const createExpense = async (
   name?: string,
   currency?: Currency,
   createdBy?: string,
-  transactionType?: 'expense' | 'income'
+  transactionType?: 'expense' | 'income',
+  extraFields?: Record<string, any>
 ): Promise<string> => {
   try {
     const type = transactionType || 'expense';
@@ -662,6 +663,15 @@ export const createExpense = async (
     // Solo agregar receiptPhoto si existe
     if (receiptPhoto) {
       cleanExpenseData.receiptPhoto = receiptPhoto;
+    }
+
+    // Agregar campos extra (notes, tags, recurring, etc.)
+    if (extraFields) {
+      Object.entries(extraFields).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          cleanExpenseData[key] = value;
+        }
+      });
     }
     
     const docRef = await addDoc(collection(db, 'expenses'), cleanExpenseData);
@@ -772,7 +782,8 @@ export const updateExpense = async (
   customSplits?: { [participantId: string]: number },
   percentageSplits?: { [participantId: string]: number },
   receiptPhoto?: string,
-  transactionType?: 'expense' | 'income'
+  transactionType?: 'expense' | 'income',
+  extraFields?: Record<string, any>
 ): Promise<void> => {
   try {
     // 1. Obtener el gasto original
@@ -818,6 +829,15 @@ export const updateExpense = async (
     
     if (receiptPhoto) {
       cleanExpenseData.receiptPhoto = receiptPhoto;
+    }
+
+    // Agregar campos extra (notes, tags, recurring, etc.)
+    if (extraFields) {
+      Object.entries(extraFields).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          cleanExpenseData[key] = value;
+        }
+      });
     }
     
     await updateDoc(doc(db, 'expenses', expenseId), cleanExpenseData);

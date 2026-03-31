@@ -14,6 +14,8 @@ import {
   Alert,
   Share,
   Modal,
+  Image,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -28,6 +30,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { formatCurrency } from '../utils/numberUtils';
+import { FeatureTooltip } from '../components/FeatureTooltip';
 import { BudgetPredictionCard } from '../components/BudgetPredictionCard';
 import { Gradients, Spacing, Radius, Typography } from '../theme/designSystem';
 import { RecommendationsCard } from '../components/RecommendationsCard';
@@ -66,6 +69,8 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   const [newParticipantName, setNewParticipantName] = useState('');
   const [newParticipantEmail, setNewParticipantEmail] = useState('');
   const [addingParticipant, setAddingParticipant] = useState(false);
+  const [receiptModalVisible, setReceiptModalVisible] = useState(false);
+  const [receiptPhotoUrl, setReceiptPhotoUrl] = useState<string | null>(null);
   const hasMigratedRef = useRef(false);
   
   const {
@@ -306,33 +311,48 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
     try {
       const userName = user.displayName || user.email?.split('@')[0] || t('eventDetail.user');
       
-      const success = await shareEvent({
+      const deepLink = generateEventDeepLink({
         eventId: event.id,
         eventName: event.name,
         creatorName: userName,
       });
       
-      if (!success) {
-        // Fallback: usar Share API nativa
-        const deepLink = generateEventDeepLink({
-          eventId: event.id,
-          eventName: event.name,
-          creatorName: userName,
-        });
-        
-        const message = t('eventDetail.shareMessage', {
-          name: event.name,
-          budget: event.initialBudget,
-          currency: CurrencySymbols[event.currency],
-          creator: userName,
-          link: deepLink,
-        });
+      const message = t('eventDetail.shareMessage', {
+        name: event.name,
+        budget: event.initialBudget,
+        currency: CurrencySymbols[event.currency],
+        creator: userName,
+        link: deepLink,
+      });
 
-        await Share.share({
-          message: message,
-          title: t('eventDetail.shareTitle', { name: event.name }),
-        });
-      }
+      Alert.alert(
+        t('common.share'),
+        '¿Cómo quieres compartir?',
+        [
+          {
+            text: '💬 WhatsApp',
+            onPress: async () => {
+              const whatsappUrl = `whatsapp://send?text=${encodeURIComponent(message)}`;
+              const canOpen = await Linking.canOpenURL(whatsappUrl);
+              if (canOpen) {
+                await Linking.openURL(whatsappUrl);
+              } else {
+                Alert.alert('WhatsApp', 'WhatsApp no está instalado');
+              }
+            },
+          },
+          {
+            text: '⤴ Compartir',
+            onPress: async () => {
+              await Share.share({
+                message,
+                title: t('eventDetail.shareTitle', { name: event.name }),
+              });
+            },
+          },
+          { text: t('common.cancel'), style: 'cancel' },
+        ]
+      );
     } catch (error: any) {
       if (error.message !== 'User did not share') {
         console.error('Error sharing event:', error);
@@ -399,6 +419,12 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   });
 
   const renderExpenses = () => (
+    <FeatureTooltip
+      id="event_expense_tips"
+      title="✨ Nuevas opciones"
+      message="Desliza gastos para editar/borrar. Pulsa una foto de recibo para verla a pantalla completa. Comparte por WhatsApp."
+      position="top"
+    >
     <View style={[styles.tabContent, { position: 'relative' }]}>
       {expenses.length === 0 ? (
         <View style={styles.emptyState}>
@@ -437,12 +463,17 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
                   mode: 'edit' 
                 })}
                 onDelete={() => handleDeleteExpense(expense.id)}
+                onReceiptPress={(url) => {
+                  setReceiptPhotoUrl(url);
+                  setReceiptModalVisible(true);
+                }}
               />
             );
           })}
         </ScrollView>
       )}
     </View>
+    </FeatureTooltip>
   );
 
   const renderParticipants = () => {
@@ -924,6 +955,35 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
               </TouchableOpacity>
             </View>
           </View>
+        </View>
+      </Modal>
+
+      {/* Receipt photo full-screen modal */}
+      <Modal
+        visible={receiptModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setReceiptModalVisible(false)}
+      >
+        <View style={{
+          flex: 1,
+          backgroundColor: 'rgba(0,0,0,0.9)',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}>
+          <TouchableOpacity
+            style={{ position: 'absolute', top: 60, right: 20, zIndex: 10 }}
+            onPress={() => setReceiptModalVisible(false)}
+          >
+            <Text style={{ fontSize: 32, color: '#fff' }}>✕</Text>
+          </TouchableOpacity>
+          {receiptPhotoUrl && (
+            <Image
+              source={{ uri: receiptPhotoUrl }}
+              style={{ width: '90%', height: '75%' }}
+              resizeMode="contain"
+            />
+          )}
         </View>
       </Modal>
     </SafeAreaView>

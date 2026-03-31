@@ -93,7 +93,8 @@ export const useExpenses = (eventId: string) => {
     customSplits?: { [participantId: string]: number },
     percentageSplits?: { [participantId: string]: number },
     receiptPhoto?: string,
-    transactionType?: 'expense' | 'income'
+    transactionType?: 'expense' | 'income',
+    extraFields?: Record<string, any>
   ): Promise<boolean> => {
     try {
       logger.info(LogCategory.EXPENSE, 'Creando gasto', { amount, description, category });
@@ -112,7 +113,8 @@ export const useExpenses = (eventId: string) => {
         undefined, // name
         undefined, // currency
         undefined, // createdBy
-        transactionType
+        transactionType,
+        extraFields
       );
       logger.info(LogCategory.EXPENSE, 'Gasto creado', { expenseId });
       
@@ -154,7 +156,8 @@ export const useExpenses = (eventId: string) => {
     customSplits?: { [participantId: string]: number },
     percentageSplits?: { [participantId: string]: number },
     receiptPhoto?: string,
-    transactionType?: 'expense' | 'income'
+    transactionType?: 'expense' | 'income',
+    extraFields?: Record<string, any>
   ): Promise<boolean> => {
     try {
       logger.info(LogCategory.EXPENSE, 'Actualizando gasto', { expenseId, amount, description });
@@ -171,7 +174,8 @@ export const useExpenses = (eventId: string) => {
         customSplits,
         percentageSplits,
         receiptPhoto,
-        transactionType
+        transactionType,
+        extraFields
       );
       logger.info(LogCategory.EXPENSE, 'Gasto actualizado', { expenseId });
       

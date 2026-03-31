@@ -114,12 +114,18 @@ export interface GroupEvent {
   groupId?: string;           // Alias de eventId
   name: string;
   description?: string;
+  notes?: string;             // Notas adicionales del gasto
   type?: TransactionType;     // 'expense' (default) o 'income'
   paidBy: string;             // participantId de quien pagó/recibió
   amount: number;
   category: ExpenseCategory | IncomeCategory;
+  customCategory?: string;    // Categoría personalizada (emoji + nombre)
+  tags?: string[];            // Etiquetas: #vacaciones, #trabajo, etc.
   date: Date;
   currency: Currency;
+  originalCurrency?: Currency;  // Moneda original si se convirtió
+  originalAmount?: number;      // Importe original antes de conversión
+  exchangeRate?: number;        // Tasa de cambio usada
   participantIds?: string[];  // Participantes que deben (opcional por compatibilidad con datos antiguos)
   beneficiaries?: string[];   // Alias de participantIds (legacy)
   splitType: SplitType;       // Cómo se divide el gasto
@@ -136,9 +142,36 @@ export interface GroupEvent {
     longitude: number;
     address?: string;
   };
+  // Gastos recurrentes
+  isRecurring?: boolean;
+  recurringFrequency?: 'daily' | 'weekly' | 'monthly' | 'yearly';
+  recurringEndDate?: Date;
+  lastRecurringDate?: Date;
+  parentExpenseId?: string;   // ID del gasto original si es generado automáticamente
   createdBy: string;
   createdAt: Date;
   updatedAt?: Date;
+}
+
+// ==================== CATEGORÍAS PERSONALIZADAS ====================
+export interface CustomCategory {
+  id: string;
+  userId: string;
+  emoji: string;
+  name: string;
+  color?: string;
+  createdAt: Date;
+}
+
+// ==================== PRESUPUESTO MENSUAL PERSONAL ====================
+export interface PersonalBudget {
+  userId: string;
+  monthlyLimit: number;
+  currency: Currency;
+  alertAt75?: boolean;        // Alertar al 75%
+  alertAt90?: boolean;        // Alertar al 90%
+  alertAt100?: boolean;       // Alertar al 100%
+  updatedAt: Date;
 }
 
 // ==================== ALIASES DE COMPATIBILIDAD (TEMPORAL) ====================

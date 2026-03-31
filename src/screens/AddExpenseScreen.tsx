@@ -15,12 +15,14 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Keyboard,
+  Switch,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
-import { RootStackParamList, ExpenseCategory, IncomeCategory, TransactionType, CategoryLabels, IncomeCategoryLabels, VALIDATION, SplitType } from '../types';
+import { RootStackParamList, ExpenseCategory, IncomeCategory, TransactionType, CategoryLabels, IncomeCategoryLabels, VALIDATION, SplitType, Currency, CurrencySymbols } from '../types';
 import { Button, Input, Card } from '../components/lovable';
 import { useExpenses } from '../hooks/useExpenses';
 import { useNotifications } from '../hooks/useNotifications';
@@ -38,6 +40,8 @@ import {
   createTemplateFromExpense,
   ExpenseTemplate 
 } from '../services/expenseTemplateService';
+import { checkPersonalBudget } from '../services/personalBudgetService';
+import { getCustomCategories, saveCustomCategory } from '../services/customCategoryService';
 import { ExpenseTemplatesModal } from '../components/ExpenseTemplatesModal';
 
 type AddExpenseScreenNavigationProp = StackNavigationProp<RootStackParamList, 'AddExpense'>;
@@ -166,6 +170,28 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
   const [expenseItems, setExpenseItems] = useState<ExpenseItem[]>([]);
   const [templates, setTemplates] = useState<ExpenseTemplate[]>([]);
   const [showTemplates, setShowTemplates] = useState(false);
+  
+  // New feature states
+  const [notes, setNotes] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
+  const [expenseCurrency, setExpenseCurrency] = useState(currentCurrency.code);
+  const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringFrequency, setRecurringFrequency] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('monthly');
+  const [customCategoryEmoji, setCustomCategoryEmoji] = useState('');
+  const [customCategoryName, setCustomCategoryName] = useState('');
+  const [customCategories, setCustomCategories] = useState<{ id: string; emoji: string; name: string }[]>([]);
+  const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
+
+  // Load custom categories
+  useEffect(() => {
+    if (user) {
+      getCustomCategories(user.uid).then(cats => {
+        setCustomCategories(cats.map(c => ({ id: c.id, emoji: c.emoji, name: c.name })));
+      }).catch(() => {});
+    }
+  }, [user]);
 
   // Helper function to translate category names
   const translateCategory = (category: ExpenseCategory): string => {
@@ -237,6 +263,14 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
             setSelectedBeneficiaries(data.beneficiaries || data.participantIds || []);
             setSplitType(data.splitType || 'equal');
             setReceiptPhoto(data.receiptPhoto || null);
+            // Load new fields
+            if (data.notes) setNotes(data.notes);
+            if (data.tags && Array.isArray(data.tags)) setTags(data.tags);
+            if (data.currency) setExpenseCurrency(data.currency);
+            if (data.isRecurring) {
+              setIsRecurring(true);
+              setRecurringFrequency(data.recurringFrequency || 'monthly');
+            }
             if (data.splitType === 'custom' && data.customSplits) {
               const splitsString: { [key: string]: string } = {};
               Object.entries(data.customSplits).forEach(([id, amt]: [string, unknown]) => {
@@ -263,6 +297,14 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
           setSelectedBeneficiaries(expense.beneficiaries || expense.participantIds || []);
           setSplitType(expense.splitType || 'equal');
           setReceiptPhoto(expense.receiptPhoto || null);
+          // Load new fields
+          if ((expense as any).notes) setNotes((expense as any).notes);
+          if ((expense as any).tags && Array.isArray((expense as any).tags)) setTags((expense as any).tags);
+          if ((expense as any).originalCurrency) setExpenseCurrency((expense as any).originalCurrency);
+          if ((expense as any).isRecurring) {
+            setIsRecurring(true);
+            setRecurringFrequency((expense as any).recurringFrequency || 'monthly');
+          }
           
           if (expense.splitType === 'custom' && expense.customSplits) {
             const splitsString: { [key: string]: string } = {};
@@ -605,6 +647,20 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
     );
   };
 
+  const handleDuplicateExpense = () => {
+    navigation.replace('AddExpense', {
+      eventId: eventId,
+      mode: 'create',
+      prefilledData: {
+        amount: parseFloat(amount) || undefined,
+        description: description ? `${description} (copia)` : undefined,
+        category: category,
+        paidBy: paidBy || undefined,
+        splitType: splitType,
+      },
+    });
+  };
+
   const handleAddExpense = async () => {
     // Validaciones
     if (!description.trim()) {
@@ -734,7 +790,7 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
             description,
             category,
             type: transactionType,
-            currency: currentCurrency.code,
+            currency: expenseCurrency || currentCurrency.code,
             splitType,
             participantIds: selectedBeneficiaries,
             beneficiaries: selectedBeneficiaries,
@@ -746,6 +802,17 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
           };
           if (photoURL) {
             expenseData.receiptPhoto = photoURL;
+          }
+          if (notes.trim()) {
+            expenseData.notes = notes.trim();
+          }
+          if (tags.length > 0) {
+            expenseData.tags = tags;
+          }
+          if (isRecurring) {
+            expenseData.isRecurring = true;
+            expenseData.recurringFrequency = recurringFrequency;
+            expenseData.lastRecurringDate = new Date();
           }
 
           if (isEditMode && expenseId) {
@@ -784,7 +851,13 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
           customSplitsData,
           percentageSplitsData,
           photoURL,
-          transactionType
+          transactionType,
+          {
+            ...(notes.trim() ? { notes: notes.trim() } : {}),
+            ...(tags.length > 0 ? { tags } : {}),
+            ...(expenseCurrency ? { originalCurrency: expenseCurrency } : {}),
+            ...(isRecurring ? { isRecurring: true, recurringFrequency, lastRecurringDate: new Date() } : {}),
+          }
         ) : false;
       } else {
         success = addExpense ? await addExpense(
@@ -797,7 +870,13 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
           customSplitsData,
           percentageSplitsData,
           photoURL,
-          transactionType
+          transactionType,
+          {
+            ...(notes.trim() ? { notes: notes.trim() } : {}),
+            ...(tags.length > 0 ? { tags } : {}),
+            ...(expenseCurrency ? { originalCurrency: expenseCurrency } : {}),
+            ...(isRecurring ? { isRecurring: true, recurringFrequency, lastRecurringDate: new Date() } : {}),
+          }
         ) : false;
       }
 
@@ -828,6 +907,16 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
             eventData.currency,
             eventData.name
           );
+        }
+
+        // Verificar presupuesto personal
+        if (!isEditMode && transactionType === 'expense') {
+          try {
+            const { auth } = await import('../services/firebase');
+            if (auth.currentUser?.uid) {
+              await checkPersonalBudget(auth.currentUser.uid, amountNum);
+            }
+          } catch {}
         }
         
         Alert.alert(
@@ -1011,7 +1100,252 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
                   </TouchableOpacity>
                 ))
               )}
+
+              {/* Custom categories */}
+              {transactionType === 'expense' && customCategories.map((cc) => (
+                <TouchableOpacity
+                  key={`custom_${cc.id}`}
+                  style={[
+                    styles.categoryButton,
+                    category === cc.name && styles.categoryButtonActive,
+                  ]}
+                  onPress={() => {
+                    setCategory(cc.name as any);
+                    setCustomCategoryEmoji(cc.emoji);
+                    setCustomCategoryName(cc.name);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.categoryText,
+                      category === cc.name && styles.categoryTextActive,
+                    ]}
+                  >
+                    {cc.emoji} {cc.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+
+              {/* Add new custom category button */}
+              {transactionType === 'expense' && (
+                <TouchableOpacity
+                  style={[styles.categoryButton, { borderStyle: 'dashed' as any }]}
+                  onPress={() => setShowNewCategoryInput(!showNewCategoryInput)}
+                >
+                  <Text style={styles.categoryText}>+ Nueva</Text>
+                </TouchableOpacity>
+              )}
             </View>
+
+            {/* New custom category input */}
+            {showNewCategoryInput && transactionType === 'expense' && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, gap: 8 }}>
+                <TextInput
+                  value={customCategoryEmoji}
+                  onChangeText={(t) => setCustomCategoryEmoji(t.slice(0, 2))}
+                  placeholder="😀"
+                  style={{
+                    width: 44,
+                    height: 44,
+                    fontSize: 24,
+                    textAlign: 'center',
+                    borderWidth: 1,
+                    borderColor: theme.colors.border || '#ddd',
+                    borderRadius: 8,
+                    color: theme.colors.text,
+                  }}
+                />
+                <TextInput
+                  value={customCategoryName}
+                  onChangeText={setCustomCategoryName}
+                  placeholder="Nombre categoría"
+                  placeholderTextColor={theme.colors.textSecondary}
+                  style={{
+                    flex: 1,
+                    height: 44,
+                    fontSize: 15,
+                    borderWidth: 1,
+                    borderColor: theme.colors.border || '#ddd',
+                    borderRadius: 8,
+                    paddingHorizontal: 12,
+                    color: theme.colors.text,
+                  }}
+                />
+                <TouchableOpacity
+                  onPress={async () => {
+                    if (!customCategoryEmoji.trim() || !customCategoryName.trim() || !user) return;
+                    try {
+                      const newCat = await saveCustomCategory(user.uid, {
+                        emoji: customCategoryEmoji.trim(),
+                        name: customCategoryName.trim(),
+                      });
+                      setCustomCategories(prev => [...prev, { id: newCat.id, emoji: newCat.emoji, name: newCat.name }]);
+                      setCategory(newCat.name as any);
+                      setShowNewCategoryInput(false);
+                      setCustomCategoryEmoji('');
+                      setCustomCategoryName('');
+                    } catch {}
+                  }}
+                  style={{
+                    height: 44,
+                    paddingHorizontal: 16,
+                    backgroundColor: theme.colors.primary,
+                    borderRadius: 8,
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text style={{ color: '#fff', fontWeight: '600' }}>✓</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Notes */}
+            <Input
+              label="📝 Notas (opcional)"
+              placeholder="Añade notas adicionales..."
+              value={notes}
+              onChangeText={setNotes}
+              multiline
+              numberOfLines={2}
+              style={{ minHeight: 60, textAlignVertical: 'top' }}
+            />
+
+            {/* Tags */}
+            <Text style={styles.label}>🏷️ Etiquetas</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+              {tags.map((tag, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  onPress={() => setTags(tags.filter((_, i) => i !== idx))}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: theme.colors.primary + '15',
+                    paddingHorizontal: 10,
+                    paddingVertical: 5,
+                    borderRadius: 12,
+                  }}
+                >
+                  <Text style={{ color: theme.colors.primary, fontSize: 13, fontWeight: '600' }}>
+                    #{tag}
+                  </Text>
+                  <Text style={{ color: theme.colors.primary, fontSize: 11, marginLeft: 4 }}>✕</Text>
+                </TouchableOpacity>
+              ))}
+              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, minWidth: 100 }}>
+                <Text style={{ color: theme.colors.textTertiary, fontSize: 14, marginRight: 2 }}>#</Text>
+                <TextInput
+                  style={{
+                    flex: 1,
+                    fontSize: 14,
+                    color: theme.colors.text,
+                    paddingVertical: 4,
+                  }}
+                  placeholder="vacaciones, trabajo..."
+                  placeholderTextColor={theme.colors.textTertiary}
+                  value={tagInput}
+                  onChangeText={setTagInput}
+                  onSubmitEditing={() => {
+                    const cleaned = tagInput.trim().replace(/^#/, '');
+                    if (cleaned && !tags.includes(cleaned)) {
+                      setTags([...tags, cleaned]);
+                    }
+                    setTagInput('');
+                  }}
+                  returnKeyType="done"
+                />
+              </View>
+            </View>
+
+            {/* Per-expense currency */}
+            <Text style={styles.label}>💱 Moneda del gasto</Text>
+            <TouchableOpacity
+              onPress={() => setShowCurrencyPicker(!showCurrencyPicker)}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: theme.colors.card,
+                borderWidth: 1,
+                borderColor: theme.colors.border,
+                borderRadius: 12,
+                padding: 12,
+                marginBottom: 8,
+              }}
+            >
+              <Text style={{ fontSize: 16, fontWeight: '600', color: theme.colors.text, flex: 1 }}>
+                {CurrencySymbols[expenseCurrency as Currency] || expenseCurrency} {expenseCurrency}
+              </Text>
+              <Text style={{ color: theme.colors.textSecondary }}>
+                {showCurrencyPicker ? '▼' : '▶'}
+              </Text>
+            </TouchableOpacity>
+            {showCurrencyPicker && (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                {(['EUR', 'USD', 'GBP', 'MXN', 'ARS', 'COP', 'BRL', 'CLP', 'JPY', 'CHF', 'CAD', 'AUD'] as Currency[]).map(cur => (
+                  <TouchableOpacity
+                    key={cur}
+                    onPress={() => { setExpenseCurrency(cur); setShowCurrencyPicker(false); }}
+                    style={{
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      borderRadius: 10,
+                      backgroundColor: expenseCurrency === cur ? theme.colors.primary : theme.colors.card,
+                      borderWidth: 1,
+                      borderColor: expenseCurrency === cur ? theme.colors.primary : theme.colors.border,
+                    }}
+                  >
+                    <Text style={{
+                      color: expenseCurrency === cur ? '#fff' : theme.colors.text,
+                      fontWeight: '600',
+                      fontSize: 13,
+                    }}>
+                      {CurrencySymbols[cur]} {cur}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            {/* Recurring */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, paddingVertical: 8 }}>
+              <View>
+                <Text style={{ fontSize: 15, fontWeight: '600', color: theme.colors.text }}>🔄 Gasto recurrente</Text>
+                <Text style={{ fontSize: 12, color: theme.colors.textSecondary }}>Se repite automáticamente</Text>
+              </View>
+              <Switch value={isRecurring} onValueChange={setIsRecurring} trackColor={{ true: theme.colors.primary }} />
+            </View>
+            {isRecurring && (
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+                {([
+                  { key: 'daily', label: 'Diario' },
+                  { key: 'weekly', label: 'Semanal' },
+                  { key: 'monthly', label: 'Mensual' },
+                  { key: 'yearly', label: 'Anual' },
+                ] as const).map(freq => (
+                  <TouchableOpacity
+                    key={freq.key}
+                    onPress={() => setRecurringFrequency(freq.key)}
+                    style={{
+                      flex: 1,
+                      paddingVertical: 8,
+                      borderRadius: 10,
+                      backgroundColor: recurringFrequency === freq.key ? theme.colors.primary : theme.colors.card,
+                      borderWidth: 1,
+                      borderColor: recurringFrequency === freq.key ? theme.colors.primary : theme.colors.border,
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Text style={{
+                      color: recurringFrequency === freq.key ? '#fff' : theme.colors.text,
+                      fontWeight: '600',
+                      fontSize: 12,
+                    }}>
+                      {freq.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
 
             {analyzingReceipt && (
               <View style={styles.ocrAnalyzing}>
@@ -1446,6 +1780,24 @@ export const AddExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
             fullWidth
             size="large"
           />
+
+          {isEditMode && expenseId && (
+            <TouchableOpacity
+              onPress={handleDuplicateExpense}
+              style={{
+                marginTop: 12,
+                paddingVertical: 14,
+                borderRadius: 12,
+                borderWidth: 1.5,
+                borderColor: theme.colors.primary,
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ color: theme.colors.primary, fontSize: 16, fontWeight: '600' }}>
+                📋 Duplicar gasto
+              </Text>
+            </TouchableOpacity>
+          )}
 
           {isEditMode && expenseId && (
             <Button

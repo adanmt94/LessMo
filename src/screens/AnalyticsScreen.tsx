@@ -330,6 +330,65 @@ export const AnalyticsScreen: React.FC<Props> = ({ navigation, route }) => {
           </View>
         ))}
       </Card>
+
+      {/* Comparativa mensual */}
+      {monthlyStats.length > 1 && (
+        <Card style={styles.card}>
+          <Text style={[styles.cardTitle, { color: theme.colors.text }]}>
+            📅 Comparativa Mensual
+          </Text>
+          <Text style={{ color: theme.colors.textSecondary, fontSize: 13, marginBottom: 12 }}>
+            Gasto total por mes
+          </Text>
+          <BarChart
+            data={{
+              labels: monthlyStats.slice(-6).map(s => {
+                const [, m] = s.month.split('-');
+                const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                return monthNames[parseInt(m, 10) - 1] || m;
+              }),
+              datasets: [{
+                data: monthlyStats.slice(-6).map(s => s.totalSpent || 0),
+              }],
+            }}
+            width={screenWidth - 64}
+            height={200}
+            yAxisLabel="€"
+            yAxisSuffix=""
+            chartConfig={{
+              backgroundColor: 'transparent',
+              backgroundGradientFrom: theme.colors.surface,
+              backgroundGradientTo: theme.colors.surface,
+              decimalPlaces: 0,
+              color: (opacity = 1) => `rgba(138, 92, 246, ${opacity})`,
+              labelColor: () => theme.colors.textSecondary,
+              barPercentage: 0.6,
+              propsForBackgroundLines: {
+                strokeDasharray: '4',
+                stroke: theme.colors.border || '#e0e0e0',
+              },
+            }}
+            style={{ borderRadius: 12 }}
+            showValuesOnTopOfBars
+          />
+          {monthlyStats.length >= 2 && (() => {
+            const last = monthlyStats[monthlyStats.length - 1];
+            const prev = monthlyStats[monthlyStats.length - 2];
+            const diff = last.totalSpent - prev.totalSpent;
+            const pct = prev.totalSpent > 0 ? (diff / prev.totalSpent) * 100 : 0;
+            return (
+              <View style={{ marginTop: 12, padding: 12, backgroundColor: theme.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', borderRadius: 10 }}>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: diff > 0 ? theme.colors.error : theme.colors.success }}>
+                  {diff > 0 ? '↑' : '↓'} {Math.abs(pct).toFixed(1)}% vs mes anterior
+                </Text>
+                <Text style={{ fontSize: 12, color: theme.colors.textSecondary, marginTop: 4 }}>
+                  {diff > 0 ? 'Gastaste más' : 'Gastaste menos'} que el mes pasado (€{Math.abs(diff).toFixed(2)})
+                </Text>
+              </View>
+            );
+          })()}
+        </Card>
+      )}
     </>
   );
 

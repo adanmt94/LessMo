@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   Alert,
   Switch,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -87,6 +88,13 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
   const [photoURL, setPhotoURL] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>('');
   const [siriExpanded, setSiriExpanded] = useState(false);
+
+  // Personal budget state
+  const [budgetAmount, setBudgetAmount] = useState('');
+  const [budgetAlert75, setBudgetAlert75] = useState(true);
+  const [budgetAlert90, setBudgetAlert90] = useState(true);
+  const [budgetAlert100, setBudgetAlert100] = useState(true);
+  const [budgetExpanded, setBudgetExpanded] = useState(false);
   
   // Hook para forzar re-render cuando cambien idioma/moneda
   useForceUpdate();
@@ -95,6 +103,7 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
   useEffect(() => {
     loadUserProfile();
     loadDebtReminderSettings();
+    loadPersonalBudget();
   }, [user]);
 
   // Cargar configuración de recordatorios
@@ -106,6 +115,42 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
       setReminderFrequency(settings.frequency);
     } catch (error) {
       
+    }
+  };
+
+  const loadPersonalBudget = async () => {
+    if (!user) return;
+    try {
+      const { getPersonalBudget } = await import('../services/personalBudgetService');
+      const budget = await getPersonalBudget(user.uid);
+      if (budget) {
+        setBudgetAmount(budget.monthlyLimit.toString());
+        setBudgetAlert75(budget.alertAt75 !== false);
+        setBudgetAlert90(budget.alertAt90 !== false);
+        setBudgetAlert100(budget.alertAt100 !== false);
+      }
+    } catch {}
+  };
+
+  const savePersonalBudget = async () => {
+    if (!user) return;
+    const amount = parseFloat(budgetAmount);
+    if (isNaN(amount) || amount <= 0) {
+      Alert.alert(t('common.error'), 'Introduce un presupuesto válido');
+      return;
+    }
+    try {
+      const { savePersonalBudget: saveBudget } = await import('../services/personalBudgetService');
+      await saveBudget(user.uid, {
+        monthlyLimit: amount,
+        currency: currentCurrency.code as any,
+        alertAt75: budgetAlert75,
+        alertAt90: budgetAlert90,
+        alertAt100: budgetAlert100,
+      });
+      Alert.alert(t('common.success'), `Presupuesto mensual: ${currentCurrency.symbol}${amount}`);
+    } catch {
+      Alert.alert(t('common.error'), 'Error al guardar presupuesto');
     }
   };
   
@@ -691,6 +736,81 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
                   {t('settings.siriStep4')}
                 </Text>
               </View>
+            </View>
+          )}
+        </Card>
+
+        {/* Presupuesto personal */}
+        <Card style={styles.section}>
+          <TouchableOpacity
+            onPress={() => setBudgetExpanded(!budgetExpanded)}
+            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+          >
+            <Text style={styles.sectionTitle}>💰 Presupuesto mensual</Text>
+            <Text style={{ fontSize: 18, color: theme.colors.textSecondary }}>
+              {budgetExpanded ? '▲' : '▼'}
+            </Text>
+          </TouchableOpacity>
+          
+          {budgetExpanded && (
+            <View style={{ marginTop: 12 }}>
+              <Text style={{ fontSize: 14, color: theme.colors.textSecondary, marginBottom: 8 }}>
+                Establece un límite de gasto mensual y recibe alertas cuando te acerques.
+              </Text>
+              
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+                <Text style={{ fontSize: 20, fontWeight: '700', color: theme.colors.text, marginRight: 8 }}>
+                  {currentCurrency.symbol}
+                </Text>
+                <TextInput
+                  value={budgetAmount}
+                  onChangeText={setBudgetAmount}
+                  keyboardType="numeric"
+                  placeholder="1000"
+                  placeholderTextColor={theme.colors.textSecondary}
+                  style={{
+                    flex: 1,
+                    fontSize: 20,
+                    fontWeight: '600',
+                    color: theme.colors.text,
+                    borderBottomWidth: 2,
+                    borderBottomColor: theme.colors.primary,
+                    paddingVertical: 8,
+                    paddingHorizontal: 4,
+                  }}
+                />
+              </View>
+
+              <Text style={{ fontSize: 13, fontWeight: '600', color: theme.colors.text, marginBottom: 8 }}>
+                🔔 Alertas de presupuesto:
+              </Text>
+
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <Text style={{ color: theme.colors.text, fontSize: 14 }}>⚠️ Al 75% del límite</Text>
+                <Switch value={budgetAlert75} onValueChange={setBudgetAlert75} />
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <Text style={{ color: theme.colors.text, fontSize: 14 }}>🔴 Al 90% del límite</Text>
+                <Switch value={budgetAlert90} onValueChange={setBudgetAlert90} />
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <Text style={{ color: theme.colors.text, fontSize: 14 }}>🚨 Al 100% del límite</Text>
+                <Switch value={budgetAlert100} onValueChange={setBudgetAlert100} />
+              </View>
+
+              <TouchableOpacity
+                onPress={savePersonalBudget}
+                style={{
+                  backgroundColor: theme.colors.primary,
+                  paddingVertical: 14,
+                  borderRadius: 12,
+                  alignItems: 'center',
+                }}
+              >
+                <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>
+                  💾 Guardar presupuesto
+                </Text>
+              </TouchableOpacity>
             </View>
           )}
         </Card>
