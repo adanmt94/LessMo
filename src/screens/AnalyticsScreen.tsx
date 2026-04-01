@@ -16,7 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { LineChart, BarChart, PieChart } from 'react-native-chart-kit';
-import { RootStackParamList, Event } from '../types';
+import { RootStackParamList, Event, CurrencySymbols, Currency } from '../types';
 import { Card } from '../components/lovable';
 import { useTheme } from '../context/ThemeContext';
 import { useExpenses } from '../hooks/useExpenses';
@@ -78,6 +78,7 @@ export const AnalyticsScreen: React.FC<Props> = ({ navigation, route }) => {
   }
 
   // Calcular todas las estadísticas con manejo de errores
+  const sym = CurrencySymbols[(event.currency || 'EUR') as Currency] || '€';
   let monthlyStats: any[] = [];
   let categoryTrends: any[] = [];
   let patterns: any = { recurring: [], unusual: [], seasonal: [] };
@@ -140,7 +141,7 @@ export const AnalyticsScreen: React.FC<Props> = ({ navigation, route }) => {
               Total Gastado
             </Text>
             <Text style={[styles.comparisonValue, { color: theme.colors.text }]}>
-              €{comparison.currentPeriod.totalSpent.toFixed(2)}
+              {sym}{comparison.currentPeriod.totalSpent.toFixed(2)}
             </Text>
             <Text style={[
               styles.comparisonChange,
@@ -168,7 +169,7 @@ export const AnalyticsScreen: React.FC<Props> = ({ navigation, route }) => {
               Promedio
             </Text>
             <Text style={[styles.comparisonValue, { color: theme.colors.text }]}>
-              €{comparison.currentPeriod.avgExpenseAmount.toFixed(2)}
+              {sym}{comparison.currentPeriod.avgExpenseAmount.toFixed(2)}
             </Text>
             <Text style={[
               styles.comparisonChange,
@@ -193,7 +194,7 @@ export const AnalyticsScreen: React.FC<Props> = ({ navigation, route }) => {
             <Text style={[styles.forecastValue, { 
               color: forecast.budgetStatus === 'over_budget' ? theme.colors.error : theme.colors.success 
             }]}>
-              €{forecast.projectedSpending.toFixed(2)}
+              {sym}{forecast.projectedSpending.toFixed(2)}
             </Text>
           </View>
           <View style={styles.forecastItem}>
@@ -201,7 +202,7 @@ export const AnalyticsScreen: React.FC<Props> = ({ navigation, route }) => {
               Tasa Diaria
             </Text>
             <Text style={[styles.forecastValue, { color: theme.colors.text }]}>
-              €{forecast.currentRunRate.toFixed(2)}/día
+              {sym}{forecast.currentRunRate.toFixed(2)}/día
             </Text>
           </View>
           <View style={styles.forecastItem}>
@@ -243,7 +244,7 @@ export const AnalyticsScreen: React.FC<Props> = ({ navigation, route }) => {
               </Text>
             </View>
             <Text style={[styles.topExpenseAmount, { color: theme.colors.primary }]}>
-              €{expense.amount.toFixed(2)}
+              {sym}{expense.amount.toFixed(2)}
             </Text>
           </View>
         ))}
@@ -318,7 +319,7 @@ export const AnalyticsScreen: React.FC<Props> = ({ navigation, route }) => {
                 {trend.category.toUpperCase()}
               </Text>
               <Text style={[styles.trendAmount, { color: theme.colors.textSecondary }]}>
-                €{trend.totalAmount.toFixed(2)} • Promedio €{trend.averageAmount.toFixed(2)}
+                {sym}{trend.totalAmount.toFixed(2)} • Promedio {sym}{trend.averageAmount.toFixed(2)}
               </Text>
             </View>
             <Text style={[
@@ -353,7 +354,7 @@ export const AnalyticsScreen: React.FC<Props> = ({ navigation, route }) => {
             }}
             width={screenWidth - 64}
             height={200}
-            yAxisLabel="€"
+            yAxisLabel={sym}
             yAxisSuffix=""
             chartConfig={{
               backgroundColor: 'transparent',
@@ -382,7 +383,7 @@ export const AnalyticsScreen: React.FC<Props> = ({ navigation, route }) => {
                   {diff > 0 ? '↑' : '↓'} {Math.abs(pct).toFixed(1)}% vs mes anterior
                 </Text>
                 <Text style={{ fontSize: 12, color: theme.colors.textSecondary, marginTop: 4 }}>
-                  {diff > 0 ? 'Gastaste más' : 'Gastaste menos'} que el mes pasado (€{Math.abs(diff).toFixed(2)})
+                  {diff > 0 ? 'Gastaste más' : 'Gastaste menos'} que el mes pasado ({sym}{Math.abs(diff).toFixed(2)})
                 </Text>
               </View>
             );
@@ -415,7 +416,7 @@ export const AnalyticsScreen: React.FC<Props> = ({ navigation, route }) => {
                   {pattern.description}
                 </Text>
                 <Text style={[styles.patternDetails, { color: theme.colors.textSecondary }]}>
-                  {pattern.frequency} veces • Promedio €{pattern.avgAmount.toFixed(2)}
+                  {pattern.frequency} veces • Promedio {sym}{pattern.avgAmount.toFixed(2)}
                 </Text>
               </View>
             </View>
@@ -456,7 +457,7 @@ export const AnalyticsScreen: React.FC<Props> = ({ navigation, route }) => {
                 Total Pagado
               </Text>
               <Text style={[styles.participantStatValue, { color: theme.colors.primary }]}>
-                €{stats.totalPaid.toFixed(2)}
+                {sym}{stats.totalPaid.toFixed(2)}
               </Text>
             </View>
             <View style={styles.participantStatItem}>
@@ -464,7 +465,7 @@ export const AnalyticsScreen: React.FC<Props> = ({ navigation, route }) => {
                 Total Adeudado
               </Text>
               <Text style={[styles.participantStatValue, { color: theme.colors.text }]}>
-                €{stats.totalOwed.toFixed(2)}
+                {sym}{stats.totalOwed.toFixed(2)}
               </Text>
             </View>
             <View style={styles.participantStatItem}>
@@ -472,7 +473,7 @@ export const AnalyticsScreen: React.FC<Props> = ({ navigation, route }) => {
                 Promedio
               </Text>
               <Text style={[styles.participantStatValue, { color: theme.colors.text }]}>
-                €{stats.avgExpenseAmount.toFixed(2)}
+                {sym}{stats.avgExpenseAmount.toFixed(2)}
               </Text>
             </View>
           </View>
@@ -488,7 +489,7 @@ export const AnalyticsScreen: React.FC<Props> = ({ navigation, route }) => {
                     {cat.category.toUpperCase()}
                   </Text>
                   <Text style={[styles.categoryStatAmount, { color: theme.colors.textSecondary }]}>
-                    €{cat.amount.toFixed(2)} ({cat.count} gastos)
+                    {sym}{cat.amount.toFixed(2)} ({cat.count} gastos)
                   </Text>
                 </View>
               ))}

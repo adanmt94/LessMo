@@ -40,12 +40,19 @@ export const useExpenses = (eventId: string) => {
 
   /**
    * Cargar gastos y participantes del evento
+   * @param forceRefresh - Si es true, invalida caché antes de cargar
    */
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (forceRefresh = false) => {
     try {
-      logger.info(LogCategory.EXPENSE, 'Cargando datos para evento', { eventId });
+      logger.info(LogCategory.EXPENSE, 'Cargando datos para evento', { eventId, forceRefresh });
       setLoading(true);
       setError(null);
+      
+      // Invalidar caché si se fuerza recarga
+      if (forceRefresh) {
+        cache.invalidatePattern(`expenses_${eventId}`);
+        cache.invalidatePattern(`participants_${eventId}`);
+      }
       
       // Usar caché para mejorar rendimiento
       const [expensesData, participantsData] = await Promise.all([

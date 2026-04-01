@@ -93,7 +93,7 @@ export const EventDetailScreen: React.FC<Props> = ({ navigation, route }) => {
     useCallback(() => {
       const init = async () => {
         await loadEvent();
-        await loadData();
+        await loadData(true); // Force refresh to get latest data
       };
       init();
     }, [eventId])
