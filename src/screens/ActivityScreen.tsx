@@ -94,6 +94,10 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
       import('../services/recurringExpenseService').then(({ processRecurringExpenses }) => {
         processRecurringExpenses(user.uid).catch(() => {});
       }).catch(() => {});
+      // Update widget data in background
+      import('../services/widgetDataService').then(({ updateWidgetData }) => {
+        updateWidgetData(user.uid).catch(() => {});
+      }).catch(() => {});
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -170,7 +174,7 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
         const snap = await getDocs(indQ);
         snap.docs.forEach(doc => {
           const d = doc.data();
-          if (d.eventId) return; // Solo individuales (sin eventId)
+          if (d.eventId && d.eventId !== 'individual') return; // Solo individuales (sin eventId o eventId === 'individual')
           const date = d.date?.toDate ? d.date.toDate() : new Date(d.date);
           const amt = d.amount || 0;
           if (d.type === 'income') {
@@ -269,7 +273,7 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
       ));
       for (const doc of indExpSnap.docs) {
         const d = doc.data();
-        if (d.eventId) continue; // Skip event expenses here
+        if (d.eventId && d.eventId !== 'individual') continue; // Skip event expenses here
         const info = await getUserInfo(d.paidBy);
         allActivities.push({
           id: `exp_${doc.id}`, type: 'expense_added',
@@ -400,7 +404,7 @@ export const ActivityScreen: React.FC<Props> = ({ navigation }) => {
               style={[styles.quickActionBtn, { backgroundColor: theme.colors.primary + '15' }]}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                navigation.navigate('AddExpense', { eventId: 'individual', mode: 'create' });
+                navigation.navigate('QuickExpense', {});
               }}
             >
               <Text style={styles.quickActionIcon}>⚡</Text>

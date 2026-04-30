@@ -73,7 +73,7 @@ export const FeatureTooltip: React.FC<Props> = ({
   const styles = getStyles(theme, position);
 
   return (
-    <View>
+    <View style={{ flex: 1 }}>
       {children}
       {visible && (
         <Animated.View style={[styles.tooltip, { opacity: fadeAnim }]}>

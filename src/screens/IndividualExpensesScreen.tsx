@@ -21,7 +21,7 @@ import {
 import { Swipeable } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -65,6 +65,15 @@ export const IndividualExpensesScreen: React.FC = () => {
     }
   }, [user]);
 
+  // Auto-refresh when screen gains focus
+  useFocusEffect(
+    useCallback(() => {
+      if (user) {
+        loadIndividualExpenses();
+      }
+    }, [user])
+  );
+
   const loadUserEvents = async () => {
     if (!user) return;
     try {
@@ -102,8 +111,8 @@ export const IndividualExpensesScreen: React.FC = () => {
         ...doc.data()
       })) as Expense[];
       
-      // Filtrar solo los que NO tienen eventId
-      const individualExpenses = allExpenses.filter(expense => !expense.eventId);
+      // Filtrar solo los que NO tienen eventId o tienen eventId === 'individual'
+      const individualExpenses = allExpenses.filter(expense => !expense.eventId || expense.eventId === 'individual');
       
       setExpenses(individualExpenses);
     } catch (error) {

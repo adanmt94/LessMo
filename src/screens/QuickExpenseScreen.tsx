@@ -42,7 +42,7 @@ import { updateWidgetData } from '../services/widgetDataService';
 import { analyzeReceipt, ReceiptData } from '../services/ocrService';
 import { getCustomCategories, saveCustomCategory } from '../services/customCategoryService';
 import { cache } from '../utils/cache';
-import { RootStackParamList, ExpenseCategory, Currency, CurrencySymbols, Participant } from '../types';
+import { RootStackParamList, ExpenseCategory, Currency, CurrencySymbols, Participant, SplitType } from '../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -98,6 +98,15 @@ export const QuickExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
   const [selectedBeneficiaries, setSelectedBeneficiaries] = useState<string[]>([]);
   const [paidBy, setPaidBy] = useState<string>('');
   const [loadingParticipants, setLoadingParticipants] = useState(false);
+
+  // Extra participants for individual expenses
+  const [extraParticipants, setExtraParticipants] = useState<Array<{ id: string; name: string }>>([]);
+  const [newParticipantName, setNewParticipantName] = useState('');
+
+  // Split type
+  const [splitType, setSplitType] = useState<SplitType>('equal');
+  const [percentageSplits, setPercentageSplits] = useState<{ [key: string]: string }>({});
+  const [customSplits, setCustomSplits] = useState<{ [key: string]: string }>({});
 
   // Receipt / OCR state
   const [receiptPhoto, setReceiptPhoto] = useState<string | null>(null);
@@ -198,16 +207,18 @@ export const QuickExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
       const activeEvents: EventOption[] = [];
 
       for (const group of groups) {
-        if (!group.isActive) continue;
+        if (group.isActive === false) continue;
         const eventIds = group.eventIds || [];
         for (const eid of eventIds) {
           try {
             const eventDoc = await getDoc(doc(db, 'events', eid));
             if (eventDoc.exists()) {
               const data = eventDoc.data();
+              // Use group name if event name is 'General' or empty
+              const eventName = (data.name && data.name !== 'General') ? data.name : group.name;
               activeEvents.push({
                 id: eid,
-                name: data.name || group.name,
+                name: eventName,
                 budget: data.initialBudget || 0,
                 spent: 0,
                 currency: data.currency || 'EUR',
@@ -365,6 +376,37 @@ export const QuickExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
         Alert.alert(t('common.error'), 'Selecciona al menos un participante');
         return;
       }
+
+      // Validate split data
+      if (splitType === 'percentage' && selectedBeneficiaries.length > 1) {
+        let totalPct = 0;
+        for (const bid of selectedBeneficiaries) {
+          const pct = parseFloat(percentageSplits[bid] || '0');
+          if (isNaN(pct) || pct <= 0 || pct > 100) {
+            Alert.alert(t('common.error'), 'Cada porcentaje debe ser entre 0 y 100');
+            return;
+          }
+          totalPct += pct;
+        }
+        if (Math.abs(totalPct - 100) > 0.1) {
+          Alert.alert(t('common.error'), `Los porcentajes suman ${totalPct.toFixed(1)}%, deben sumar 100%`);
+          return;
+        }
+      } else if ((splitType === 'custom' || splitType === 'amount') && selectedBeneficiaries.length > 1) {
+        let totalCustom = 0;
+        for (const bid of selectedBeneficiaries) {
+          const splitAmt = parseFloat(customSplits[bid] || '0');
+          if (isNaN(splitAmt) || splitAmt <= 0) {
+            Alert.alert(t('common.error'), 'Cada participante debe tener una cantidad mayor a 0');
+            return;
+          }
+          totalCustom += splitAmt;
+        }
+        if (Math.abs(totalCustom - numAmount) > 0.01) {
+          Alert.alert(t('common.error'), `Las cantidades suman ${totalCustom.toFixed(2)}, pero el gasto es ${numAmount.toFixed(2)}`);
+          return;
+        }
+      }
     }
 
     setSaving(true);
@@ -396,6 +438,21 @@ export const QuickExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
         // Save to event using createExpense (supports extraFields)
         const { createExpense } = await import('../services/firebase');
 
+        // Build split data
+        let customSplitsData: { [key: string]: number } | undefined;
+        let percentageSplitsData: { [key: string]: number } | undefined;
+        if (splitType === 'percentage' && selectedBeneficiaries.length > 1) {
+          percentageSplitsData = {};
+          for (const bid of selectedBeneficiaries) {
+            percentageSplitsData[bid] = parseFloat(percentageSplits[bid] || '0');
+          }
+        } else if ((splitType === 'custom' || splitType === 'amount') && selectedBeneficiaries.length > 1) {
+          customSplitsData = {};
+          for (const bid of selectedBeneficiaries) {
+            customSplitsData[bid] = parseFloat(customSplits[bid] || '0');
+          }
+        }
+
         await createExpense(
           selectedEventId,
           paidBy,
@@ -403,9 +460,9 @@ export const QuickExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
           description || category,
           category,
           selectedBeneficiaries,
-          'equal',
-          undefined,
-          undefined,
+          selectedBeneficiaries.length > 1 ? splitType : 'equal',
+          customSplitsData,
+          percentageSplitsData,
           photoURL || undefined,
           description || undefined,
           currencyCode,
@@ -420,8 +477,13 @@ export const QuickExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
 
       } else {
         // Save as individual expense
+        const allParticipantIds = [user.uid, ...extraParticipants.map(p => p.id)];
+        const participantNames: Record<string, string> = {
+          [user.uid]: userName || user.displayName || 'Tú',
+        };
+        extraParticipants.forEach(p => { participantNames[p.id] = p.name; });
+
         const expenseData: any = {
-          eventId: 'individual',
           userId: user.uid,
           paidBy: user.uid,
           amount: numAmount,
@@ -433,7 +495,8 @@ export const QuickExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
           date: Timestamp.now(),
           createdAt: Timestamp.now(),
           currency: currencyCode,
-          participantIds: [user.uid],
+          participantIds: allParticipantIds,
+          participantNames,
           splitType: 'equal',
         };
         if (photoURL) expenseData.receiptPhoto = photoURL;
@@ -795,6 +858,162 @@ export const QuickExpenseScreen: React.FC<Props> = ({ navigation, route }) => {
                     </Text>
                   </TouchableOpacity>
                 ))}
+              </View>
+
+              {/* Split type selector — only when multiple beneficiaries */}
+              {selectedBeneficiaries.length > 1 && (
+                <>
+                  <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}>¿Cómo se divide?</Text>
+                  <View style={styles.splitTypeGrid}>
+                    {([
+                      { key: 'equal' as SplitType, icon: '⚖️', label: 'Partes iguales' },
+                      { key: 'percentage' as SplitType, icon: '📊', label: 'Porcentaje' },
+                      { key: 'amount' as SplitType, icon: '💰', label: 'Cantidad fija' },
+                      { key: 'custom' as SplitType, icon: '🎯', label: 'Personalizado' },
+                    ]).map(st => (
+                      <TouchableOpacity
+                        key={st.key}
+                        style={[
+                          styles.splitTypeChip,
+                          { backgroundColor: theme.colors.card, borderColor: theme.colors.border },
+                          splitType === st.key && { backgroundColor: theme.colors.primary + '20', borderColor: theme.colors.primary },
+                        ]}
+                        onPress={() => setSplitType(st.key)}
+                      >
+                        <Text style={{ fontSize: 16 }}>{st.icon}</Text>
+                        <Text style={[
+                          { fontSize: 12, color: theme.colors.textSecondary, fontWeight: '600' },
+                          splitType === st.key && { color: theme.colors.primary, fontWeight: '700' },
+                        ]}>
+                          {st.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  {/* Percentage inputs */}
+                  {splitType === 'percentage' && (
+                    <View style={styles.splitInputsContainer}>
+                      {eventParticipants.filter(p => selectedBeneficiaries.includes(p.id)).map(p => (
+                        <View key={p.id} style={styles.splitInputRow}>
+                          <Text style={[styles.splitInputName, { color: theme.colors.text }]} numberOfLines={1}>
+                            {p.userId === user?.uid ? `${p.name} (tú)` : p.name}
+                          </Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <TextInput
+                              style={[styles.splitInputField, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.card }]}
+                              value={percentageSplits[p.id] || ''}
+                              onChangeText={(text) => setPercentageSplits(prev => ({ ...prev, [p.id]: text }))}
+                              placeholder="0"
+                              placeholderTextColor={theme.colors.textSecondary}
+                              keyboardType="decimal-pad"
+                            />
+                            <Text style={{ color: theme.colors.textSecondary, marginLeft: 4, fontWeight: '600' }}>%</Text>
+                          </View>
+                        </View>
+                      ))}
+                      <Text style={[styles.splitHint, { color: theme.colors.textSecondary }]}>
+                        Total: {selectedBeneficiaries.reduce((sum, id) => sum + (parseFloat(percentageSplits[id] || '0') || 0), 0).toFixed(1)}% / 100%
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* Custom / Amount inputs */}
+                  {(splitType === 'custom' || splitType === 'amount') && (
+                    <View style={styles.splitInputsContainer}>
+                      {eventParticipants.filter(p => selectedBeneficiaries.includes(p.id)).map(p => (
+                        <View key={p.id} style={styles.splitInputRow}>
+                          <Text style={[styles.splitInputName, { color: theme.colors.text }]} numberOfLines={1}>
+                            {p.userId === user?.uid ? `${p.name} (tú)` : p.name}
+                          </Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <Text style={{ color: theme.colors.textSecondary, marginRight: 4 }}>{CurrencySymbols[currencyCode] || currencyCode}</Text>
+                            <TextInput
+                              style={[styles.splitInputField, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.card }]}
+                              value={customSplits[p.id] || ''}
+                              onChangeText={(text) => setCustomSplits(prev => ({ ...prev, [p.id]: text }))}
+                              placeholder="0.00"
+                              placeholderTextColor={theme.colors.textSecondary}
+                              keyboardType="decimal-pad"
+                            />
+                          </View>
+                        </View>
+                      ))}
+                      <Text style={[styles.splitHint, { color: theme.colors.textSecondary }]}>
+                        Total: {CurrencySymbols[currencyCode]}{selectedBeneficiaries.reduce((sum, id) => sum + (parseFloat(customSplits[id] || '0') || 0), 0).toFixed(2)} / {CurrencySymbols[currencyCode]}{amount ? parseFloat(amount.replace(',', '.'))?.toFixed(2) || '0.00' : '0.00'}
+                      </Text>
+                    </View>
+                  )}
+                </>
+              )}
+            </>
+          )}
+
+          {/* Add participants for individual expenses (no event selected) */}
+          {!selectedEventId && (
+            <>
+              <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}>
+                👥 Participantes (opcional)
+              </Text>
+              <View style={styles.addParticipantContainer}>
+                {/* Current user always shown */}
+                <View style={[styles.beneficiaryChip, { backgroundColor: theme.colors.primary + '15', borderColor: theme.colors.primary }]}>
+                  <Text style={[styles.checkMark, { color: theme.colors.primary }]}>✓</Text>
+                  <Text style={[styles.beneficiaryName, { color: theme.colors.primary, fontWeight: '600' }]}>
+                    {userName || 'Tú'}
+                  </Text>
+                </View>
+                {/* Extra participants */}
+                {extraParticipants.map(p => (
+                  <View key={p.id} style={[styles.beneficiaryChip, { backgroundColor: theme.colors.primary + '15', borderColor: theme.colors.primary }]}>
+                    <Text style={[styles.checkMark, { color: theme.colors.primary }]}>✓</Text>
+                    <Text style={[styles.beneficiaryName, { color: theme.colors.primary, fontWeight: '600' }]}>
+                      {p.name}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => setExtraParticipants(prev => prev.filter(ep => ep.id !== p.id))}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Text style={{ color: theme.colors.primary, fontSize: 12, marginLeft: 4 }}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+              {/* Add participant input */}
+              <View style={[styles.addParticipantRow, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+                <TextInput
+                  style={[styles.addParticipantInput, { color: theme.colors.text }]}
+                  value={newParticipantName}
+                  onChangeText={setNewParticipantName}
+                  placeholder="Nombre del participante"
+                  placeholderTextColor={theme.colors.textSecondary}
+                  returnKeyType="done"
+                  onSubmitEditing={() => {
+                    const name = newParticipantName.trim();
+                    if (!name) return;
+                    if (extraParticipants.some(p => p.name.toLowerCase() === name.toLowerCase())) {
+                      Alert.alert(t('common.error'), 'El participante ya existe');
+                      return;
+                    }
+                    setExtraParticipants(prev => [...prev, { id: `temp_${Date.now()}`, name }]);
+                    setNewParticipantName('');
+                  }}
+                />
+                <TouchableOpacity
+                  style={[styles.addParticipantBtn, { backgroundColor: theme.colors.primary }]}
+                  onPress={() => {
+                    const name = newParticipantName.trim();
+                    if (!name) return;
+                    if (extraParticipants.some(p => p.name.toLowerCase() === name.toLowerCase())) {
+                      Alert.alert(t('common.error'), 'El participante ya existe');
+                      return;
+                    }
+                    setExtraParticipants(prev => [...prev, { id: `temp_${Date.now()}`, name }]);
+                    setNewParticipantName('');
+                  }}
+                >
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 18 }}>+</Text>
+                </TouchableOpacity>
               </View>
             </>
           )}
@@ -1225,6 +1444,80 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   beneficiaryName: {
     ...Typography.subhead,
+  },
+  // Split type
+  splitTypeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+    marginBottom: Spacing.lg,
+  },
+  splitTypeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm + 2,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    minWidth: '45%' as any,
+    flex: 1,
+  },
+  splitInputsContainer: {
+    marginBottom: Spacing.lg,
+  },
+  splitInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.sm,
+  },
+  splitInputName: {
+    ...Typography.subhead,
+    flex: 1,
+    marginRight: Spacing.sm,
+  },
+  splitInputField: {
+    width: 70,
+    borderWidth: 1,
+    borderRadius: Radius.sm,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs + 2,
+    textAlign: 'center',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  splitHint: {
+    fontSize: 12,
+    textAlign: 'right',
+    marginTop: 2,
+  },
+  // Add participants (individual expenses)
+  addParticipantContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  addParticipantRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    paddingLeft: Spacing.md,
+    marginBottom: Spacing.lg,
+    overflow: 'hidden',
+  },
+  addParticipantInput: {
+    flex: 1,
+    ...Typography.body,
+    paddingVertical: Spacing.sm + 2,
+  },
+  addParticipantBtn: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   // Receipt
   receiptPreview: {

@@ -238,6 +238,7 @@ struct LessmoWidgetEntryViewSmall: View {
     
     private var dataView: some View {
         VStack(alignment: .leading, spacing: 0) {
+            // Header
             HStack(spacing: 5) {
                 Image(systemName: "chart.pie.fill")
                     .font(.system(size: 11))
@@ -249,17 +250,20 @@ struct LessmoWidgetEntryViewSmall: View {
                     .font(.system(size: 11, weight: .bold, design: .rounded))
                     .foregroundColor(.secondary)
                 Spacer()
-                if !entry.lastUpdateText.isEmpty {
-                    Text(entry.lastUpdateText)
-                        .font(.system(size: 8, weight: .medium, design: .rounded))
-                        .foregroundColor(.secondary.opacity(0.7))
+                if entry.eventsCount > 0 {
+                    Text("\(entry.eventsCount)")
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                        .frame(width: 18, height: 18)
+                        .background(Color.orange)
+                        .clipShape(Circle())
                 }
             }
             
             Spacer()
             
-            // Gastado este mes - main number
-            Text("Gastado este mes")
+            // Month total
+            Text("Este mes")
                 .font(.system(size: 10, weight: .medium, design: .rounded))
                 .foregroundColor(.secondary)
             
@@ -272,34 +276,39 @@ struct LessmoWidgetEntryViewSmall: View {
             .foregroundColor(.primary)
             .padding(.top, 1)
             
-            // Event debts summary
-            if entry.youOwe > 0 {
-                HStack(spacing: 3) {
-                    Image(systemName: "arrow.up.right")
-                        .font(.system(size: 8))
-                    Text("Debes \(entry.formatAmount(entry.youOwe))")
-                        .font(.system(size: 10, weight: .medium, design: .rounded))
+            Spacer().frame(height: 6)
+            
+            // Debt indicators — show BOTH if applicable
+            VStack(alignment: .leading, spacing: 2) {
+                if entry.youOwe > 0 {
+                    HStack(spacing: 3) {
+                        Circle()
+                            .fill(Color.widgetNegative)
+                            .frame(width: 6, height: 6)
+                        Text("Debes \(entry.formatAmount(entry.youOwe))")
+                            .font(.system(size: 10, weight: .semibold, design: .rounded))
+                    }
+                    .foregroundColor(.widgetNegative)
                 }
-                .foregroundColor(.widgetNegative)
-                .padding(.top, 3)
-            } else if entry.owedToYou > 0 {
-                HStack(spacing: 3) {
-                    Image(systemName: "arrow.down.left")
-                        .font(.system(size: 8))
-                    Text("Te deben \(entry.formatAmount(entry.owedToYou))")
-                        .font(.system(size: 10, weight: .medium, design: .rounded))
+                if entry.owedToYou > 0 {
+                    HStack(spacing: 3) {
+                        Circle()
+                            .fill(Color.widgetPositive)
+                            .frame(width: 6, height: 6)
+                        Text("Te deben \(entry.formatAmount(entry.owedToYou))")
+                            .font(.system(size: 10, weight: .semibold, design: .rounded))
+                    }
+                    .foregroundColor(.widgetPositive)
                 }
-                .foregroundColor(.widgetPositive)
-                .padding(.top, 3)
-            } else if entry.eventsCount > 0 {
-                HStack(spacing: 3) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 8))
-                    Text("Estás al día")
-                        .font(.system(size: 10, weight: .medium, design: .rounded))
+                if entry.youOwe == 0 && entry.owedToYou == 0 && entry.eventsCount > 0 {
+                    HStack(spacing: 3) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 9))
+                        Text("Al día")
+                            .font(.system(size: 10, weight: .semibold, design: .rounded))
+                    }
+                    .foregroundColor(.widgetPositive)
                 }
-                .foregroundColor(.widgetPositive)
-                .padding(.top, 3)
             }
         }
         .padding(14)
@@ -361,7 +370,7 @@ struct LessmoWidgetEntryViewMedium: View {
     
     private var dataView: some View {
         HStack(spacing: 0) {
-            // Left column - Balance + debts → opens dashboard
+            // Left column - Balance + month total
             Link(destination: URL(string: "lessmo://dashboard")!) {
                 VStack(alignment: .leading, spacing: 0) {
                     HStack(spacing: 5) {
@@ -378,7 +387,7 @@ struct LessmoWidgetEntryViewMedium: View {
                     
                     Spacer()
                     
-                    Text("Gastado este mes")
+                    Text("Este mes")
                         .font(.system(size: 10, weight: .medium, design: .rounded))
                         .foregroundColor(.secondary)
                     
@@ -391,37 +400,45 @@ struct LessmoWidgetEntryViewMedium: View {
                     .foregroundColor(.primary)
                     .padding(.top, 1)
                     
-                    // Owe/Owed summary
-                    HStack(spacing: 12) {
+                    // Debt cards — show both
+                    VStack(alignment: .leading, spacing: 3) {
                         if entry.youOwe > 0 {
-                            HStack(spacing: 2) {
-                                Image(systemName: "arrow.up.right")
-                                    .font(.system(size: 8))
-                                Text("Debes \(entry.formatAmount(entry.youOwe))")
-                                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                            HStack(spacing: 4) {
+                                Circle()
+                                    .fill(Color.widgetNegative)
+                                    .frame(width: 7, height: 7)
+                                Text("Debes")
+                                    .font(.system(size: 9, weight: .medium, design: .rounded))
+                                    .foregroundColor(.secondary)
+                                Text(entry.formatAmount(entry.youOwe))
+                                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                                    .foregroundColor(.widgetNegative)
                             }
-                            .foregroundColor(.widgetNegative)
                         }
                         if entry.owedToYou > 0 {
-                            HStack(spacing: 2) {
-                                Image(systemName: "arrow.down.left")
-                                    .font(.system(size: 8))
-                                Text("Te deben \(entry.formatAmount(entry.owedToYou))")
-                                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                            HStack(spacing: 4) {
+                                Circle()
+                                    .fill(Color.widgetPositive)
+                                    .frame(width: 7, height: 7)
+                                Text("Te deben")
+                                    .font(.system(size: 9, weight: .medium, design: .rounded))
+                                    .foregroundColor(.secondary)
+                                Text(entry.formatAmount(entry.owedToYou))
+                                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                                    .foregroundColor(.widgetPositive)
                             }
-                            .foregroundColor(.widgetPositive)
                         }
                         if entry.youOwe == 0 && entry.owedToYou == 0 && entry.eventsCount > 0 {
-                            HStack(spacing: 2) {
+                            HStack(spacing: 4) {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 8))
+                                    .font(.system(size: 9))
                                 Text("Al día")
-                                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                    .font(.system(size: 11, weight: .semibold, design: .rounded))
                             }
                             .foregroundColor(.widgetPositive)
                         }
                     }
-                    .padding(.top, 4)
+                    .padding(.top, 5)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             }
@@ -433,7 +450,7 @@ struct LessmoWidgetEntryViewMedium: View {
                 .padding(.vertical, 8)
                 .padding(.horizontal, 10)
             
-            // Right column - Stats + actions
+            // Right column - Stats + quick action
             VStack(alignment: .leading, spacing: 8) {
                 Link(destination: URL(string: "lessmo://events")!) {
                     HStack(spacing: 6) {
@@ -583,11 +600,11 @@ struct LessmoWidgetEntryViewLarge: View {
                 }
             }
             
-            // Gastado este mes + events info
+            // Month total + event/expense count
             Link(destination: URL(string: "lessmo://dashboard")!) {
                 HStack(alignment: .bottom) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Gastado este mes")
+                        Text("Este mes")
                             .font(.system(size: 11, weight: .medium, design: .rounded))
                             .foregroundColor(.secondary)
                             .padding(.top, 8)
@@ -602,7 +619,6 @@ struct LessmoWidgetEntryViewLarge: View {
                     
                     Spacer()
                     
-                    // Right side: events info
                     VStack(alignment: .trailing, spacing: 2) {
                         if entry.eventsCount > 0 {
                             Text("\(entry.eventsCount) evento\(entry.eventsCount == 1 ? "" : "s")")
@@ -615,37 +631,61 @@ struct LessmoWidgetEntryViewLarge: View {
                 }
             }
             
-            // Debts row
-            HStack(spacing: 16) {
-                if entry.owedToYou > 0 {
-                    HStack(spacing: 4) {
-                        Image(systemName: "arrow.down.left")
-                            .font(.system(size: 9))
-                        Text("Te deben \(entry.formatAmount(entry.owedToYou))")
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+            // Prominent debt cards
+            if entry.youOwe > 0 || entry.owedToYou > 0 {
+                HStack(spacing: 8) {
+                    if entry.youOwe > 0 {
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(Color.widgetNegative)
+                                .frame(width: 8, height: 8)
+                            VStack(alignment: .leading, spacing: 0) {
+                                Text("Debes")
+                                    .font(.system(size: 9, weight: .medium, design: .rounded))
+                                    .foregroundColor(.secondary)
+                                Text(entry.formatAmount(entry.youOwe))
+                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                    .foregroundColor(.widgetNegative)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(Color.widgetNegative.opacity(0.08))
+                        .cornerRadius(8)
                     }
-                    .foregroundColor(.widgetPositive)
-                }
-                if entry.youOwe > 0 {
-                    HStack(spacing: 4) {
-                        Image(systemName: "arrow.up.right")
-                            .font(.system(size: 9))
-                        Text("Debes \(entry.formatAmount(entry.youOwe))")
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    if entry.owedToYou > 0 {
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(Color.widgetPositive)
+                                .frame(width: 8, height: 8)
+                            VStack(alignment: .leading, spacing: 0) {
+                                Text("Te deben")
+                                    .font(.system(size: 9, weight: .medium, design: .rounded))
+                                    .foregroundColor(.secondary)
+                                Text(entry.formatAmount(entry.owedToYou))
+                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                    .foregroundColor(.widgetPositive)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(Color.widgetPositive.opacity(0.08))
+                        .cornerRadius(8)
                     }
-                    .foregroundColor(.widgetNegative)
                 }
-                if entry.youOwe == 0 && entry.owedToYou == 0 {
-                    HStack(spacing: 4) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 10))
-                        Text("Estás al día")
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
-                    }
-                    .foregroundColor(.widgetPositive)
+                .padding(.top, 8)
+            } else if entry.eventsCount > 0 {
+                HStack(spacing: 4) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 11))
+                    Text("Estás al día — sin deudas pendientes")
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
                 }
+                .foregroundColor(.widgetPositive)
+                .padding(.top, 8)
             }
-            .padding(.top, 6)
             
             // Budget progress bar (if budget set)
             if entry.budget > 0 {

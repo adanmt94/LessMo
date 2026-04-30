@@ -103,13 +103,39 @@ export async function updateWidgetData(userId: string): Promise<void> {
 
   try {
     // Importar servicios dinámicamente para evitar ciclos
-    const { getUserEventsByStatus, getEventExpenses, getEventParticipants } = await import('./firebase');
-    const { collection: firestoreCollection, query: firestoreQuery, where: firestoreWhere, getDocs: firestoreGetDocs, orderBy: firestoreOrderBy } = await import('firebase/firestore');
+    const { getUserGroups, getEventExpenses, getEventParticipants } = await import('./firebase');
+    const { collection: firestoreCollection, query: firestoreQuery, where: firestoreWhere, getDocs: firestoreGetDocs, orderBy: firestoreOrderBy, doc: firestoreDoc, getDoc: firestoreGetDoc } = await import('firebase/firestore');
     const { db } = await import('./firebase');
     
-    // Obtener eventos del usuario
-    const userEvents = await getUserEventsByStatus(userId);
-    const activeEvents = userEvents.filter(e => e.status === 'active');
+    // Obtener TODOS los eventos del usuario (creados + participante) via groups
+    const groups = await getUserGroups(userId);
+    const activeEventIds: string[] = [];
+    const activeEvents: Array<{ id: string; name: string; budget: number; currency: string; participantIds?: string[] }> = [];
+    
+    for (const group of groups) {
+      if (group.isActive === false) continue;
+      const eventIds = group.eventIds || [];
+      for (const eid of eventIds) {
+        if (activeEventIds.includes(eid)) continue;
+        try {
+          const eventDoc = await firestoreGetDoc(firestoreDoc(db, 'events', eid));
+          if (eventDoc.exists()) {
+            const data = eventDoc.data();
+            const eventName = (data.name && data.name !== 'General') ? data.name : group.name;
+            activeEventIds.push(eid);
+            activeEvents.push({
+              id: eid,
+              name: eventName,
+              budget: data.initialBudget || 0,
+              currency: data.currency || 'EUR',
+              participantIds: data.participantIds || [],
+            });
+          }
+        } catch {
+          // Skip errored event
+        }
+      }
+    }
     
     // Calcular balance total de eventos
     let totalBalance = 0;
@@ -207,8 +233,8 @@ export async function updateWidgetData(userId: string): Promise<void> {
       const individualSnap = await firestoreGetDocs(individualQuery);
       individualSnap.docs.forEach(doc => {
         const data = doc.data();
-        // Solo procesar gastos individuales (sin eventId)
-        if (data.eventId) return;
+        // Solo procesar gastos individuales (sin eventId o eventId === 'individual')
+        if (data.eventId && data.eventId !== 'individual') return;
         
         const expenseDate = data.date?.toDate ? data.date.toDate() : new Date(data.date);
         const amount = data.amount || 0;
